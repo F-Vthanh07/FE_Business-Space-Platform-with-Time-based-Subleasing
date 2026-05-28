@@ -1,0 +1,7 @@
+{
+  "permissions": [],
+  "hooks": {
+    "pre-command": "",
+    "post-command": ""
+  }
+}

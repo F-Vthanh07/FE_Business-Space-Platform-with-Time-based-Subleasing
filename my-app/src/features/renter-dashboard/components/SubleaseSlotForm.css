@@ -1,0 +1,96 @@
+.sublease-form-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.sublease-form-modal {
+  width: 580px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: var(--radius-3xl);
+  border-color: rgba(255, 255, 255, 0.08);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  background: rgba(20, 24, 33, 0.85);
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5);
+  scrollbar-width: thin;
+}
+
+/* Header */
+.sublease-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 16px;
+}
+
+.sublease-form-title-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sublease-form-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: rgba(74, 114, 255, 0.15);
+  border: 1px solid rgba(74, 114, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent);
+}
+
+/* Form Body */
+.sublease-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.info-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(74, 114, 255, 0.08);
+  border: 1px solid rgba(74, 114, 255, 0.15);
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  margin-top: 10px;
+}
+
+.info-banner-icon {
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.info-banner-text {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+/* Custom Scrollbar inside modal */
+.sublease-form-modal::-webkit-scrollbar {
+  width: 4px;
+}
+.sublease-form-modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sublease-form-modal::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}

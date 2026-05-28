@@ -1,0 +1,335 @@
+.space-form-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.space-form-modal {
+  width: 680px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: var(--radius-3xl);
+  border-color: rgba(255, 255, 255, 0.08);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  background: rgba(20, 24, 33, 0.85);
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5);
+  scrollbar-width: thin;
+}
+
+/* Header */
+.space-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 16px;
+}
+
+.space-form-title-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.space-form-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: rgba(74, 114, 255, 0.15);
+  border: 1px solid rgba(74, 114, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent);
+}
+
+.form-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+
+.form-modal-subtitle {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Form Body */
+.space-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-text-secondary);
+  border-left: 2px solid var(--color-accent);
+  padding-left: 8px;
+  margin-bottom: 4px;
+}
+
+.section-desc {
+  font-size: 11px;
+  margin-top: -6px;
+  margin-bottom: 4px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.input-with-icon {
+  position: relative;
+  width: 100%;
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+}
+
+.form-input {
+  width: 100%;
+  padding: 11px 16px 11px 40px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: var(--color-accent);
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 10px rgba(74, 114, 255, 0.15);
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Checkbox Lists */
+.checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  height: 190px;
+  overflow-y: auto;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.checkbox-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.checkbox-item--checked {
+  background: rgba(74, 114, 255, 0.08);
+}
+
+.hidden-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.checkbox-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.checkbox-item--checked .checkbox-indicator {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.checkbox-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.checkbox-item--checked .checkbox-label {
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Operating Hours */
+.operating-hours-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+}
+
+.operating-day-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.operating-day-row:last-child {
+  border-bottom: none;
+}
+
+.day-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 120px;
+}
+
+.day-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.day-disabled .day-name {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.day-time-pickers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-picker-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.time-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.time-input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: #fff;
+  padding: 6px 8px 6px 28px;
+  font-size: 12px;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 100px;
+}
+
+.time-input:focus:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.time-input:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.time-separator {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.day-disabled .day-time-pickers {
+  opacity: 0.5;
+}
+
+/* Footer Actions */
+.form-actions-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 20px;
+  margin-top: 10px;
+}
+
+.cancel-btn {
+  padding: 10px 20px;
+}
+
+.submit-btn {
+  padding: 10px 24px;
+}
+
+/* Custom Scrollbar inside modal */
+.space-form-modal::-webkit-scrollbar {
+  width: 4px;
+}
+.space-form-modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+.space-form-modal::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
