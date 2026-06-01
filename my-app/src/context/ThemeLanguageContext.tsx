@@ -11,14 +11,72 @@ interface Translations {
 }
 
 const translations: Translations = {
+  // Homepage Landing
+  'home.navFeatures': { en: 'Features', vi: 'Tính năng' },
+  'home.navExplore': { en: 'Explore', vi: 'Khám phá' },
+  'home.navPricing': { en: 'Pricing', vi: 'Bảng giá' },
+  'home.navHowItWorks': { en: 'How it works', vi: 'Cách hoạt động' },
+  'home.navLaunch': { en: 'Login', vi: 'Đăng nhập' },
+
+  'home.heroTag': { en: '✦ THE FUTURE OF RETAIL SPACES', vi: '✦ TƯƠNG LAI CỦA MẶT BẰNG BÁN LẺ' },
+  'home.heroTitleMain': { en: 'Spatial Fluidity.', vi: 'Mặt bằng linh hoạt.' },
+  'home.heroTitleSub': { en: 'Hourly Subleasing.', vi: 'Cho thuê theo giờ.' },
+  'home.heroDesc': {
+    en: 'Tether unused retail hours to ambitious brands. Register spaces, allocate slots, and rent securely.',
+    vi: 'Kết nối khung giờ trống của cửa hàng với các nhãn hàng. Đăng ký mặt bằng, chia slot và thuê lại an toàn.'
+  },
+  'home.heroBtnDemo': { en: 'Launch App', vi: 'Khởi chạy App' },
+  'home.heroBtnExplore': { en: 'Browse Venues →', vi: 'Duyệt mặt bằng →' },
+
+  'home.statOccupancy': { en: 'Average Occupancy', vi: 'Tỷ lệ lấp đầy TB' },
+  'home.statSlots': { en: 'Hourly Slots Booked', vi: 'Slot giờ đã đặt' },
+  'home.statSpaces': { en: 'Verified Venues', vi: 'Mặt bằng xác minh' },
+
+  'home.featTitle': { en: 'Engineered for Spatial Flexibility', vi: 'Thiết kế cho sự linh hoạt không gian' },
+  'home.featSub': { en: 'Discover how EtherSpace simplifies sharing and subleasing.', vi: 'Khám phá cách EtherSpace tối ưu hóa việc chia sẻ mặt bằng kinh doanh.' },
+
+  'home.feat1Title': { en: 'Hourly Scheduling', vi: 'Lịch trình theo giờ' },
+  'home.feat1Desc': { en: 'Divide daily operational hours into micro-slots, allowing multiple business models in a single location.', vi: 'Chia nhỏ khung giờ hoạt động hàng ngày thành các slot nhỏ, hỗ trợ nhiều mô hình kinh doanh trên một mặt bằng.' },
+
+  'home.feat2Title': { en: 'AI Conflict Protection', vi: 'Kiểm duyệt xung đột AI' },
+  'home.feat2Desc': { en: 'Our intelligent collision checker auto-reviews sublease slots against primary leases to prevent schedule clashes.', vi: 'Hệ thống tự động rà soát lịch thuê lại so với lịch thuê gốc để đảm bảo không xảy ra chồng chéo lịch trình.' },
+
+  'home.feat3Title': { en: 'Secure Transactions', vi: 'Thanh toán an toàn' },
+  'home.feat3Desc': { en: 'Automatic transaction coding, digital invoices, and secure escrow protect both owners and renters.', vi: 'Mã hóa giao dịch tự động, xuất hóa đơn VAT điện tử và ví ký quỹ đảm bảo quyền lợi cho cả hai bên.' },
+
+  'home.feat4Title': { en: 'Multi-Role Dashboards', vi: 'Dashboard đa vai trò' },
+  'home.feat4Desc': { en: 'Tailored consoles for space owners to track monthly income, and renters to manage subleasing operations.', vi: 'Bảng quản trị chuyên sâu dành cho Chủ mặt bằng theo dõi doanh thu và Người thuê chính quản lý cho thuê lại.' },
+
+  'home.howTitle': { en: 'Fluid Subleasing in 3 Steps', vi: 'Quy trình hoạt động 3 bước' },
+  'home.howOwner': { en: 'For Owners', vi: 'Dành cho Chủ mặt bằng' },
+  'home.howRenter': { en: 'For Renters', vi: 'Dành cho Khách thuê chính' },
+
+  'home.step1OwnerTitle': { en: '1. Register Assets', vi: '1. Đăng ký tài sản' },
+  'home.step1OwnerDesc': { en: 'Declare physical attributes, dimensions, and operational schedules.', vi: 'Khai báo thông số vật lý, diện tích và khung giờ hoạt động.' },
+  'home.step2OwnerTitle': { en: '2. Publish Listing', vi: '2. Đăng tin cho thuê' },
+  'home.step2OwnerDesc': { en: 'Create long-term contract offers to attract primary renters.', vi: 'Tạo đề xuất hợp đồng dài hạn để tìm kiếm khách thuê chính.' },
+  'home.step3OwnerTitle': { en: '3. Collect Rent', vi: '3. Nhận tiền hàng tháng' },
+  'home.step3OwnerDesc': { en: 'Track contracts, invoices, and receive recurring bank payouts.', vi: 'Theo dõi hợp đồng, hóa đơn và nhận tiền thuê định kỳ.' },
+
+  'home.step1RenterTitle': { en: '1. Secure Location', vi: '1. Thuê mặt bằng gốc' },
+  'home.step1RenterDesc': { en: 'Sign monthly contract with the landlord through our vetted listings.', vi: 'Ký hợp đồng thuê tháng với chủ nhà thông qua tin đăng xác minh.' },
+  'home.step2RenterTitle': { en: '2. Create Time Slots', vi: '2. Thiết lập slot giờ' },
+  'home.step2RenterDesc': { en: 'Slice idle hours of the retail storefront into rentable slots.', vi: 'Chia nhỏ các khung giờ không sử dụng của mặt bằng thành slot cho thuê.' },
+  'home.step3RenterTitle': { en: '3. Host Sub-tenants', vi: '3. Đón tiếp khách thuê phụ' },
+  'home.step3RenterDesc': { en: 'Approve requests, gather subleasing yields, and lower overheads.', vi: 'Duyệt yêu cầu thuê phụ, thu hồi chi phí mặt bằng và tối ưu hóa.' },
+
+  'home.exploreTitle': { en: 'Explore Premium Hubs', vi: 'Khám phá không gian nổi bật' },
+  'home.exploreSub': { en: 'Premium retail venues configured for time sharing.', vi: 'Mặt bằng kinh doanh cao cấp đã cấu hình chia sẻ khung giờ.' },
+  'home.footerText': { en: 'Hourly retail space sharing platform. Made with spatial fluid principles.', vi: 'Nền tảng chia sẻ mặt bằng kinh doanh theo khung giờ. Thiết kế theo phong cách trực quan.' },
+
   // Role Selector
   'app.tagline': {
     en: 'Hourly retail space sharing platform',
     vi: 'Nền tảng chia sẻ mặt bằng kinh doanh theo khung giờ',
   },
   'app.selectRole': {
-    en: 'Select a role to view the demo:',
-    vi: 'Chọn vai trò để xem demo:',
+    en: 'Select a portal role console:',
+    vi: 'Chọn cổng điều khiển vai trò:',
   },
   'app.ownerTitle': {
     en: 'Space Owner',
@@ -69,8 +127,8 @@ const translations: Translations = {
     vi: 'Người thuê phụ',
   },
   'app.demoNote': {
-    en: '✦ This is a demo interface — data is simulated',
-    vi: '✦ Đây là giao diện demo — dữ liệu được mô phỏng',
+    en: '✦ Secure Space Management Portal',
+    vi: '✦ Cổng quản lý mặt bằng kinh doanh bảo mật',
   },
 
   // Header
@@ -976,6 +1034,30 @@ const translations: Translations = {
     en: 'Dark Theme',
     vi: 'Giao diện Tối',
   },
+  // Auth Page
+  'auth.title': { en: 'EtherSpace Console', vi: 'Bảng Điều Khiển EtherSpace' },
+  'auth.subtitle': { en: 'Secure Access Gateway', vi: 'Cổng Kết Nối Hệ Thống Bảo Mật' },
+  'auth.loginTab': { en: 'LOGIN', vi: 'ĐĂNG NHẬP' },
+  'auth.registerTab': { en: 'REGISTER', vi: 'ĐĂNG KÝ' },
+  'auth.emailLabel': { en: 'EMAIL ADDRESS', vi: 'ĐỊA CHỈ EMAIL' },
+  'auth.emailPlaceholder': { en: 'e.g., operator@etherspace.io', vi: 'Ví dụ: operator@etherspace.io' },
+  'auth.passwordLabel': { en: 'PASSWORD', vi: 'MẬT KHẨU' },
+  'auth.passwordPlaceholder': { en: 'Enter credentials', vi: 'Nhập mật khẩu' },
+  'auth.confirmPasswordLabel': { en: 'CONFIRM PASSWORD', vi: 'XÁC NHẬN MẬT KHẨU' },
+  'auth.confirmPasswordPlaceholder': { en: 'Re-type password', vi: 'Nhập lại mật khẩu' },
+  'auth.roleLabel': { en: 'SYSTEM NODE ROLE', vi: 'VAI TRÒ NÚT HỆ THỐNG' },
+  'auth.submitLogin': { en: 'Login', vi: 'Đăng Nhập' },
+  'auth.submitRegister': { en: 'Register', vi: 'Đăng Ký' },
+  'auth.orDivider': { en: 'OR', vi: 'HOẶC' },
+  'auth.googleLogin': { en: 'Continue with Google', vi: 'Tiếp tục với Google' },
+  'auth.googleRegister': { en: 'Sign up with Google', vi: 'Đăng ký với Google' },
+  'auth.switchRegisterText': { en: 'Need an access node? Register here', vi: 'Cần tạo tài khoản? Đăng ký tại đây' },
+  'auth.switchLoginText': { en: 'Already have a node? Login here', vi: 'Đã có tài khoản? Đăng nhập tại đây' },
+  'auth.validationFill': { en: 'Please fill all credential fields!', vi: 'Vui lòng điền đầy đủ thông tin!' },
+  'auth.validationMatch': { en: 'Passwords do not match!', vi: 'Mật khẩu xác nhận không trùng khớp!' },
+  'auth.simulating': { en: 'ESTABLISHING SECURE CONNECTION...', vi: 'ĐANG THIẾT LẬP KẾT NỐI BẢO MẬT...' },
+  'auth.loadingWallet': { en: 'SYNCING ESCROW WALLET SEGMENTS...', vi: 'ĐANG ĐỒNG BỘ LUỒNG VÍ KÝ QUỸ...' },
+  'auth.authorized': { en: 'SESSION AUTHORIZED. REDIRECTING...', vi: 'PHIÊN TRUY CẬP HỢP LỆ. ĐANG CHUYỂN HƯỚNG...' },
 };
 
 interface ThemeLanguageContextType {

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { gsap } from 'gsap';
 import { Header } from '../../components/Header';
 import { OwnerSidebar } from './components/OwnerSidebar';
 import { OwnerOverview } from './components/OwnerOverview';
@@ -11,15 +13,46 @@ import './OwnerDashboardPage.css';
 
 type OwnerPage = 'overview' | 'spaces' | 'listings' | 'tenants' | 'analytics' | 'settings';
 
-export const OwnerDashboardPage: React.FC = () => {
-  const [activePage, setActivePage] = useState<OwnerPage>('overview');
+interface OwnerDashboardPageProps {
+  onLogout: () => void;
+}
+
+export const OwnerDashboardPage: React.FC<OwnerDashboardPageProps> = ({ onLogout }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isNewSpaceFormOpen, setIsNewSpaceFormOpen] = useState(false);
   const { t } = useThemeLanguage();
+
+  // Extract activePage from the router pathname, e.g. /owner/spaces -> spaces
+  const pathParts = location.pathname.split('/');
+  const activePage = (pathParts[2] || 'overview') as OwnerPage;
+
+  useEffect(() => {
+    const tl = gsap.timeline({ defaults: { ease: 'power4.out', duration: 0.8 } });
+
+    tl.fromTo(
+      '.dashboard-header',
+      { y: -72, opacity: 0 },
+      { y: 0, opacity: 1 }
+    );
+    tl.fromTo(
+      '.owner-sidebar',
+      { x: -250, opacity: 0 },
+      { x: 0, opacity: 1 },
+      '-=0.6'
+    );
+    tl.fromTo(
+      '.main-content',
+      { y: 40, opacity: 0 },
+      { y: 0, opacity: 1 },
+      '-=0.6'
+    );
+  }, []);
 
   const handleNewSpaceSubmit = (data: any) => {
     console.log('Registered new space:', data);
     setIsNewSpaceFormOpen(false);
-    setActivePage('spaces'); // Chuyển sang tab mặt bằng để xem
+    navigate('/owner/spaces');
   };
 
   const renderContent = () => {
@@ -49,8 +82,9 @@ export const OwnerDashboardPage: React.FC = () => {
       <div className="app-body">
         <OwnerSidebar
           activePage={activePage}
-          onNavigate={setActivePage}
+          onNavigate={(page) => navigate(`/owner/${page}`)}
           onNewSpaceClick={() => setIsNewSpaceFormOpen(true)}
+          onLogout={onLogout}
         />
         <main className="main-content">
           {renderContent()}

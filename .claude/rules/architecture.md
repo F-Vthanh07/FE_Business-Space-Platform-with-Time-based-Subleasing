@@ -39,3 +39,12 @@ src/
 ├── App.tsx             # Root Component (Providers, Error Boundaries)
 └── main.tsx            # DOM Entry Point
 ```
+
+---
+
+## 3. Quy tắc Định tuyến & Phân quyền (Routing & Authorization Rules)
+
+* **Export Đường dẫn (Route Paths Export):** Trong `App.tsx`, chỉ định nghĩa và export hằng số đường dẫn (`ROUTES`) của từng trang để tránh việc sử dụng chuỗi ký tự cứng (hardcoded strings) ở các thành phần khác.
+* **Định tuyến phân quyền (Role-based Routing):** Sử dụng các route bảo vệ (`ProtectedRoute`) để kiểm tra quyền truy cập dựa trên vai trò hiện tại của người dùng (`role` gồm `owner` hoặc `renter`).
+* **Điều hướng bảo vệ (Protected Redirection):** Nếu người dùng chưa chọn vai trò hoặc cố tình truy cập vào trang không được phân quyền, hệ thống sẽ tự động điều hướng về trang chủ (`/`) bằng cách sử dụng `<Navigate to={ROUTES.HOME} replace />`.
+

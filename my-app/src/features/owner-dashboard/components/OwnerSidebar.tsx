@@ -21,6 +21,7 @@ interface OwnerSidebarProps {
   activePage: OwnerPage;
   onNavigate: (page: OwnerPage) => void;
   onNewSpaceClick?: () => void;
+  onLogout?: () => void;
 }
 
 interface NavItem {
@@ -48,7 +49,7 @@ const getTranslationKeys = (id: OwnerPage) => {
   }
 };
 
-export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activePage, onNavigate, onNewSpaceClick }) => {
+export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activePage, onNavigate, onNewSpaceClick, onLogout }) => {
   const { t, language, setLanguage, theme, toggleTheme } = useThemeLanguage();
 
   return (
@@ -103,7 +104,19 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activePage, onNaviga
             {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
           </button>
           <div className="sidebar-footer-divider" />
-          <button className="sidebar-action-btn" title={t('sidebar.logout')} onClick={() => window.location.reload()}>
+          <button 
+            className="sidebar-action-btn" 
+            title={t('sidebar.logout')} 
+            onClick={() => {
+              if (onLogout) {
+                onLogout();
+              } else {
+                localStorage.removeItem('portal_role');
+                localStorage.removeItem('portal_token');
+                window.location.reload();
+              }
+            }}
+          >
             <LogOut size={14} />
           </button>
         </div>

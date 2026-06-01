@@ -81,3 +81,12 @@ Sử dụng một font chữ Sans-serif hiện đại, hình học (Geometric) n
 * **List Items (Trong Market Sentiment):** Đổi màu nền từ tối sang sáng hơn một chút (ví dụ `rgba(255, 255, 255, 0.05)`) và con trỏ biến thành `cursor: pointer`.
 * **Menu Items (Sidebar):** Item đang active có background dập chìm `rgba(0, 0, 0, 0.2)`. Khi hover vào các item khác, text và icon chuyển từ Secondary color sang Primary color (`#FFFFFF`).
 * **Primary Button:** Tăng độ sáng (brightness) của background hoặc thêm shadow cùng màu viền: `box-shadow: 0 0 15px rgba(74, 114, 255, 0.4)`.
+
+## 6. Quy định không sử dụng biểu tượng hình ảnh (No Icons/Emojis Guideline)
+
+* **Tuyệt đối không dùng Icon/Emoji:** Không được sử dụng bất kỳ biểu tượng đồ họa (như Lucide Icons, FontAwesome, SVG icons) hay biểu tượng cảm xúc (Emojis như 👗, 🎨, 💻) để trang trí trong giao diện thiết kế.
+* **Thay thế bằng Typography (Thiết kế chữ):**
+  - **Ký tự viết tắt:** Thay thế các icon/emoji mô tả mặt bằng bằng các khối chữ viết tắt thiết kế tinh gọn (ví dụ: `FS` cho Fashion, `CF` cho Cafe, `AR` cho Art, `TC` cho Tech) đặt trong một hộp màu sắc đồng nhất.
+  - **Trạng thái chữ:** Thay thế các icon trạng thái bằng chữ bọc trong dấu ngoặc vuông (ví dụ: `[TRỐNG]`, `[ĐÃ ĐẶT]`, `[XUNG ĐỘT]` hoặc `[Available]`, `[Booked]`, `[Conflict]`).
+  - **Nút điều hướng & Toggles:** Toggles ngôn ngữ/giao diện sử dụng thuần chữ (ví dụ: nút hiển thị `EN` | `VI` thay vì biểu tượng quả địa cầu, hoặc `LIGHT` | `DARK` thay vì biểu tượng Mặt trời/Mặt trăng).
+

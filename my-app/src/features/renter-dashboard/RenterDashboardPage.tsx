@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { gsap } from 'gsap';
 import { Header } from '../../components/Header';
 import { RenterSidebar } from './components/RenterSidebar';
 import type { RenterPage, SubSlot } from './types';
@@ -25,11 +27,42 @@ const initialMockSlots: SubSlot[] = [
   { id: 's12', date: '2025-06-05', startTime: '08:00', endTime: '20:00', tenantName: 'Bùi Văn I', tenantInitials: 'BI', status: 'booked', price: '1.100.000₫', spaceId: 'space-quangtrung' },
 ];
 
-export const RenterDashboardPage: React.FC = () => {
-  const [activePage, setActivePage] = useState<RenterPage>('overview');
+interface RenterDashboardPageProps {
+  onLogout: () => void;
+}
+
+export const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onLogout }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isNewSlotFormOpen, setIsNewSlotFormOpen] = useState(false);
   const [slots, setSlots] = useState<SubSlot[]>(initialMockSlots);
   const { t } = useThemeLanguage();
+
+  // Extract activePage from the router pathname, e.g. /renter/calendar -> calendar
+  const pathParts = location.pathname.split('/');
+  const activePage = (pathParts[2] || 'overview') as RenterPage;
+
+  useEffect(() => {
+    const tl = gsap.timeline({ defaults: { ease: 'power4.out', duration: 0.8 } });
+
+    tl.fromTo(
+      '.dashboard-header',
+      { y: -72, opacity: 0 },
+      { y: 0, opacity: 1 }
+    );
+    tl.fromTo(
+      '.renter-sidebar',
+      { x: -250, opacity: 0 },
+      { x: 0, opacity: 1 },
+      '-=0.6'
+    );
+    tl.fromTo(
+      '.main-content',
+      { y: 40, opacity: 0 },
+      { y: 0, opacity: 1 },
+      '-=0.6'
+    );
+  }, []);
 
   const handleCreateSlot = (newSlot: SubSlot) => {
     setSlots(prev => [...prev, newSlot]);
@@ -42,7 +75,7 @@ export const RenterDashboardPage: React.FC = () => {
   const handleNewSlotSubmit = (data: any) => {
     handleCreateSlot(data);
     setIsNewSlotFormOpen(false);
-    setActivePage('calendar'); // Chuyển đến lịch để xem
+    navigate('/renter/calendar');
   };
 
   const renderContent = () => {
@@ -97,8 +130,9 @@ export const RenterDashboardPage: React.FC = () => {
       <div className="app-body">
         <RenterSidebar 
           activePage={activePage} 
-          onNavigate={setActivePage} 
+          onNavigate={(page) => navigate(`/renter/${page}`)} 
           onNewSlotClick={() => setIsNewSlotFormOpen(true)}
+          onLogout={onLogout}
         />
         <main className="main-content">
           {renderContent()}

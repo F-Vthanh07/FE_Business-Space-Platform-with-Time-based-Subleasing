@@ -20,6 +20,7 @@ interface RenterSidebarProps {
   activePage: RenterPage;
   onNavigate: (page: RenterPage) => void;
   onNewSlotClick?: () => void;
+  onLogout?: () => void;
 }
 
 interface NavItem {
@@ -36,7 +37,7 @@ const navItems: NavItem[] = [
   { id: 'settings', icon: <Settings size={15} /> },
 ];
 
-export const RenterSidebar: React.FC<RenterSidebarProps> = ({ activePage, onNavigate, onNewSlotClick }) => {
+export const RenterSidebar: React.FC<RenterSidebarProps> = ({ activePage, onNavigate, onNewSlotClick, onLogout }) => {
   const { t, language, setLanguage, theme, toggleTheme } = useThemeLanguage();
 
   const getNavLabel = (id: RenterPage) => {
@@ -111,7 +112,19 @@ export const RenterSidebar: React.FC<RenterSidebarProps> = ({ activePage, onNavi
             {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
           </button>
           <div className="sidebar-footer-divider" />
-          <button className="sidebar-action-btn" title={t('sidebar.logout')} onClick={() => window.location.reload()}>
+          <button 
+            className="sidebar-action-btn" 
+            title={t('sidebar.logout')} 
+            onClick={() => {
+              if (onLogout) {
+                onLogout();
+              } else {
+                localStorage.removeItem('portal_role');
+                localStorage.removeItem('portal_token');
+                window.location.reload();
+              }
+            }}
+          >
             <LogOut size={14} />
           </button>
         </div>
