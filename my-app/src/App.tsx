@@ -5,12 +5,13 @@ import { OwnerDashboardPage } from './features/owner-dashboard/OwnerDashboardPag
 import { RenterDashboardPage } from './features/renter-dashboard/RenterDashboardPage';
 import { Homepage } from './features/homepage/Homepage';
 import { AuthPage } from './features/auth/AuthPage';
+import ClickSpark from './components/ClickSpark'; 
 import './App.css';
 
 type PortalRole = 'owner' | 'renter';
 
 // Export route paths of each page as requested
-export const ROUTES = {
+ const ROUTES = {
   HOME: '/',
   OWNER: '/owner',
   RENTER: '/renter',
@@ -52,46 +53,60 @@ const App: React.FC = () => {
   };
 
   return (
-    <Routes>
-      {/* Landing Page */}
-      <Route 
-        path={ROUTES.HOME} 
-        element={<Homepage onLaunch={() => navigate(ROUTES.LOGIN)} />} 
-      />
+    <>
+      {/* HIỆU ỨNG CLICK TOÀN MÀN HÌNH */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'none' }}>
+        <ClickSpark
+          sparkColor="#00D4A0" /* Xanh neon đồng bộ với hệ thống */
+          sparkSize={10}
+          sparkRadius={15}
+          sparkCount={8}
+          duration={400}
+          extraScale={1}
+        />
+      </div>
 
-      {/* Login / Register Page */}
-      <Route 
-        path={ROUTES.LOGIN} 
-        element={<AuthPage onLoginSuccess={(selectedRole) => setRole(selectedRole)} />} 
-      />
+      <Routes>
+        {/* Landing Page */}
+        <Route 
+          path={ROUTES.HOME} 
+          element={<Homepage onLaunch={() => navigate(ROUTES.LOGIN)} />} 
+        />
 
-      {/* Space Owner Dashboard - Protected */}
-      <Route 
-        path="/owner/*" 
-        element={
-          <ProtectedRoute allowedRoles={['owner']} currentRole={role}>
-            <MeshBackground>
-              <OwnerDashboardPage onLogout={handleLogout} />
-            </MeshBackground>
-          </ProtectedRoute>
-        } 
-      />
+        {/* Login / Register Page */}
+        <Route 
+          path={ROUTES.LOGIN} 
+          element={<AuthPage onLoginSuccess={(selectedRole) => setRole(selectedRole)} />} 
+        />
 
-      {/* Primary Tenant Dashboard - Protected */}
-      <Route 
-        path="/renter/*" 
-        element={
-          <ProtectedRoute allowedRoles={['renter']} currentRole={role}>
-            <MeshBackground>
-              <RenterDashboardPage onLogout={handleLogout} />
-            </MeshBackground>
-          </ProtectedRoute>
-        } 
-      />
+        {/* Space Owner Dashboard - Protected */}
+        <Route 
+          path="/owner/*" 
+          element={
+            <ProtectedRoute allowedRoles={['owner']} currentRole={role}>
+              <MeshBackground>
+                <OwnerDashboardPage onLogout={handleLogout} />
+              </MeshBackground>
+            </ProtectedRoute>
+          } 
+        />
 
-      {/* Fallback Catch All */}
-      <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
-    </Routes>
+        {/* Primary Tenant Dashboard - Protected */}
+        <Route 
+          path="/renter/*" 
+          element={
+            <ProtectedRoute allowedRoles={['renter']} currentRole={role}>
+              <MeshBackground>
+                <RenterDashboardPage onLogout={handleLogout} />
+              </MeshBackground>
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Fallback Catch All */}
+        <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+      </Routes>
+    </>
   );
 };
 
