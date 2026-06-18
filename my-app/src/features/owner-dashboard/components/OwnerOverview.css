@@ -275,14 +275,14 @@
   width: 100%;
   max-width: 16px;
   border-radius: var(--radius-full);
-  background: linear-gradient(180deg, #3b63da, rgba(59, 99, 218, 0.15));
-  box-shadow: 0 0 10px rgba(59, 99, 218, 0.2);
+  background: linear-gradient(180deg, #00D4A0, rgba(0, 212, 160, 0.15));
+  box-shadow: 0 0 10px rgba(0, 212, 160, 0.2);
   transition: height 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .chart-bar-container:hover .chart-bar {
-  background: linear-gradient(180deg, #5c81ff, rgba(92, 129, 255, 0.3));
-  box-shadow: 0 0 15px rgba(92, 129, 255, 0.4);
+  background: linear-gradient(180deg, #00FFC0, rgba(0, 255, 192, 0.3));
+  box-shadow: 0 0 15px rgba(0, 255, 192, 0.4);
 }
 
 /* ==============================
@@ -359,7 +359,7 @@
   margin-left: 0;
 }
 
-.avatar-1 { background: #3b63da; }
+.avatar-1 { background: #00D4A0; color: #0D1117; }
 .avatar-2 { background: #4b8f8c; }
 .avatar-3 { background: #d9a05b; }
 
@@ -393,8 +393,8 @@
 .insights-wave-bg {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 100% 100%, rgba(75, 143, 140, 0.1) 0%, transparent 60%),
-              radial-gradient(circle at 0% 0%, rgba(59, 99, 218, 0.05) 0%, transparent 50%);
+  background: radial-gradient(circle at 100% 100%, rgba(0, 212, 160, 0.1) 0%, transparent 60%),
+              radial-gradient(circle at 0% 0%, rgba(0, 212, 160, 0.05) 0%, transparent 50%);
   opacity: 0.8;
   pointer-events: none;
   z-index: 1;
@@ -457,31 +457,32 @@
 .upgrade-card {
   padding: 24px;
   border-radius: var(--radius-2xl);
-  background: linear-gradient(135deg, rgba(56, 64, 104, 0.4), rgba(22, 26, 48, 0.5));
+  background: linear-gradient(135deg, rgba(0, 212, 160, 0.05), rgba(13, 17, 23, 0.8));
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  border-color: rgba(74, 114, 255, 0.15);
+  border: 1px solid rgba(0, 212, 160, 0.15);
+  transition: all 0.2s ease;
 }
 
 .upgrade-card:hover {
-  border-color: rgba(74, 114, 255, 0.25);
-  box-shadow: 0 16px 40px rgba(74, 114, 255, 0.08);
+  border-color: rgba(0, 212, 160, 0.3);
+  box-shadow: 0 16px 40px rgba(0, 212, 160, 0.08);
 }
 
 .upgrade-icon-wrap {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(74, 114, 255, 0.15);
+  background: rgba(0, 212, 160, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: #00D4A0;
   margin-bottom: 12px;
-  box-shadow: 0 0 15px rgba(74, 114, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 212, 160, 0.3);
 }
 
 .star-glow {
