@@ -3,20 +3,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
+import { MapComponent } from './components/MapComponent';
 
 // Components dùng chung
 import { Header } from '../../components/Header';
 import { Footer } from '../../components/Footer';
-import { TopAgentsWidget } from './components/TopAgentsWidget'; // Import ở trên cùng
 import { SidebarNav } from '../../components/SidebarNav';
 
-// 3 Component vừa chia nhỏ (Nhớ trỏ đúng đường dẫn thư mục components nhé)
+// 3 Component vừa chia nhỏ
 import { HomeSearchBar } from './components/HomeSearchBar';
 import { HomeListings } from './components/HomeListings';
 import { ScheduleSidebar } from './components/ScheduleSidebar';
 
-// Data cũ của ông (nhớ giữ lại file demoDb chứa pricingTiers)
-import { pricingTiers } from './demoDb'; 
+// Data cũ (nhớ giữ lại file demoDb chứa pricingTiers)
+import { pricingTiers } from './demoDb';
 
 import './Homepage.css';
 
@@ -28,24 +28,39 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
   const { language, t } = useThemeLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // State bật/tắt Map
+  const [isMapMode, setIsMapMode] = useState(false);
+
   // State cho phần Listing
   const [selectedVenueId, setSelectedVenueId] = useState<string>('FS1');
 
   // State cho phần How it works
   const [activeRoleTab, setActiveRoleTab] = useState<'owner' | 'renter'>('owner');
 
-  // GSAP Animations (Trượt từ trên xuống)
+  // GSAP Animations — chạy lần đầu load trang
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Timeline cho khu vực Header, Search, Listings
     const tl = gsap.timeline();
-    tl.fromTo('.home-search-section', { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
-    tl.fromTo('.category-tabs-wrapper', { opacity: 0 }, { opacity: 1, duration: 0.3 }, '-=0.2');
-    tl.fromTo('.gsap-listing-card', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, stagger: 0.1, ease: 'back.out(1.2)' }, '-=0.1');
-    tl.fromTo('.detail-sidebar', { x: 30, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, '-=0.5');
+    tl.fromTo(
+      '.home-search-wrapper',
+      { y: -20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }
+    );
+    tl.fromTo(
+      '.gsap-listing-card',
+      { y: 40, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.6, stagger: 0.1, ease: 'back.out(1.2)' },
+      '-=0.2'
+    );
+    tl.fromTo(
+      '.right-sidebar-column',
+      { x: 30, opacity: 0 },
+      { x: 0, opacity: 1, duration: 0.6, ease: 'power3.out' },
+      '-=0.5'
+    );
 
-    // Scroll Reveal cho các sections bên dưới (Tính năng, Quy trình, Bảng giá)
+    // Scroll Reveal cho các sections bên dưới
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -65,6 +80,23 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
     };
   }, []);
 
+  // GSAP Animation khi toggle Map/List
+  useEffect(() => {
+    if (isMapMode) {
+      gsap.fromTo(
+        '.map-view-container',
+        { x: 50, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }
+      );
+    } else {
+      gsap.fromTo(
+        '.right-sidebar-content',
+        { opacity: 0, scale: 0.98 },
+        { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' }
+      );
+    }
+  }, [isMapMode]);
+
   const currentPricing = pricingTiers[language] || pricingTiers['en'];
 
   return (
@@ -73,27 +105,42 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
       <Header onPostListing={onLaunch} />
 
       {/* =========================================
-          KHU VỰC TÌM KIẾM & DANH SÁCH (ĐÃ CHIA COMPONENT)
+          KHU VỰC TÌM KIẾM & DANH SÁCH
           ========================================= */}
       <div id="search-nav">
-        <HomeSearchBar />
-        <div className="listings-layout">
+        <HomeSearchBar
+          isMapMode={isMapMode}
+          onToggleMap={() => setIsMapMode((prev) => !prev)}
+        />
+
+        {/* GRID LAYOUT CHIA ĐÔI MÀN HÌNH */}
+        <div className={`listings-layout ${isMapMode ? 'map-active' : ''}`}>
+
+          {/* CỘT TRÁI: Danh sách listing (thu lại khi bật map) */}
           <HomeListings
             selectedId={selectedVenueId}
             onCardClick={(id) => setSelectedVenueId(id)}
           />
-          <div className="right-sidebar-column" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <ScheduleSidebar />
-            <TopAgentsWidget /> {/* Bảng Môi giới đặt dưới Lịch trình */}
+
+          {/* CỘT PHẢI: Sidebar hoặc Bản đồ */}
+          <div className="right-sidebar-column">
+            {isMapMode ? (
+              <div className="map-view-container">
+                <MapComponent />
+              </div>
+            ) : (
+              <div className="right-sidebar-content">
+                <ScheduleSidebar />
+              </div>
+            )}
           </div>
+
         </div>
       </div>
 
       {/* =========================================
-          TRẢ LẠI 3 SECTIONS CŨ CHO ÔNG ĐÂY!
+          SECTION 1: FEATURES
           ========================================= */}
-
-      {/* SECTION 1: FEATURES */}
       <section id="features" className="features-section reveal-on-scroll">
         <span className="section-tag">{t('home.navFeatures')}</span>
         <h2 className="section-title">{t('home.featTitle')}</h2>
@@ -127,8 +174,12 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
               </div>
               <div className="terminal-body">
                 <span>$ etherspace-ai check --schedule</span>
-                <span style={{ color: 'var(--color-text-secondary)' }}>&gt; MATCHING CONFLICT CODES...</span>
-                <span style={{ color: 'var(--color-positive)' }}>&gt; [OK] NO SHIFT INTERSECTION DETECTED</span>
+                <span style={{ color: 'var(--color-text-secondary)' }}>
+                  &gt; MATCHING CONFLICT CODES...
+                </span>
+                <span style={{ color: 'var(--color-positive)' }}>
+                  &gt; [OK] NO SHIFT INTERSECTION DETECTED
+                </span>
               </div>
             </div>
           </div>
@@ -148,14 +199,20 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
               <p className="feature-card-desc">{t('home.feat4Desc')}</p>
             </div>
             <div className="feature-bento-roles">
-              <span className="bento-role-badge">[SO] {t('app.ownerTitle')?.toUpperCase()}</span>
-              <span className="bento-role-badge">[PT] {t('app.renterTitle')?.toUpperCase()}</span>
+              <span className="bento-role-badge">
+                [SO] {t('app.ownerTitle')?.toUpperCase()}
+              </span>
+              <span className="bento-role-badge">
+                [PT] {t('app.renterTitle')?.toUpperCase()}
+              </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SECTION 2: HOW IT WORKS */}
+      {/* =========================================
+          SECTION 2: HOW IT WORKS
+          ========================================= */}
       <section id="how-it-works" className="how-it-works-section reveal-on-scroll">
         <h2 className="section-title">{t('home.howTitle')}</h2>
 
@@ -228,25 +285,38 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
         </div>
       </section>
 
-      {/* SECTION 3: PRICING */}
+      {/* =========================================
+          SECTION 3: PRICING
+          ========================================= */}
       <section id="pricing" className="pricing-section reveal-on-scroll">
         <h2 className="section-title">
-          {language === 'en' ? 'Transparent Subscription Plans' : 'Bảng Giá Dịch Vụ Minh Bạch'}
+          {language === 'en'
+            ? 'Transparent Subscription Plans'
+            : 'Bảng Giá Dịch Vụ Minh Bạch'}
         </h2>
         <p className="section-subtitle">
-          {language === 'en' ? 'Select a suitable tier to scale your retail locations.' : 'Lựa chọn gói dịch vụ phù hợp để tối ưu hóa địa điểm bán lẻ của bạn.'}
+          {language === 'en'
+            ? 'Select a suitable tier to scale your retail locations.'
+            : 'Lựa chọn gói dịch vụ phù hợp để tối ưu hóa địa điểm bán lẻ của bạn.'}
         </p>
 
         <div className="pricing-grid">
           {currentPricing?.map((tier: any, idx: number) => (
-            <div key={idx} className={`pricing-card ${tier.popular ? 'pricing-card--popular' : ''}`}>
+            <div
+              key={idx}
+              className={`pricing-card ${tier.popular ? 'pricing-card--popular' : ''}`}
+            >
               <div>
                 <h3 className="pricing-card-title">{tier.name}</h3>
-                <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 8 }}>{tier.desc}</p>
+                <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 8 }}>
+                  {tier.desc}
+                </p>
               </div>
               <div>
                 <span className="pricing-card-price">{tier.price}</span>
-                {tier.period && <span className="pricing-price-period"> {tier.period}</span>}
+                {tier.period && (
+                  <span className="pricing-price-period"> {tier.period}</span>
+                )}
               </div>
               <ul className="pricing-features-list">
                 {tier.features.map((feat: string, fidx: number) => (
@@ -257,7 +327,9 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
                 ))}
               </ul>
               <button
-                className={`pricing-btn ${tier.popular ? 'pricing-btn-primary' : 'pricing-btn-secondary'}`}
+                className={`pricing-btn ${
+                  tier.popular ? 'pricing-btn-primary' : 'pricing-btn-secondary'
+                }`}
                 onClick={onLaunch}
               >
                 {tier.btn}
