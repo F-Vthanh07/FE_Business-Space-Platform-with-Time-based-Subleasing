@@ -1,0 +1,38 @@
+.mesh-container {
+  position: relative;
+  min-height: 100vh;
+  background-color: transparent;
+  overflow: hidden;
+}
+
+/* Các cục phát sáng mờ ảo phía sau */
+.mesh-bg, .mesh-bg-accent {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.4;
+  pointer-events: none; /* Tránh cản trở click chuột */
+  z-index: 0;
+}
+
+.mesh-bg {
+  top: -10%; 
+  left: 10%;
+  width: 50vw; 
+  height: 50vw;
+  background: radial-gradient(circle, rgba(0, 212, 160, 0.15) 0%, transparent 70%); /* Xanh Neon */
+}
+
+.mesh-bg-accent {
+  bottom: -10%; 
+  right: 10%;
+  width: 45vw; 
+  height: 45vw;
+  background: radial-gradient(circle, rgba(74, 114, 255, 0.1) 0%, transparent 70%); /* Xanh dương nhẹ */
+}
+
+/* Đảm bảo nội dung luôn nằm trên lớp phát sáng */
+.mesh-content {
+  position: relative;
+  z-index: 1;
+}

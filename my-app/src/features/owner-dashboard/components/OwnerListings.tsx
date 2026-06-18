@@ -1,17 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { gsap } from 'gsap';
 import {
-  Plus,
-  Search,
-  Eye,
-  Edit3,
-  Trash2,
-  MoreHorizontal,
-  Building2,
-  MapPin,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Star,
+  Plus, Search, Eye, Edit3, Trash2, MoreHorizontal,
+  Building2, MapPin, Clock, CheckCircle2, XCircle, Star,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import './OwnerListings.css';
@@ -53,44 +44,59 @@ export const OwnerListings: React.FC = () => {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const { t, language } = useThemeLanguage();
+  
+  // Ref cho GSAP
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const getStatusLabel = (status: Listing['status']) => {
     switch (status) {
-      case 'published': return t('listings.published');
-      case 'pending': return t('listings.pending');
-      case 'draft': return t('listings.draft');
-      case 'expired': return t('listings.expired');
+      case 'published': return t('listings.published') || 'Đang đăng';
+      case 'pending': return t('listings.pending') || 'Chờ duyệt';
+      case 'draft': return t('listings.draft') || 'Bản nháp';
+      case 'expired': return t('listings.expired') || 'Hết hạn';
     }
   };
 
   const filtered = listings.filter((l) => {
-    const matchSearch = l.name.toLowerCase().includes(search.toLowerCase()) ||
-      l.location.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = l.name.toLowerCase().includes(search.toLowerCase()) || l.location.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || l.status === filterStatus;
     return matchSearch && matchStatus;
   });
 
+  // Hiệu ứng GSAP: Trượt thẻ card khi đổi Filter hoặc Search
+  useEffect(() => {
+    if (containerRef.current) {
+      const cards = containerRef.current.querySelectorAll('.listing-card');
+      if (cards.length > 0) {
+        gsap.fromTo(cards, 
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out' }
+        );
+      }
+    }
+  }, [filtered.length, filterStatus]);
+
   return (
-    <div className="owner-listings animate-in">
+    <div className="owner-listings animate-in" ref={containerRef}>
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t('listings.rentalListings')}</h1>
-          <p className="page-subtitle text-secondary">{t('listings.listingsSubtitle')}</p>
+          <h1 className="page-title">{t('listings.rentalListings') || 'Danh sách cho thuê'}</h1>
+          <p className="page-subtitle text-secondary">{t('listings.listingsSubtitle') || 'Quản lý các bài đăng hiển thị trên hệ thống'}</p>
         </div>
         <button className="btn-primary">
           <Plus size={16} />
-          {t('listings.createNewListing')}
+          {t('listings.createNewListing') || 'Tạo bài đăng mới'}
         </button>
       </div>
 
       {/* Summary Strip */}
       <div className="listings-summary">
         {[
-          { label: t('listings.totalListings'), value: listings.length, color: '#fff' },
-          { label: t('listings.published'), value: listings.filter(l => l.status === 'published').length, color: 'var(--color-positive)' },
-          { label: t('listings.pending'), value: listings.filter(l => l.status === 'pending').length, color: 'var(--color-gold)' },
-          { label: t('listings.draft'), value: listings.filter(l => l.status === 'draft').length, color: 'var(--color-text-secondary)' },
+          { label: t('listings.totalListings') || 'Tổng số bài', value: listings.length, color: '#fff' },
+          { label: t('listings.published') || 'Đang đăng', value: listings.filter(l => l.status === 'published').length, color: 'var(--color-positive)' },
+          { label: t('listings.pending') || 'Chờ duyệt', value: listings.filter(l => l.status === 'pending').length, color: 'var(--color-gold)' },
+          { label: t('listings.draft') || 'Bản nháp', value: listings.filter(l => l.status === 'draft').length, color: 'var(--color-text-secondary)' },
         ].map((s, i) => (
           <div key={i} className="glass-card listings-summary-item">
             <span className="listings-summary-value" style={{ color: s.color }}>{s.value}</span>
@@ -105,7 +111,7 @@ export const OwnerListings: React.FC = () => {
           <Search size={15} style={{ color: 'var(--color-text-secondary)' }} />
           <input
             type="text"
-            placeholder={t('listings.searchListingPlaceholder')}
+            placeholder={t('listings.searchListingPlaceholder') || 'Tìm kiếm tên, địa điểm...'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="search-input"
@@ -118,7 +124,7 @@ export const OwnerListings: React.FC = () => {
               className={`filter-tab ${filterStatus === f ? 'filter-tab--active' : ''}`}
               onClick={() => setFilterStatus(f)}
             >
-              {f === 'all' ? t('listings.all') : getStatusLabel(f)}
+              {f === 'all' ? (t('listings.all') || 'Tất cả') : getStatusLabel(f)}
             </button>
           ))}
         </div>
@@ -126,9 +132,9 @@ export const OwnerListings: React.FC = () => {
 
       {/* Listings Grid */}
       <div className="listings-grid">
-        {filtered.map((listing, i) => (
-          <div key={listing.id} className={`glass-card listing-card animate-in delay-${Math.min(i + 1, 6)}`}>
-            {/* Card Top */}
+        {filtered.map((listing) => (
+          <div key={listing.id} className="glass-card listing-card">
+            
             <div className="listing-card-top">
               <div className="listing-type-tag">
                 <Building2 size={13} />
@@ -145,16 +151,14 @@ export const OwnerListings: React.FC = () => {
               </div>
             </div>
 
-            {/* Space Visual */}
             <div className="listing-visual">
-              <Building2 size={32} style={{ color: 'rgba(74, 114, 255, 0.5)' }} />
+              <Building2 size={32} style={{ color: 'rgba(0, 212, 160, 0.4)' }} />
               <div className="listing-area-badge">{listing.area}</div>
               {listing.subleasing && (
-                <div className="sublease-badge">{t('listings.subleaseBadge')}</div>
+                <div className="sublease-badge">{t('listings.subleaseBadge') || 'Cho thuê lại'}</div>
               )}
             </div>
 
-            {/* Card Body */}
             <div className="listing-card-body">
               <h3 className="listing-name">{listing.name}</h3>
               <p className="listing-location">
@@ -170,11 +174,11 @@ export const OwnerListings: React.FC = () => {
               <div className="listing-meta">
                 <div className="listing-meta-item">
                   <Eye size={12} className="text-secondary" />
-                  <span>{t('listings.views', { count: listing.views })}</span>
+                  <span>{t('listings.views', { count: listing.views }) || `${listing.views} Lượt xem`}</span>
                 </div>
                 <div className="listing-meta-item">
                   <Building2 size={12} className="text-secondary" />
-                  <span>{t('listings.inquiries', { count: listing.inquiries })}</span>
+                  <span>{t('listings.inquiries', { count: listing.inquiries }) || `${listing.inquiries} Yêu cầu`}</span>
                 </div>
                 {listing.rating > 0 && (
                   <div className="listing-meta-item">
@@ -184,18 +188,17 @@ export const OwnerListings: React.FC = () => {
                 )}
               </div>
 
-              <p className="listing-date text-secondary">{t('listings.postedOn', { date: listing.postedDate })}</p>
+              <p className="listing-date text-secondary">{t('listings.postedOn', { date: listing.postedDate }) || `Đăng ngày ${listing.postedDate}`}</p>
             </div>
 
-            {/* Card Actions */}
             <div className="listing-card-actions">
               <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>
                 <Eye size={14} /> {language === 'en' ? 'View' : 'Xem'}
               </button>
               <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>
-                <Edit3 size={14} /> {t('spaces.edit')}
+                <Edit3 size={14} /> {t('spaces.edit') || 'Sửa'}
               </button>
-              <button className="btn-icon" style={{ color: 'var(--color-negative)' }} title={t('spaces.delete')}>
+              <button className="btn-icon" style={{ color: 'var(--color-negative)' }} title={t('spaces.delete') || 'Xóa'}>
                 <Trash2 size={14} />
               </button>
             </div>
