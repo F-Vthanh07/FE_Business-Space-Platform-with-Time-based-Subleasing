@@ -21,6 +21,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('owner');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Thêm state loading để chặn bấm nhiều lần
   
   // Ref để GSAP nắm được cái khung form
   const formContainerRef = useRef<HTMLDivElement>(null);
@@ -28,7 +29,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
   // 1. Logic GSAP: Trượt qua lại 2 chiều
   const handleTabChange = (targetTab: AuthTab) => {
-    if (activeTab === targetTab) return;
+    if (activeTab === targetTab || isLoading) return;
     
     // Xác định hướng trượt (Login -> Register: -1 trượt trái, Register -> Login: 1 trượt phải)
     const direction = targetTab === 'register' ? -1 : 1;
@@ -58,14 +59,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     });
   };
 
-  // 2. Logic điều hướng chung (Dùng cho cả form và Google)
-  const processLogin = () => {
-    onLoginSuccess(role);
-    // Nhảy vào route tương ứng với role (owner hoặc renter)
-    navigate(role === 'owner' ? '/owner' : '/renter');
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  // 2. Hàm gọi API Login
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -79,14 +74,67 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       return;
     }
 
-    processLogin();
+    // Nếu đang ở màn hình ĐĂNG NHẬP
+    if (activeTab === 'login') {
+      setIsLoading(true);
+      try {
+        const response = await fetch('https://localhost:7069/api/Auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'accept': '*/*'
+          },
+          body: JSON.stringify({
+            email: email,
+            password: password,
+            turnstileToken: "XXXX.DUMMY.TOKEN.XXXX" // Gắn cứng dummy token theo như swagger
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          // Xử lý khi đăng nhập thất bại (sai pass, không tồn tại user...)
+          throw new Error(data.message || (language === 'en' ? 'Login failed. Please check your credentials.' : 'Đăng nhập thất bại. Kiểm tra lại thông tin.'));
+        }
+
+        // ĐĂNG NHẬP THÀNH CÔNG
+        // Lưu token vào localStorage
+        if (data.accessToken) {
+          localStorage.setItem('portal_token', data.accessToken);
+        }
+        
+        // Ép cứng role là 'owner' và lưu lại theo như yêu cầu của bạn
+        localStorage.setItem('portal_role', 'owner');
+        
+        // Báo cho App.tsx biết để cập nhật state
+        onLoginSuccess('owner');
+        
+        // Điều hướng thẳng vào trang Owner
+        navigate('/owner');
+
+      } catch (err: any) {
+        console.error("Login Error:", err);
+        setError(err.message || 'Không thể kết nối đến máy chủ.');
+      } finally {
+        setIsLoading(false);
+      }
+    } 
+    // Nếu ở màn ĐĂNG KÝ (Tạm thời giả lập cho đến khi có API Register)
+    else {
+      localStorage.setItem('portal_role', 'owner');
+      onLoginSuccess('owner');
+      navigate('/owner');
+    }
   };
 
   // 3. Logic khi nhấn nút Google
   const handleGoogleLogin = (e: React.MouseEvent) => {
     e.preventDefault();
     // Simulate việc Google trả về token thành công, cho vô trong luôn
-    processLogin();
+    localStorage.setItem('portal_role', 'owner');
+    onLoginSuccess('owner');
+    navigate('/owner');
   };
 
   const trans = {
@@ -96,7 +144,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     emailPlaceholder: language === 'en' ? 'Enter Email' : 'Nhập địa chỉ Email',
     passPlaceholder: language === 'en' ? 'Enter Password' : 'Nhập Mật khẩu',
     confirmPassPlaceholder: language === 'en' ? 'Confirm Password' : 'Xác nhận Mật khẩu',
-    signIn: language === 'en' ? 'Sign In' : 'Đăng nhập',
+    signIn: language === 'en' ? (isLoading ? 'Signing In...' : 'Sign In') : (isLoading ? 'Đang xử lý...' : 'Đăng nhập'),
     signUp: language === 'en' ? 'Sign Up' : 'Đăng ký',
     orContinue: language === 'en' ? 'Or continue with' : 'Hoặc tiếp tục với',
     noAccount: language === 'en' ? "Don't Have an account ?" : "Chưa có tài khoản ?",
@@ -167,6 +215,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                   placeholder={trans.emailPlaceholder}
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
 
@@ -177,6 +226,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                   placeholder={trans.passPlaceholder}
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
 
@@ -189,6 +239,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                       placeholder={trans.confirmPassPlaceholder}
                       value={confirmPassword} 
                       onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={isLoading}
                     />
                   </div>
                   
@@ -211,7 +262,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
               {error && <div style={{ color: '#f85149', fontSize: '13px', fontWeight: 500, textAlign: 'center' }}>{error}</div>}
 
-              <button type="submit" className="auth-submit-btn">
+              <button type="submit" className="auth-submit-btn" disabled={isLoading}>
                 {activeTab === 'login' ? trans.signIn : trans.signUp}
               </button>
             </form>
