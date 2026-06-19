@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { gsap } from 'gsap';
+// 1. IMPORT TURNSTILE VÀO ĐÂY
+import { Turnstile } from '@marsidev/react-turnstile';
 import './AuthPage.css';
 
 type AuthTab = 'login' | 'register';
@@ -30,6 +32,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   const [showOtpForm, setShowOtpForm] = useState(false);
   const [otpCode, setOtpCode] = useState('');
 
+  // 2. STATE LƯU TOKEN CỦA ROBOT
+  const [turnstileToken, setTurnstileToken] = useState('');
+
   // States hệ thống
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -38,7 +43,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   const formContainerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // 1. Logic GSAP: Trượt qua lại 2 chiều
+  // Logic GSAP: Trượt qua lại
   const handleTabChange = (targetTab: AuthTab) => {
     if (activeTab === targetTab || isLoading) return;
     
@@ -50,12 +55,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       duration: 0.25,
       ease: 'power2.in',
       onComplete: () => {
-        // Reset states khi chuyển tab
         setActiveTab(targetTab);
         setError('');
         setSuccessMsg('');
         setShowOtpForm(false);
         setOtpCode('');
+        setTurnstileToken(''); // Clear token khi chuyển tab
         
         gsap.fromTo(formContainerRef.current, 
           { x: -direction * 40, opacity: 0 }, 
@@ -71,7 +76,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     });
   };
 
-  // 2. Logic điều phối Submit Form (Login, Register, OTP)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -93,12 +97,19 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       return;
     }
 
+    // 3. CHẶN NẾU CHƯA XÁC THỰC ROBOT
+    if (!turnstileToken) {
+      setError(language === 'en' ? 'Please verify you are human.' : 'Vui lòng xác thực bạn không phải là robot.');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch('https://localhost:7069/api/Auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
-        body: JSON.stringify({ email, password, turnstileToken: "XXXX.DUMMY.TOKEN.XXXX" })
+        // Gắn token xịn vào đây thay vì DUMMY
+        body: JSON.stringify({ email, password, turnstileToken: turnstileToken })
       });
 
       const data = await response.json().catch(() => ({}));
@@ -106,14 +117,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       if (!response.ok) throw new Error(data.message || (language === 'en' ? 'Login failed.' : 'Đăng nhập thất bại.'));
 
       if (data.accessToken) localStorage.setItem('portal_token', data.accessToken);
-      localStorage.setItem('portal_role', role); // Lưu tạm role theo mockup
+      localStorage.setItem('portal_role', role); 
       
       onLoginSuccess(role);
       navigate(role === 'owner' ? '/owner' : '/renter');
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("Login Error:", err);
       setError(err.message || 'Không thể kết nối đến máy chủ.');
+      setTurnstileToken(''); // Lỗi thì bắt xác thực lại
     } finally {
       setIsLoading(false);
     }
@@ -130,21 +143,27 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       return;
     }
 
+    // 3. CHẶN NẾU CHƯA XÁC THỰC ROBOT
+    if (!turnstileToken) {
+      setError(language === 'en' ? 'Please verify you are human.' : 'Vui lòng xác thực bạn không phải là robot.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Chuyển ngày sinh sang chuẩn ISO 8601 theo yêu cầu của Swagger
       const dobISO = new Date(dob).toISOString();
 
       const response = await fetch('https://localhost:7069/api/Auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
+        // Gắn token xịn vào đây thay vì DUMMY
         body: JSON.stringify({ 
           email, 
           password, 
           dob: dobISO, 
           phoneNumber, 
           name, 
-          turnstileToken: "XXXX.DUMMY.TOKEN.XXXX" 
+          turnstileToken: turnstileToken 
         })
       });
 
@@ -152,13 +171,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
       if (!response.ok) throw new Error(data.message || (language === 'en' ? 'Registration failed.' : 'Đăng ký thất bại.'));
 
-      // Đăng ký thành công -> Bật form OTP
       setShowOtpForm(true);
       setSuccessMsg(language === 'en' ? 'Success! Please check your email for OTP.' : 'Thành công! Vui lòng kiểm tra email để nhận mã OTP.');
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("Register Error:", err);
       setError(err.message || 'Không thể kết nối đến máy chủ.');
+      setTurnstileToken(''); // Lỗi thì bắt xác thực lại
     } finally {
       setIsLoading(false);
     }
@@ -183,12 +203,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
       if (!response.ok) throw new Error(data.message || (language === 'en' ? 'Invalid OTP.' : 'Xác thực OTP thất bại.'));
 
-      // Xác thực thành công -> Quay về form Login
       setSuccessMsg(language === 'en' ? 'Account verified! You can now log in.' : 'Tài khoản đã xác thực! Bạn có thể đăng nhập.');
       setShowOtpForm(false);
       setActiveTab('login');
-      setPassword(''); // Xóa mật khẩu cho bảo mật
+      setPassword(''); 
       
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("Verify OTP Error:", err);
       setError(err.message || 'Lỗi xác thực.');
@@ -204,7 +224,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     navigate('/owner');
   };
 
-  // Dịch thuật
   const trans = {
     hello: language === 'en' ? 'Hello !' : 'Xin chào !',
     welcomeBack: language === 'en' ? 'Welcome Back' : 'Chào mừng trở lại',
@@ -279,12 +298,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
               )}
             </div>
 
-            {/* Hiển thị thông báo thành công nếu có */}
             {successMsg && <div style={{ color: '#00D4A0', fontSize: '13px', fontWeight: 600, textAlign: 'center', marginBottom: '16px' }}>{successMsg}</div>}
 
             <form className="auth-form" onSubmit={handleSubmit}>
               
-              {/* === MÀN HÌNH NHẬP OTP === */}
               {showOtpForm ? (
                 <>
                   <div className="auth-input-wrapper">
@@ -299,65 +316,52 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                   </div>
                 </>
               ) : (
-                /* === MÀN HÌNH LOGIN / REGISTER === */
                 <>
                   {activeTab === 'register' && (
                     <>
                       <div className="auth-input-wrapper">
-                        <input 
-                          type="text" className="auth-input" placeholder={trans.namePlaceholder}
-                          value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading}
-                        />
+                        <input type="text" className="auth-input" placeholder={trans.namePlaceholder} value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} />
                       </div>
                       <div className="auth-input-wrapper">
-                        <input 
-                          type="tel" className="auth-input" placeholder={trans.phonePlaceholder}
-                          value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} disabled={isLoading}
-                        />
+                        <input type="tel" className="auth-input" placeholder={trans.phonePlaceholder} value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} disabled={isLoading} />
                       </div>
                       <div className="auth-input-wrapper">
-                        {/* Native Date Picker cho đơn giản và chuẩn ISO */}
-                        <input 
-                          type="date" className="auth-input"
-                          value={dob} onChange={(e) => setDob(e.target.value)} disabled={isLoading}
-                        />
+                        <input type="date" className="auth-input" value={dob} onChange={(e) => setDob(e.target.value)} disabled={isLoading} />
                       </div>
                     </>
                   )}
 
                   <div className="auth-input-wrapper">
-                    <input 
-                      type="email" className="auth-input" placeholder={trans.emailPlaceholder}
-                      value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading}
-                    />
+                    <input type="email" className="auth-input" placeholder={trans.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
                   </div>
 
                   <div className="auth-input-wrapper">
-                    <input 
-                      type="password" className="auth-input" placeholder={trans.passPlaceholder}
-                      value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading}
-                    />
+                    <input type="password" className="auth-input" placeholder={trans.passPlaceholder} value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} />
                   </div>
 
                   {activeTab === 'register' && (
                     <>
                       <div className="auth-input-wrapper">
-                        <input 
-                          type="password" className="auth-input" placeholder={trans.confirmPassPlaceholder}
-                          value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading}
-                        />
+                        <input type="password" className="auth-input" placeholder={trans.confirmPassPlaceholder} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} />
                       </div>
                       
                       <div className="auth-role-badges">
-                        <div className={`auth-role-badge ${role === 'owner' ? 'active' : ''}`} onClick={() => setRole('owner')}>
-                          {trans.ownerLabel}
-                        </div>
-                        <div className={`auth-role-badge ${role === 'renter' ? 'active' : ''}`} onClick={() => setRole('renter')}>
-                          {trans.renterLabel}
-                        </div>
+                        <div className={`auth-role-badge ${role === 'owner' ? 'active' : ''}`} onClick={() => setRole('owner')}>{trans.ownerLabel}</div>
+                        <div className={`auth-role-badge ${role === 'renter' ? 'active' : ''}`} onClick={() => setRole('renter')}>{trans.renterLabel}</div>
                       </div>
                     </>
                   )}
+
+                  {/* 4. CHÈN WIDGET TURNSTILE VÀO FORM */}
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
+                    <Turnstile
+                      siteKey="0x4AAAAAADnUZrc9Wc0pQQjU"
+                      onSuccess={(token) => setTurnstileToken(token)}
+                      options={{
+                        theme: 'light', // có thể đổi thành 'dark' nếu form tối
+                      }}
+                    />
+                  </div>
                 </>
               )}
 
@@ -368,11 +372,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
               </button>
             </form>
 
-            {/* Chỉ hiện dòng Login Social nếu chưa vào màn hình OTP */}
             {!showOtpForm && (
               <>
                 <div className="auth-divider">{trans.orContinue}</div>
-
+                {/* ... Các nút Social giữ nguyên ... */}
                 <div className="auth-social-group">
                   <button className="auth-social-btn" type="button" onClick={handleGoogleLogin}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

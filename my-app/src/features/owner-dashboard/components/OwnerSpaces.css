@@ -74,6 +74,9 @@
   flex-direction: column;
   gap: 16px;
   border-color: rgba(255, 255, 255, 0.05);
+  transform: translateZ(0); /* Ép bật GPU Acceleration */
+  backface-visibility: hidden; /* Chống nháy hình, chống vỡ viền */
+  will-change: transform, opacity;
 }
 
 .space-card:hover {
@@ -118,9 +121,8 @@
   position: absolute;
   bottom: 10px;
   right: 10px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
   border: 1px solid var(--color-border);
-  backdrop-filter: blur(8px);
   padding: 4px 8px;
   border-radius: var(--radius-sm);
   display: flex;

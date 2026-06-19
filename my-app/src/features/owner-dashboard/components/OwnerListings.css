@@ -106,6 +106,9 @@
   overflow: hidden;
   padding: 0;
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transform: translateZ(0); /* Ép bật GPU Acceleration */
+  backface-visibility: hidden; /* Chống nháy hình, chống vỡ viền */
+  will-change: transform, opacity;
 }
 
 .listing-card:hover {
@@ -145,8 +148,7 @@
   position: absolute;
   bottom: 10px;
   left: 12px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.7);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 3px 10px;

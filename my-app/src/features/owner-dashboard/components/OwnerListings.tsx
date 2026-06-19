@@ -5,76 +5,121 @@ import {
   Building2, MapPin, Clock, CheckCircle2, XCircle, Star,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import { ListingForm } from './ListingForm';
 import './OwnerListings.css';
 
-interface Listing {
-  id: number;
-  name: string;
-  location: string;
-  price: string;
-  period: string;
-  area: string;
-  type: string;
-  status: 'published' | 'pending' | 'draft' | 'expired';
-  views: number;
-  inquiries: number;
-  rating: number;
-  subleasing: boolean;
-  postedDate: string;
-}
-
-const listings: Listing[] = [
-  { id: 1, name: 'Mặt bằng kinh doanh Lê Lợi', location: 'Quận 1, TP.HCM', price: '12.500.000₫', period: '/tháng', area: '45 m²', type: 'Cửa hàng bán lẻ', status: 'published', views: 342, inquiries: 18, rating: 4.8, subleasing: true, postedDate: '15/03/2025' },
-  { id: 2, name: 'Shop Mini Phan Đình Phùng', location: 'Bình Thạnh, TP.HCM', price: '8.200.000₫', period: '/tháng', area: '30 m²', type: 'Quán cà phê', status: 'published', views: 215, inquiries: 11, rating: 4.5, subleasing: false, postedDate: '01/01/2025' },
-  { id: 3, name: 'Kiosk Quang Trung', location: 'Gò Vấp, TP.HCM', price: '3.800.000₫', period: '/tháng', area: '18 m²', type: 'Ki-ốt', status: 'pending', views: 89, inquiries: 3, rating: 0, subleasing: true, postedDate: '20/05/2025' },
-  { id: 4, name: 'Không gian kinh doanh Nguyễn Trãi', location: 'Quận 5, TP.HCM', price: '15.000.000₫', period: '/tháng', area: '60 m²', type: 'Cửa hàng bán lẻ', status: 'draft', views: 0, inquiries: 0, rating: 0, subleasing: true, postedDate: '25/05/2025' },
-  { id: 5, name: 'Mặt bằng Đinh Tiên Hoàng', location: 'Bình Thạnh, TP.HCM', price: '6.500.000₫', period: '/tháng', area: '25 m²', type: 'Văn phòng nhỏ', status: 'expired', views: 178, inquiries: 9, rating: 4.2, subleasing: false, postedDate: '10/01/2025' },
-];
-
-const statusConfig = {
+const statusConfig: Record<string, { className: string, icon: React.ReactNode }> = {
   published: { className: 'badge--positive', icon: <CheckCircle2 size={11} /> },
   pending: { className: 'badge--warning', icon: <Clock size={11} /> },
   draft: { className: 'badge--neutral', icon: <Edit3 size={11} /> },
   expired: { className: 'badge--negative', icon: <XCircle size={11} /> },
 };
 
-type FilterStatus = 'all' | Listing['status'];
-
 export const OwnerListings: React.FC = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [listings, setListings] = useState<any[]>([]); // Data lấy từ API
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // States quản lý Form
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [editingListing, setEditingListing] = useState<any | null>(null);
+
   const { t, language } = useThemeLanguage();
-  
-  // Ref cho GSAP
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const getStatusLabel = (status: Listing['status']) => {
+  const getStatusLabel = (status: string) => {
     switch (status) {
       case 'published': return t('listings.published') || 'Đang đăng';
       case 'pending': return t('listings.pending') || 'Chờ duyệt';
       case 'draft': return t('listings.draft') || 'Bản nháp';
       case 'expired': return t('listings.expired') || 'Hết hạn';
+      default: return 'Không rõ';
     }
   };
 
+  // --- API GET ALL LISTINGS ---
+  const fetchListings = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('portal_token');
+      const res = await fetch('https://localhost:7069/api/Listing/GetAll', {
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setListings(data);
+      }
+    } catch (err) {
+      console.error("Lỗi lấy danh sách bài đăng:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchListings();
+  }, []);
+
   const filtered = listings.filter((l) => {
-    const matchSearch = l.name.toLowerCase().includes(search.toLowerCase()) || l.location.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = l.name?.toLowerCase().includes(search.toLowerCase()) || l.location?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || l.status === filterStatus;
     return matchSearch && matchStatus;
   });
 
-  // Hiệu ứng GSAP: Trượt thẻ card khi đổi Filter hoặc Search
+  // Hiệu ứng GSAP mượt mà
   useEffect(() => {
-    if (containerRef.current) {
-      const cards = containerRef.current.querySelectorAll('.listing-card');
+    const  ctx = gsap.context(() => {
+      const cards = gsap.utils.toArray('.listing-card');
       if (cards.length > 0) {
         gsap.fromTo(cards, 
           { opacity: 0, y: 20 },
           { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out' }
         );
       }
-    }
+    }, containerRef);
+    return () => ctx.revert();
   }, [filtered.length, filterStatus]);
+
+  // --- HÀM XỬ LÝ SỰ KIỆN ---
+  const handleOpenNew = () => {
+    setEditingListing(null);
+    setIsFormOpen(true);
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleOpenEdit = (listing: any) => {
+    setEditingListing(listing);
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa bài đăng này?')) {
+      try {
+        const token = localStorage.getItem('portal_token');
+        const res = await fetch(`https://localhost:7069/api/Listing/Delete/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+        });
+        if (res.ok) {
+          setListings(prev => prev.filter(l => l.id !== id));
+        } else {
+          alert('Không thể xóa bài đăng. Vui lòng thử lại sau.');
+        }
+      } catch (err) {
+        console.error("Lỗi khi xóa bài đăng:", err);
+        alert("Lỗi kết nối máy chủ.");
+      }
+    }
+  };
+
+  const handleFormSuccess = () => {
+    setIsFormOpen(false);
+    fetchListings(); // Load lại data từ DB sau khi thêm/sửa thành công
+  };
 
   return (
     <div className="owner-listings animate-in" ref={containerRef}>
@@ -84,7 +129,7 @@ export const OwnerListings: React.FC = () => {
           <h1 className="page-title">{t('listings.rentalListings') || 'Danh sách cho thuê'}</h1>
           <p className="page-subtitle text-secondary">{t('listings.listingsSubtitle') || 'Quản lý các bài đăng hiển thị trên hệ thống'}</p>
         </div>
-        <button className="btn-primary">
+        <button className="btn-primary" onClick={handleOpenNew}>
           <Plus size={16} />
           {t('listings.createNewListing') || 'Tạo bài đăng mới'}
         </button>
@@ -118,7 +163,7 @@ export const OwnerListings: React.FC = () => {
           />
         </div>
         <div className="listings-filters">
-          {(['all', 'published', 'pending', 'draft', 'expired'] as FilterStatus[]).map((f) => (
+          {['all', 'published', 'pending', 'draft', 'expired'].map((f) => (
             <button
               key={f}
               className={`filter-tab ${filterStatus === f ? 'filter-tab--active' : ''}`}
@@ -132,17 +177,18 @@ export const OwnerListings: React.FC = () => {
 
       {/* Listings Grid */}
       <div className="listings-grid">
+        {isLoading && listings.length === 0 && <p className="text-secondary" style={{ padding: '20px' }}>Đang tải dữ liệu...</p>}
         {filtered.map((listing) => (
           <div key={listing.id} className="glass-card listing-card">
             
             <div className="listing-card-top">
               <div className="listing-type-tag">
                 <Building2 size={13} />
-                {listing.type}
+                {listing.type || 'Mặt bằng'}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className={`badge ${statusConfig[listing.status].className}`}>
-                  {statusConfig[listing.status].icon}
+                <span className={`badge ${statusConfig[listing.status]?.className || 'badge--neutral'}`}>
+                  {statusConfig[listing.status]?.icon}
                   {getStatusLabel(listing.status)}
                 </span>
                 <button className="btn-icon" style={{ width: 28, height: 28 }}>
@@ -153,7 +199,7 @@ export const OwnerListings: React.FC = () => {
 
             <div className="listing-visual">
               <Building2 size={32} style={{ color: 'rgba(0, 212, 160, 0.4)' }} />
-              <div className="listing-area-badge">{listing.area}</div>
+              <div className="listing-area-badge">{listing.area || 'N/A'}</div>
               {listing.subleasing && (
                 <div className="sublease-badge">{t('listings.subleaseBadge') || 'Cho thuê lại'}</div>
               )}
@@ -163,22 +209,22 @@ export const OwnerListings: React.FC = () => {
               <h3 className="listing-name">{listing.name}</h3>
               <p className="listing-location">
                 <MapPin size={12} />
-                {listing.location}
+                {listing.location || 'Chưa cập nhật địa chỉ'}
               </p>
 
               <div className="listing-price-row">
-                <span className="listing-price">{listing.price}</span>
-                <span className="text-secondary" style={{ fontSize: 12 }}>{listing.period}</span>
+                <span className="listing-price">{listing.price ? `${listing.price.toLocaleString('vi-VN')}₫` : 'Thỏa thuận'}</span>
+                <span className="text-secondary" style={{ fontSize: 12 }}>/giờ</span>
               </div>
 
               <div className="listing-meta">
                 <div className="listing-meta-item">
                   <Eye size={12} className="text-secondary" />
-                  <span>{t('listings.views', { count: listing.views }) || `${listing.views} Lượt xem`}</span>
+                  <span>{t('listings.views', { count: listing.views || 0 }) || `${listing.views || 0} Lượt xem`}</span>
                 </div>
                 <div className="listing-meta-item">
                   <Building2 size={12} className="text-secondary" />
-                  <span>{t('listings.inquiries', { count: listing.inquiries }) || `${listing.inquiries} Yêu cầu`}</span>
+                  <span>{t('listings.inquiries', { count: listing.inquiries || 0 }) || `${listing.inquiries || 0} Yêu cầu`}</span>
                 </div>
                 {listing.rating > 0 && (
                   <div className="listing-meta-item">
@@ -188,23 +234,33 @@ export const OwnerListings: React.FC = () => {
                 )}
               </div>
 
-              <p className="listing-date text-secondary">{t('listings.postedOn', { date: listing.postedDate }) || `Đăng ngày ${listing.postedDate}`}</p>
+              <p className="listing-date text-secondary">
+                {t('listings.postedOn', { date: listing.postedDate || 'gần đây' }) || `Đăng ngày ${listing.postedDate || 'gần đây'}`}
+              </p>
             </div>
 
             <div className="listing-card-actions">
               <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>
                 <Eye size={14} /> {language === 'en' ? 'View' : 'Xem'}
               </button>
-              <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>
+              <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => handleOpenEdit(listing)}>
                 <Edit3 size={14} /> {t('spaces.edit') || 'Sửa'}
               </button>
-              <button className="btn-icon" style={{ color: 'var(--color-negative)' }} title={t('spaces.delete') || 'Xóa'}>
+              <button className="btn-icon" style={{ color: 'var(--color-negative)' }} title={t('spaces.delete') || 'Xóa'} onClick={() => handleDelete(listing.id)}>
                 <Trash2 size={14} />
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {isFormOpen && (
+        <ListingForm 
+          onClose={() => setIsFormOpen(false)} 
+          onSuccess={handleFormSuccess} 
+          initialData={editingListing} 
+        />
+      )}
     </div>
   );
 };
