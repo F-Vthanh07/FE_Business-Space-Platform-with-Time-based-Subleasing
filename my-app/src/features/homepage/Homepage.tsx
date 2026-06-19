@@ -41,24 +41,27 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const tl = gsap.timeline();
-    tl.fromTo(
-      '.home-search-wrapper',
-      { y: -20, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }
-    );
-    tl.fromTo(
-      '.gsap-listing-card',
-      { y: 40, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.6, stagger: 0.1, ease: 'back.out(1.2)' },
-      '-=0.2'
-    );
-    tl.fromTo(
-      '.right-sidebar-column',
-      { x: 30, opacity: 0 },
-      { x: 0, opacity: 1, duration: 0.6, ease: 'power3.out' },
-      '-=0.5'
-    );
+    // BỌC TOÀN BỘ VÀO gsap.context() ĐỂ CHỐNG RÒ RỈ BỘ NHỚ
+    let ctx = gsap.context(() => {
+      const tl = gsap.timeline();
+      tl.fromTo(
+        '.home-search-wrapper',
+        { y: -20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }
+      );
+      tl.fromTo(
+        '.gsap-listing-card',
+        { y: 40, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, stagger: 0.1, ease: 'back.out(1.2)' },
+        '-=0.2'
+      );
+      tl.fromTo(
+        '.right-sidebar-column',
+        { x: 30, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.6, ease: 'power3.out' },
+        '-=0.5'
+      );
+    }, containerRef); // Gắn context vào container
 
     // Scroll Reveal cho các sections bên dưới
     const observer = new IntersectionObserver(
@@ -76,25 +79,31 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
     revealElements.forEach((el) => observer.observe(el));
 
     return () => {
+      ctx.revert(); // <--- DỌN RÁC GSAP KHI UNMOUNT (Quan trọng nhất)
       revealElements.forEach((el) => observer.unobserve(el));
     };
   }, []);
 
   // GSAP Animation khi toggle Map/List
+  // GSAP Animation khi toggle Map/List
   useEffect(() => {
-    if (isMapMode) {
-      gsap.fromTo(
-        '.map-view-container',
-        { x: 50, opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }
-      );
-    } else {
-      gsap.fromTo(
-        '.right-sidebar-content',
-        { opacity: 0, scale: 0.98 },
-        { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' }
-      );
-    }
+    let ctx = gsap.context(() => {
+      if (isMapMode) {
+        gsap.fromTo(
+          '.map-view-container',
+          { x: 50, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }
+        );
+      } else {
+        gsap.fromTo(
+          '.right-sidebar-content',
+          { opacity: 0, scale: 0.98 },
+          { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' }
+        );
+      }
+    }, containerRef);
+
+    return () => ctx.revert(); // Dọn dẹp
   }, [isMapMode]);
 
   const currentPricing = pricingTiers[language] || pricingTiers['en'];
