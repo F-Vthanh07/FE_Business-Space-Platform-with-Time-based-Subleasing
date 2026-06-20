@@ -50,7 +50,9 @@ export const OwnerListings: React.FC = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        setListings(data);
+        // ÁO GIÁP 1: Ép kiểu về mảng [] nếu BE trả về null
+        const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
+        setListings(safeData);
       }
     } catch (err) {
       console.error("Lỗi lấy danh sách bài đăng:", err);
@@ -64,15 +66,20 @@ export const OwnerListings: React.FC = () => {
     fetchListings();
   }, []);
 
+  // ÁO GIÁP 2: Chống null khi tìm kiếm
   const filtered = listings.filter((l) => {
-    const matchSearch = l.name?.toLowerCase().includes(search.toLowerCase()) || l.location?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === 'all' || l.status === filterStatus;
+    const safeName = l?.name || '';
+    const safeLocation = l?.location || l?.address || ''; // BE có thể dùng location hoặc address
+    
+    const matchSearch = safeName.toLowerCase().includes(search.toLowerCase()) || 
+                        safeLocation.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = filterStatus === 'all' || l?.status === filterStatus;
     return matchSearch && matchStatus;
   });
 
   // Hiệu ứng GSAP mượt mà
   useEffect(() => {
-    const  ctx = gsap.context(() => {
+    const ctx = gsap.context(() => {
       const cards = gsap.utils.toArray('.listing-card');
       if (cards.length > 0) {
         gsap.fromTo(cards, 
@@ -92,22 +99,37 @@ export const OwnerListings: React.FC = () => {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleOpenEdit = (listing: any) => {
-    setEditingListing(listing);
+    // ÁO GIÁP 3: Vá lại data trước khi ném cho thằng Form để nó không bị sập
+    const safeListingForEdit = {
+      ...listing,
+      slots: listing?.slots || [] // Ép slots thành mảng rỗng nếu BE không có
+    };
+    setEditingListing(safeListingForEdit);
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleDelete = async (listingItem: any) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa bài đăng này?')) {
       try {
+        // CỨU CÁNH VỤ XÓA SAI: Check xem BE trả về chữ "id" hay "Id"
+        const targetId = listingItem.id || listingItem.Id; 
+
+        if (!targetId) {
+          alert('Lỗi FE: Không tìm thấy ID của bài đăng này!');
+          return;
+        }
+
         const token = localStorage.getItem('portal_token');
-        const res = await fetch(`https://localhost:7069/api/Listing/Delete/${id}`, {
+        const res = await fetch(`https://localhost:7069/api/Listing/Delete/${targetId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
         });
+        
         if (res.ok) {
-          setListings(prev => prev.filter(l => l.id !== id));
+          setListings(prev => prev.filter(l => (l.id || l.Id) !== targetId));
         } else {
-          alert('Không thể xóa bài đăng. Vui lòng thử lại sau.');
+          alert('Không thể xóa bài đăng. Vui lòng kiểm tra lại link API Xóa của Backend!');
         }
       } catch (err) {
         console.error("Lỗi khi xóa bài đăng:", err);
@@ -178,80 +200,87 @@ export const OwnerListings: React.FC = () => {
       {/* Listings Grid */}
       <div className="listings-grid">
         {isLoading && listings.length === 0 && <p className="text-secondary" style={{ padding: '20px' }}>Đang tải dữ liệu...</p>}
-        {filtered.map((listing) => (
-          <div key={listing.id} className="glass-card listing-card">
-            
-            <div className="listing-card-top">
-              <div className="listing-type-tag">
-                <Building2 size={13} />
-                {listing.type || 'Mặt bằng'}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className={`badge ${statusConfig[listing.status]?.className || 'badge--neutral'}`}>
-                  {statusConfig[listing.status]?.icon}
-                  {getStatusLabel(listing.status)}
-                </span>
-                <button className="btn-icon" style={{ width: 28, height: 28 }}>
-                  <MoreHorizontal size={14} />
-                </button>
-              </div>
-            </div>
+        {filtered.map((listing, index) => {
+          // Lấy ID ra, nếu không có ID thì lấy index làm key tạm
+          const currentId = listing.id || listing.Id;
 
-            <div className="listing-visual">
-              <Building2 size={32} style={{ color: 'rgba(0, 212, 160, 0.4)' }} />
-              <div className="listing-area-badge">{listing.area || 'N/A'}</div>
-              {listing.subleasing && (
-                <div className="sublease-badge">{t('listings.subleaseBadge') || 'Cho thuê lại'}</div>
-              )}
-            </div>
-
-            <div className="listing-card-body">
-              <h3 className="listing-name">{listing.name}</h3>
-              <p className="listing-location">
-                <MapPin size={12} />
-                {listing.location || 'Chưa cập nhật địa chỉ'}
-              </p>
-
-              <div className="listing-price-row">
-                <span className="listing-price">{listing.price ? `${listing.price.toLocaleString('vi-VN')}₫` : 'Thỏa thuận'}</span>
-                <span className="text-secondary" style={{ fontSize: 12 }}>/giờ</span>
-              </div>
-
-              <div className="listing-meta">
-                <div className="listing-meta-item">
-                  <Eye size={12} className="text-secondary" />
-                  <span>{t('listings.views', { count: listing.views || 0 }) || `${listing.views || 0} Lượt xem`}</span>
+          return (
+            <div key={currentId || index} className="glass-card listing-card">
+              
+              <div className="listing-card-top">
+                <div className="listing-type-tag">
+                  <Building2 size={13} />
+                  {listing.type || 'Mặt bằng'}
                 </div>
-                <div className="listing-meta-item">
-                  <Building2 size={12} className="text-secondary" />
-                  <span>{t('listings.inquiries', { count: listing.inquiries || 0 }) || `${listing.inquiries || 0} Yêu cầu`}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className={`badge ${statusConfig[listing.status]?.className || 'badge--neutral'}`}>
+                    {statusConfig[listing.status]?.icon || <Clock size={11} />}
+                    {getStatusLabel(listing.status)}
+                  </span>
+                  <button className="btn-icon" style={{ width: 28, height: 28 }}>
+                    <MoreHorizontal size={14} />
+                  </button>
                 </div>
-                {listing.rating > 0 && (
-                  <div className="listing-meta-item">
-                    <Star size={12} style={{ color: '#D9A05B' }} />
-                    <span style={{ color: '#D9A05B', fontWeight: 600 }}>{listing.rating}</span>
-                  </div>
+              </div>
+
+              <div className="listing-visual">
+                <Building2 size={32} style={{ color: 'rgba(0, 212, 160, 0.4)' }} />
+                <div className="listing-area-badge">{listing.area || 'N/A'}</div>
+                {listing.subleasing && (
+                  <div className="sublease-badge">{t('listings.subleaseBadge') || 'Cho thuê lại'}</div>
                 )}
               </div>
 
-              <p className="listing-date text-secondary">
-                {t('listings.postedOn', { date: listing.postedDate || 'gần đây' }) || `Đăng ngày ${listing.postedDate || 'gần đây'}`}
-              </p>
-            </div>
+              <div className="listing-card-body">
+                <h3 className="listing-name">{listing.name || 'Bài đăng chưa có tên'}</h3>
+                <p className="listing-location">
+                  <MapPin size={12} />
+                  {listing.location || listing.address || 'Chưa cập nhật địa chỉ'}
+                </p>
 
-            <div className="listing-card-actions">
-              <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>
-                <Eye size={14} /> {language === 'en' ? 'View' : 'Xem'}
-              </button>
-              <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => handleOpenEdit(listing)}>
-                <Edit3 size={14} /> {t('spaces.edit') || 'Sửa'}
-              </button>
-              <button className="btn-icon" style={{ color: 'var(--color-negative)' }} title={t('spaces.delete') || 'Xóa'} onClick={() => handleDelete(listing.id)}>
-                <Trash2 size={14} />
-              </button>
+                <div className="listing-price-row">
+                  <span className="listing-price">{listing.price ? `${listing.price.toLocaleString('vi-VN')}₫` : 'Thỏa thuận'}</span>
+                  <span className="text-secondary" style={{ fontSize: 12 }}>/giờ</span>
+                </div>
+
+                <div className="listing-meta">
+                  <div className="listing-meta-item">
+                    <Eye size={12} className="text-secondary" />
+                    <span>{t('listings.views', { count: listing.views || 0 }) || `${listing.views || 0} Lượt xem`}</span>
+                  </div>
+                  <div className="listing-meta-item">
+                    <Building2 size={12} className="text-secondary" />
+                    <span>{t('listings.inquiries', { count: listing.inquiries || 0 }) || `${listing.inquiries || 0} Yêu cầu`}</span>
+                  </div>
+                  {listing.rating > 0 && (
+                    <div className="listing-meta-item">
+                      <Star size={12} style={{ color: '#D9A05B' }} />
+                      <span style={{ color: '#D9A05B', fontWeight: 600 }}>{listing.rating}</span>
+                    </div>
+                  )}
+                </div>
+
+                <p className="listing-date text-secondary">
+                  {t('listings.postedOn', { date: listing.postedDate || 'gần đây' }) || `Đăng ngày ${listing.postedDate || 'gần đây'}`}
+                </p>
+              </div>
+
+              <div className="listing-card-actions">
+                <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>
+                  <Eye size={14} /> {language === 'en' ? 'View' : 'Xem'}
+                </button>
+                {/* Nút sửa */}
+                <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => handleOpenEdit(listing)}>
+                  <Edit3 size={14} /> {t('spaces.edit') || 'Sửa'}
+                </button>
+                {/* Nút xóa truyền nguyên cục listing vào để phân tích */}
+                <button className="btn-icon" style={{ color: 'var(--color-negative)' }} title={t('spaces.delete') || 'Xóa'} onClick={() => handleDelete(listing)}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {isFormOpen && (
