@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { gsap } from 'gsap';
 import { Plus, Search, Building2, MapPin, Minimize2, Edit3, Trash2, CheckCircle2, Clock } from 'lucide-react';
-import {SpaceForm} from './SpaceForm';
+import { SpaceForm } from './SpaceForm';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import './OwnerSpaces.css';
 
@@ -13,14 +14,18 @@ interface Space {
   status: 'active' | 'pending' | 'inactive';
   revenue: string;
   occupancy: number;
-  amenities: string[];
-  categories: string[];
+  isActive: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  amenities: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  spaceAllowedCategories: any[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   operatingHours?: any[];
 }
 
 export const OwnerSpaces: React.FC = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
+  const [apiCategories, setApiCategories] = useState<any[]>([]); 
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
@@ -28,12 +33,34 @@ export const OwnerSpaces: React.FC = () => {
   const { t } = useThemeLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // --- API GET ALL ---
+  // --- 1. LẤY DANH MỤC NGÀNH NGHỀ TỪ API ---
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch('https://localhost:7069/api/BussinessCategory/GetAll', {
+          headers: { 'accept': '*/*' }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setApiCategories(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.error("Lỗi lấy danh mục ngành nghề:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // --- 2. API GET ALL VỚI QUERY THAM SỐ (Lấy mặt bằng của chính mình) ---
   const fetchSpaces = useCallback(async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('portal_token');
-      const response = await fetch('https://localhost:7069/api/Space/GetAll', {
+      const ownerId = localStorage.getItem('current_owner_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
+
+      const url = `https://localhost:7069/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -43,25 +70,31 @@ export const OwnerSpaces: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setSpaces(data);
+        const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
+        setSpaces(safeData);
+      } else {
+        setSpaces([]);
       }
     } catch (error) {
-      console.error("Lỗi khi tải danh sách:", error);
+      console.error("Lỗi khi tải danh sách mặt bằng:", error);
+      setSpaces([]);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Fetch khi mount
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSpaces();
   }, [fetchSpaces]);
 
-  const filteredSpaces = spaces.filter(space =>
-    space.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    space.address.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Bộ lọc frontend
+  const filteredSpaces = spaces.filter(space => {
+    const safeName = space?.name || '';
+    const safeAddress = space?.address || '';
+    return safeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           safeAddress.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   // GSAP animation
   useEffect(() => {
@@ -82,17 +115,33 @@ export const OwnerSpaces: React.FC = () => {
     setIsFormOpen(true);
   };
 
+  // ÁO GIÁP: Xử lý data an toàn trước khi ném cho SpaceForm
   const handleOpenFormForEdit = (space: Space) => {
-    setEditingSpace(space);
+    const safeSpaceForEdit = {
+      ...space,
+      amenities: space.amenities || [],
+      spaceAllowedCategories: space.spaceAllowedCategories || [],
+      operatingHours: space.operatingHours || []
+    };
+    setEditingSpace(safeSpaceForEdit); 
     setIsFormOpen(true);
   };
 
-  // --- API DELETE ---
-  const handleDeleteSpace = async (id: number) => {
+  // --- 3. API DELETE: XÓA MẶT BẰNG ---
+  const handleDeleteSpace = async (spaceToDelete: Space) => {
+    // Ép lấy đúng ID (Phòng trường hợp C# trả về 'Id' in hoa)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const targetId = spaceToDelete.id || (spaceToDelete as any).Id;
+
+    if (!targetId) {
+      alert("Lỗi: Không tìm thấy ID của mặt bằng này để xóa.");
+      return;
+    }
+
     if (window.confirm(t('spaces.confirmDeleteSpace') || 'Bạn có chắc chắn muốn xóa mặt bằng này?')) {
       try {
         const token = localStorage.getItem('portal_token');
-        const response = await fetch(`https://localhost:7069/api/Space/Delete/${id}`, {
+        const response = await fetch(`https://localhost:7069/api/Space/Delete${targetId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -101,10 +150,10 @@ export const OwnerSpaces: React.FC = () => {
         });
 
         if (response.ok) {
-          setSpaces(prev => prev.filter(s => s.id !== id));
+          setSpaces(prev => prev.filter(s => (s.id || (s as any).Id) !== targetId));
         } else {
           const errData = await response.json().catch(() => ({}));
-          alert((errData as { message?: string }).message || "Xóa thất bại do lỗi hệ thống.");
+          alert(errData.message || "Xóa thất bại do lỗi hệ thống.");
         }
       } catch (error) {
         console.error("Lỗi khi xóa:", error);
@@ -121,7 +170,6 @@ export const OwnerSpaces: React.FC = () => {
 
   return (
     <div className="owner-spaces animate-in" ref={containerRef}>
-      {/* Page Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('spaces.mySpaces') || 'Quản lý Mặt bằng'}</h1>
@@ -133,7 +181,6 @@ export const OwnerSpaces: React.FC = () => {
         </button>
       </div>
 
-      {/* Controls */}
       <div className="spaces-controls glass-card">
         <div className="spaces-search">
           <Search size={15} style={{ color: 'var(--color-text-secondary)' }} />
@@ -150,7 +197,6 @@ export const OwnerSpaces: React.FC = () => {
         </div>
       </div>
 
-      {/* Loading state */}
       {isLoading && (
         <div className="loading-state text-secondary">
           <Clock size={20} />
@@ -158,78 +204,91 @@ export const OwnerSpaces: React.FC = () => {
         </div>
       )}
 
-      {/* Grid */}
       {!isLoading && (
         <div className="spaces-grid">
-          {filteredSpaces.map((space) => (
-            <div key={space.id} className="glass-card space-card">
-              <div className="space-card-top">
-                <div className="space-card-type">
-                  <Building2 size={14} />
-                  <span>{t('spaces.physicalSpace') || 'Không gian vật lý'}</span>
+          {filteredSpaces.map((space, index) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const currentId = space.id || (space as any).Id;
+            const safeAmenities = space?.amenities || [];
+            const safeCategories = space?.spaceAllowedCategories || [];
+
+            return (
+              <div key={currentId || index} className="glass-card space-card">
+                <div className="space-card-top">
+                  <div className="space-card-type">
+                    <Building2 size={14} />
+                    <span>{t('spaces.physicalSpace') || 'Không gian vật lý'}</span>
+                  </div>
+                  <span className={`badge ${space.isActive !== false ? 'badge--positive' : 'badge--warning'}`}>
+                    {space.isActive !== false ? <CheckCircle2 size={11} /> : <Clock size={11} />}
+                    {space.isActive !== false ? 'Hoạt động' : 'Tạm khóa'}
+                  </span>
                 </div>
-                <span className={`badge ${space.status === 'active' ? 'badge--positive' : 'badge--warning'}`}>
-                  {space.status === 'active' ? <CheckCircle2 size={11} /> : <Clock size={11} />}
-                  {space.status === 'active' ? (t('spaces.statusActive') || 'Hoạt động') : (t('spaces.statusPending') || 'Chờ duyệt')}
-                </span>
-              </div>
 
-              <div className="space-card-visual">
-                <Building2 size={36} className="visual-building-icon" />
-                <div className="space-area-tag">
-                  <Minimize2 size={11} />
-                  <span>{space.area}</span>
-                </div>
-              </div>
-
-              <div className="space-card-info">
-                <h3 className="space-name">{space.name}</h3>
-                <p className="space-address text-secondary">
-                  <MapPin size={12} />
-                  {space.address}
-                </p>
-
-                <div className="space-meta-section">
-                  <span className="meta-label">{t('spaces.amenities') || 'Tiện ích'}</span>
-                  <div className="meta-badges">
-                    {space.amenities.length > 0 ? (
-                      space.amenities.map(a => (
-                        <span key={a} className="badge badge--neutral badge-sm">
-                          {t('amenity.' + a) || a}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-muted text-xs">{t('spaces.noAmenities') || 'Chưa cập nhật'}</span>
-                    )}
+                <div className="space-card-visual">
+                  <Building2 size={36} className="visual-building-icon" />
+                  <div className="space-area-tag">
+                    <Minimize2 size={11} />
+                    <span>{space?.area || 'N/A'} m²</span>
                   </div>
                 </div>
 
-                <div className="space-meta-section">
-                  <span className="meta-label">{t('spaces.allowedModels') || 'Ngành nghề phù hợp'}</span>
-                  <div className="meta-badges">
-                    {space.categories.length > 0 ? (
-                      space.categories.map(c => (
-                        <span key={c} className="badge badge--accent badge-sm">
-                          {t('category.' + c) || c}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-muted text-xs">{t('spaces.notConfigured') || 'Chưa thiết lập'}</span>
-                    )}
+                <div className="space-card-info">
+                  <h3 className="space-name">{space?.name || 'Mặt bằng chưa có tên'}</h3>
+                  <p className="space-address text-secondary">
+                    <MapPin size={12} />
+                    {space?.address || 'Chưa cập nhật địa chỉ'}
+                  </p>
+
+                  <div className="space-meta-section">
+                    <span className="meta-label">{t('spaces.amenities') || 'Tiện ích'}</span>
+                    <div className="meta-badges">
+                      {safeAmenities.length > 0 ? (
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        safeAmenities.map((a: any, idx: number) => (
+                          <span key={idx} className="badge badge--neutral badge-sm">
+                            {a.name || t('amenity.' + a) || 'Tiện ích'}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-muted text-xs">{t('spaces.noAmenities') || 'Chưa cập nhật'}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-meta-section">
+                    <span className="meta-label">{t('spaces.allowedModels') || 'Ngành nghề phù hợp'}</span>
+                    <div className="meta-badges">
+                      {safeCategories.length > 0 ? (
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        safeCategories.map((c: any, idx: number) => {
+                          const catId = c.bussinessCategoryId;
+                          const catObj = apiCategories.find(cat => cat.id === catId);
+                          const catName = catObj ? catObj.name : `Ngành nghề ID: ${catId}`;
+                          return (
+                            <span key={idx} className="badge badge--accent badge-sm">
+                              {catName}
+                            </span>
+                          );
+                        })
+                      ) : (
+                        <span className="text-muted text-xs">{t('spaces.notConfigured') || 'Không ràng buộc'}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-card-actions">
-                <button className="btn-ghost" onClick={() => handleOpenFormForEdit(space)}>
-                  <Edit3 size={13} /> {t('spaces.edit') || 'Sửa'}
-                </button>
-                <button className="btn-ghost btn-danger-icon" onClick={() => handleDeleteSpace(space.id)} title={t('spaces.delete') || 'Xóa'}>
-                  <Trash2 size={13} />
-                </button>
+                <div className="space-card-actions">
+                  <button className="btn-ghost" onClick={() => handleOpenFormForEdit(space)}>
+                    <Edit3 size={13} /> {t('spaces.edit') || 'Sửa'}
+                  </button>
+                  <button className="btn-ghost btn-danger-icon" onClick={() => handleDeleteSpace(space)} title={t('spaces.delete') || 'Xóa'}>
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

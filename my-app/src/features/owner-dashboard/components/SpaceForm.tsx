@@ -1,20 +1,21 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import { X, Building2, MapPin, Minimize2, Clock, Check, ShieldAlert } from 'lucide-react';
+import { X, Building2, MapPin, Minimize2, Clock, Check, ShieldAlert, Briefcase } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import './SpaceForm.css';
 
 interface SpaceFormProps {
   onClose: () => void;
-  onSubmit: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onSubmit: (data?: any) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   initialData?: any;
 }
 
 const AMENITIES_IDS = ['wifi', 'ac', 'parking', 'wc', 'projector', 'sound'];
-const CATEGORIES_IDS = ['retail', 'cafe', 'office', 'kiosk'];
 
 const DAYS_OF_WEEK_CONFIG = [
-  { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 0 }, // 0 là Chủ Nhật theo chuẩn BE
+  { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 0 },
 ];
 
 const getDayLabel = (id: number, lang: 'en' | 'vi') => {
@@ -32,30 +33,71 @@ const getDayLabel = (id: number, lang: 'en' | 'vi') => {
 
 export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initialData }) => {
   const { t, language } = useThemeLanguage();
+  
+  // --- STATE DỮ LIỆU CƠ BẢN ---
   const [name, setName] = useState(initialData?.name || '');
   const [address, setAddress] = useState(initialData?.address || '');
-  const [city, setCity] = useState(initialData?.city || 'Hồ Chí Minh'); // Thêm city cho API
-  const [area, setArea] = useState(initialData?.area?.replace(/[^\d]/g, '') || '');
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>(initialData?.amenities || []);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialData?.categories || []);
+  const [city, setCity] = useState(initialData?.city || 'Hồ Chí Minh');
   
-  // Khởi tạo lịch hoạt động
+  // Ép kiểu Area về chuỗi đề phòng API trả về số
+  const [area, setArea] = useState(initialData?.area?.toString().replace(/[^\d]/g, '') || '');
+  
+  // --- STATE DỮ LIỆU ĐỘNG VÀ MAPPER KHI EDIT ---
+  
+  // Map từ [{ name: 'wifi' }] thành ['wifi']
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const initialAmenities = (initialData?.amenities || []).map((a: any) => a.name || a);
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>(initialAmenities);
+  
   const [operatingHours, setOperatingHours] = useState<any[]>([]);
   
-  // State API
+  // Category lấy từ Backend API
+  const [apiCategories, setApiCategories] = useState<any[]>([]);
+  
+  // Lấy ID ngành nghề từ mảng spaceAllowedCategories của BE
+  const initialCat = initialData?.spaceAllowedCategories?.[0]?.bussinessCategoryId || '';
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | ''>(initialCat);
+
+  // --- STATE UI ---
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // 1. FETCH DANH MỤC NGÀNH NGHỀ TỪ BACKEND
   useEffect(() => {
-    if (initialData?.operatingHours) {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch('https://localhost:7069/api/BussinessCategory/GetAll', {
+          headers: { 'accept': '*/*' } 
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setApiCategories(data.filter((c: any) => c.isActive));
+        }
+      } catch (err) {
+        console.error("Lỗi lấy danh mục:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // 2. KHỞI TẠO GIỜ HOẠT ĐỘNG KHI RENDER HOẶC KHI CÓ DATA EDIT
+  useEffect(() => {
+    if (initialData?.operatingHours && initialData.operatingHours.length > 0) {
+      // Map data từ BE vào cấu hình 7 ngày của giao diện
+      const mappedHours = DAYS_OF_WEEK_CONFIG.map(day => {
+        const found = initialData.operatingHours.find((h: any) => h.dayOfWeek === day.id);
+        if (found) {
+          return { dayOfWeek: day.id, enabled: true, openTime: found.openTime, closeTime: found.closeTime };
+        }
+        return { dayOfWeek: day.id, enabled: false, openTime: '08:00', closeTime: '22:00' };
+      });
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setOperatingHours(initialData.operatingHours);
+      setOperatingHours(mappedHours);
     } else {
       setOperatingHours(
         DAYS_OF_WEEK_CONFIG.map(day => ({
           dayOfWeek: day.id,
-          enabled: day.id !== 0, // Chủ Nhật (0) tắt mặc định
+          enabled: day.id !== 0, // Mặc định bật T2-T7, tắt CN
           openTime: '08:00',
           closeTime: '22:00',
         }))
@@ -67,10 +109,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     setSelectedAmenities(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
-  const handleCategoryToggle = (id: string) => {
-    setSelectedCategories(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
-  };
-
   const handleDayToggle = (dayOfWeek: number) => {
     setOperatingHours(prev => prev.map(item => item.dayOfWeek === dayOfWeek ? { ...item, enabled: !item.enabled } : item));
   };
@@ -79,74 +117,74 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     setOperatingHours(prev => prev.map(item => item.dayOfWeek === dayOfWeek ? { ...item, [type]: value } : item));
   };
 
-  // --- API LOGIC NẰM Ở ĐÂY ---
+  // 3. SUBMIT FORM: BẮN API TẠO/SỬA MẶT BẰNG
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (!name || !address || !area) {
-      setError(t('spaceForm.fillAllFields') || 'Vui lòng điền đủ thông tin cơ bản!');
+      setError('Vui lòng điền đủ tên, địa chỉ và diện tích cơ bản!');
       return;
     }
 
     const token = localStorage.getItem('portal_token');
-    if (!token) {
-      setError('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại.');
-      return;
-    }
-
-    // 1. CHUẨN BỊ PAYLOAD CHO SWAGGER
-    // 1. CHUẨN BỊ PAYLOAD TẠM THỜI (THEO Ý BACKEND)
+    // Ông có thể lấy ownerId từ LocalStorage nếu BE bắt buộc truyền
+    const ownerId = localStorage.getItem('current_owner_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
+    
+    // --- CHUẨN BỊ PAYLOAD ---
     const payload = {
-      id: 0,
-      ownerId: null,
       name: name,
       address: address,
       city: city,
       area: Number(area),
-      isDeleted: false, // BE gửi true là hơi ngáo, mình cứ gửi false để mặt bằng không bị xóa nhé =))
       isActive: true,
-      // TẠM THỜI GỬI MẢNG RỖNG ĐỂ TRÁNH LỖI 400 NOT FOUND
-      amenities: [],
-      operatingHours: [],
-      spaceAllowedCategories: []
+      ownerId: ownerId, // Nếu BE cần cái này
+      
+      // Mảng 1: Tiện ích
+      amenities: selectedAmenities.map(am => ({
+        name: am,
+        quantity: 1,
+        isActive: true
+      })),
+      
+      // Mảng 2: Giờ hoạt động (Chỉ lọc các ngày được tích xanh)
+      operatingHours: operatingHours.filter(h => h.enabled).map(h => ({
+        dayOfWeek: h.dayOfWeek,
+        openTime: h.openTime,
+        closeTime: h.closeTime
+      })),
+      
+      // Mảng 3: Ngành nghề
+      spaceAllowedCategories: selectedCategoryId !== '' 
+        ? [{ bussinessCategoryId: selectedCategoryId }] 
+        : []
     };
 
     setIsLoading(true);
     try {
-      // KIỂM TRA XEM ĐANG LÀ THÊM MỚI HAY CHỈNH SỬA
       const isEditing = !!initialData;
-      
-      // Nếu sửa thì gọi Update{id}, nếu tạo thì gọi Create
       const url = isEditing 
-        ? `https://localhost:7069/api/Space/Update/${initialData.id}` 
+        ? `https://localhost:7069/api/Space/Update${initialData.id}` 
         : 'https://localhost:7069/api/Space/Create';
-        
-      // Sửa dùng phương thức PUT, Tạo dùng POST
-      const method = isEditing ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
-        method: method,
+        method: isEditing ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
           'accept': '*/*'
         },
-        // Nếu API PUT bắt bẻ ID trong body, ông ném thêm initialData.id vào đây nhé
-        body: JSON.stringify({ ...payload, id: isEditing ? initialData.id : 0 }) 
+        // Nhét thêm ID vào payload khi gọi PUT theo chuẩn của BE
+        body: JSON.stringify(isEditing ? { ...payload, id: initialData.id } : payload)
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.message || `Lỗi khi ${isEditing ? 'cập nhật' : 'tạo'} mặt bằng.`);
+        throw new Error(`Lỗi khi ${isEditing ? 'cập nhật' : 'tạo'} mặt bằng.`);
       }
 
-      // THÀNH CÔNG -> Đóng form và gọi hàm báo cho component cha biết
-      onSubmit();
+      onSubmit(); // Báo component cha (OwnerSpaces) load lại list
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      console.error(err);
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -160,15 +198,13 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
         {/* Header */}
         <div className="space-form-header">
           <div className="space-form-title-area">
-            <div className="space-form-icon-wrap">
-              <Building2 size={16} />
-            </div>
+            <div className="space-form-icon-wrap"><Building2 size={16} /></div>
             <div>
               <h2 className="form-modal-title">{initialData ? t('spaceForm.editSpace') : t('spaceForm.registerSpace')}</h2>
               <p className="form-modal-subtitle text-secondary">{t('spaceForm.spaceFormSubtitle')}</p>
             </div>
           </div>
-          <button className="btn-icon close-btn" onClick={onClose} disabled={isLoading}>
+          <button type="button" className="btn-icon close-btn" onClick={onClose} disabled={isLoading}>
             <X size={15} />
           </button>
         </div>
@@ -176,7 +212,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="space-form-body">
           
-          {/* Thông tin cơ bản */}
           <div className="form-section">
             <h3 className="form-section-title">{t('spaceForm.formSectionBasic')}</h3>
             
@@ -188,7 +223,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
               </div>
             </div>
 
-            {/* Thêm ô chọn Thành phố cho đủ chuẩn API */}
             <div className="form-grid-2">
               <div className="form-group">
                 <label className="form-label">Thành phố (Tỉnh/Thành)</label>
@@ -216,12 +250,11 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
             </div>
           </div>
 
-          {/* Tiện ích và Ngành nghề */}
           <div className="form-grid-2">
             
-            {/* Tiện ích */}
+            {/* TIỆN ÍCH */}
             <div className="form-section">
-              <h3 className="form-section-title">{t('spaceForm.formSectionAmenities')}</h3>
+              <h3 className="form-section-title">{t('spaceForm.formSectionAmenities')} (Tùy chọn)</h3>
               <div className="checkbox-list">
                 {AMENITIES_IDS.map(id => {
                   const isChecked = selectedAmenities.includes(id);
@@ -236,29 +269,36 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
               </div>
             </div>
 
-            {/* Ngành nghề cho phép */}
+            {/* DANH MỤC MÓC TỪ BE */}
             <div className="form-section">
-              <h3 className="form-section-title">{t('spaceForm.formSectionCategories')}</h3>
-              <div className="checkbox-list">
-                {CATEGORIES_IDS.map(id => {
-                  const isChecked = selectedCategories.includes(id);
-                  return (
-                    <label key={id} className={`checkbox-item ${isChecked ? 'checkbox-item--checked' : ''}`}>
-                      <input type="checkbox" checked={isChecked} onChange={() => handleCategoryToggle(id)} className="hidden-checkbox" disabled={isLoading} />
-                      <span className="checkbox-indicator">{isChecked && <Check size={10} />}</span>
-                      <span className="checkbox-label">{t('category.' + id)}</span>
-                    </label>
-                  );
-                })}
+              <h3 className="form-section-title">Ngành nghề cho phép (Tùy chọn)</h3>
+              
+              <div className="form-group" style={{ marginTop: '8px' }}>
+                <div className="input-with-icon">
+                  <Briefcase size={14} className="input-icon" />
+                  <select 
+                    value={selectedCategoryId} 
+                    onChange={(e) => setSelectedCategoryId(e.target.value === '' ? '' : Number(e.target.value))} 
+                    className="form-input" 
+                    style={{ paddingLeft: '40px' }} 
+                    disabled={isLoading}
+                  >
+                    <option value="">Không (Không thiết lập)</option>
+                    {apiCategories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+              <p className="section-desc text-secondary" style={{ marginTop: '8px' }}>
+                Nếu chọn "Không", mặt bằng này sẽ không có ràng buộc ngành nghề khi tạo bài đăng cho thuê.
+              </p>
             </div>
-
           </div>
 
-          {/* Khung giờ hoạt động */}
           <div className="form-section">
-            <h3 className="form-section-title">{t('spaceForm.formSectionOperating')}</h3>
-            <p className="section-desc text-secondary">{t('spaceForm.formOperatingSubtitle')}</p>
+            <h3 className="form-section-title">{t('spaceForm.formSectionOperating')} (Tùy chọn)</h3>
+            <p className="section-desc text-secondary">Tắt tất cả các ngày nếu bạn chưa muốn thiết lập giờ cố định</p>
             
             <div className="operating-hours-list">
               {operatingHours.map(item => (
@@ -285,7 +325,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
             </div>
           </div>
 
-          {/* Error Banner */}
           {error && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', borderRadius: '8px', border: '1px dashed #f85149', color: '#f85149', background: 'rgba(248,81,73,0.05)' }}>
               <ShieldAlert size={16} />
@@ -293,13 +332,12 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
             </div>
           )}
 
-          {/* Footer Actions */}
           <div className="form-actions-footer">
             <button type="button" className="btn-ghost cancel-btn" onClick={onClose} disabled={isLoading}>
               {t('spaceForm.cancel')}
             </button>
             <button type="submit" className="btn-primary submit-btn" disabled={isLoading}>
-              {isLoading ? 'Đang tạo...' : t('spaceForm.saveSpaceInfo')}
+              {isLoading ? 'Đang lưu...' : t('spaceForm.saveSpaceInfo')}
             </button>
           </div>
 
