@@ -49,6 +49,7 @@ export const OwnerDashboardPage: React.FC<OwnerDashboardPageProps> = ({ onLogout
     );
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleNewSpaceSubmit = (data: any) => {
     console.log('Registered new space:', data);
     setIsNewSpaceFormOpen(false);

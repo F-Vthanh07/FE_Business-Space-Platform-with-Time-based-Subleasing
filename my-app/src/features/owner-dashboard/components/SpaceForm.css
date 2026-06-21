@@ -1,14 +1,16 @@
 .space-form-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  position: fixed; /* Bắt buộc phải là fixed */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7); /* Màu nền mờ */
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 24px;
+  align-items: center; /* Căn giữa màn hình */
+  z-index: 9999; /* Đảm bảo nằm trên cùng */
+  overflow-y: auto; /* Nếu form quá dài thì tự scroll */
+  padding: 20px;
 }
 
 .space-form-modal {

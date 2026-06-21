@@ -1,7 +1,8 @@
 // src/components/Header.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Globe, LogOut, LayoutDashboard, User } from 'lucide-react';
+// IMPORT THÊM Building2 VÀ FileText Ở ĐÂY NÈ
+import { Bell, Globe, LogOut, LayoutDashboard, User, Building2, FileText } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
 import './Header.css';
 import { Shuffle } from '../components/Shuffle';
@@ -50,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
 
   return (
     <header className="dashboard-header">
-      {/* 1. LOGO (Đã sửa link về đúng localhost:5173) */}
+      {/* 1. LOGO */}
       <div 
         className="header-logo-text" 
         onClick={() => window.location.href = 'http://localhost:5173/'}
@@ -79,6 +80,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
 
       {/* 3. RIGHT CONTROLS */}
       <div className="header-right">
+        {/* Nút Đăng tin to oạch ngoài cùng */}
         <button className="btn-post-listing" onClick={onPostListing}>
           {language === 'en' ? 'Post Listing' : 'Đăng tin'} <span className="arrow-icon">→</span>
         </button>
@@ -96,15 +98,30 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
               <div className="header-avatar" onClick={() => setShowDropdown(!showDropdown)} style={{ cursor: 'pointer', userSelect: 'none' }}>
                 {userInitials || 'NC'}
               </div>
+              
               {showDropdown && (
                 <div className="glass-card animate-in" style={{ position: 'absolute', top: 'calc(100% + 12px)', right: 0, minWidth: '200px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px', zIndex: 100, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', border: '1px solid #2A3A4A' }}>
                   <div style={{ padding: '8px 12px', borderBottom: '1px solid #2A3A4A', marginBottom: '4px' }}>
                     <p style={{ fontSize: '13px', fontWeight: 700, color: '#fff', margin: 0 }}>{userName || (language === 'en' ? 'System User' : 'Người dùng hệ thống')}</p>
                     <p style={{ fontSize: '11px', color: '#00D4A0', margin: '2px 0 0 0', fontWeight: 600 }}>{userRole || (role === 'owner' ? 'Owner' : 'Renter')}</p>
                   </div>
+                  
                   <button className="sidebar-nav-item" onClick={handleDashboardClick} style={{ background: 'transparent', padding: '10px 12px' }}>
                     <LayoutDashboard size={14} /> <span style={{ fontSize: '12px' }}>{language === 'en' ? 'Dashboard' : 'Bảng điều khiển'}</span>
                   </button>
+
+                  {/* MENU DÀNH RIÊNG CHO OWNER */}
+                  {role === 'owner' && (
+                    <>
+                      <button className="sidebar-nav-item" onClick={() => { setShowDropdown(false); navigate('/owner/spaces'); }} style={{ background: 'transparent', padding: '10px 12px' }}>
+                        <Building2 size={14} /> <span style={{ fontSize: '12px' }}>{language === 'en' ? 'Manage Spaces' : 'Quản lý Mặt bằng'}</span>
+                      </button>
+                      <button className="sidebar-nav-item" onClick={() => { setShowDropdown(false); navigate('/owner/listings'); }} style={{ background: 'transparent', padding: '10px 12px' }}>
+                        <FileText size={14} /> <span style={{ fontSize: '12px' }}>{language === 'en' ? 'Manage Listings' : 'Quản lý Tin đăng'}</span>
+                      </button>
+                    </>
+                  )}
+
                   <button className="sidebar-nav-item" onClick={handleLogout} style={{ background: 'transparent', padding: '10px 12px', color: '#f85149' }}>
                     <LogOut size={14} /> <span style={{ fontSize: '12px' }}>{language === 'en' ? 'Log out' : 'Đăng xuất'}</span>
                   </button>

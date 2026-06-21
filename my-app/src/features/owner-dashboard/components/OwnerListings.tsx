@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import {
@@ -41,18 +42,43 @@ export const OwnerListings: React.FC = () => {
   };
 
   // --- API GET ALL LISTINGS ---
+// --- API LẤY BÀI ĐĂNG CỦA RIÊNG MÌNH ---
   const fetchListings = async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('portal_token');
+      const ownerId = localStorage.getItem('current_owner_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
+
+      // BƯỚC 1: Lấy danh sách Mặt bằng (Space) của chính ông này
+      const spaceRes = await fetch(`https://localhost:7069/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+      
+      let mySpaceIds: any[] = [];
+      if (spaceRes.ok) {
+        const spaceData = await spaceRes.json();
+        const safeSpaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+        // Gom toàn bộ ID mặt bằng của ông chủ này lại thành 1 mảng [1, 2, 5...]
+        mySpaceIds = safeSpaces.map((s: any) => s.id || s.Id);
+      }
+
+      // BƯỚC 2: Lấy tất cả bài đăng
       const res = await fetch('https://localhost:7069/api/Listing/GetAll', {
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
+      
       if (res.ok) {
         const data = await res.json();
-        // ÁO GIÁP 1: Ép kiểu về mảng [] nếu BE trả về null
         const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-        setListings(safeData);
+        
+        // BƯỚC 3: LỌC - Chỉ giữ lại những Bài đăng có spaceId trùng với Mặt bằng của mình
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const myListings = safeData.filter((l: any) => {
+          const currentSpaceId = l.spaceId || l.SpaceId;
+          return mySpaceIds.includes(currentSpaceId) || l.ownerId === ownerId || l.createdBy === ownerId;
+        });
+
+        setListings(myListings); 
       }
     } catch (err) {
       console.error("Lỗi lấy danh sách bài đăng:", err);
