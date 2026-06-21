@@ -36,19 +36,21 @@ const navItems: NavItem[] = [
   { id: 'settings', icon: <Settings size={16} /> },
 ];
 
-const getTranslationKeys = (id: OwnerPage) => {
+const getPageLabels = (id: OwnerPage, lang: string) => {
+  const isEn = lang === 'en';
   switch (id) {
-    case 'overview': return { label: 'sidebar.dashboard', sub: 'sidebar.dashboardSub' };
-    case 'spaces': return { label: 'sidebar.assets', sub: 'sidebar.assetsSub' };
-    case 'listings': return { label: 'sidebar.market', sub: 'sidebar.marketSub' };
-    case 'tenants': return { label: 'sidebar.exchange', sub: 'sidebar.exchangeSub' };
-    case 'analytics': return { label: 'sidebar.wallet', sub: 'sidebar.walletSub' };
-    case 'settings': return { label: 'sidebar.settings', sub: 'sidebar.settingsSub' };
+    case 'overview': return { title: isEn ? 'Dashboard' : 'Bảng điều khiển', sub: isEn ? 'System overview' : 'Tổng quan hệ thống' };
+    case 'spaces': return { title: isEn ? 'My Spaces' : 'Quản lý Mặt bằng', sub: isEn ? 'Physical locations' : 'Tài sản vật lý' };
+    case 'listings': return { title: isEn ? 'My Listings' : 'Quản lý Tin đăng', sub: isEn ? 'Public market ads' : 'Bài đăng cho thuê' };
+    case 'tenants': return { title: isEn ? 'Tenants' : 'Khách thuê', sub: isEn ? 'Manage contracts' : 'Quản lý hợp đồng' };
+    case 'analytics': return { title: isEn ? 'Analytics' : 'Doanh thu', sub: isEn ? 'Financial reports' : 'Báo cáo tài chính' };
+    case 'settings': return { title: isEn ? 'Settings' : 'Cài đặt', sub: isEn ? 'Account prefs' : 'Hệ thống' };
+    default: return { title: id, sub: '' };
   }
 };
 
 export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activePage, onNavigate, onNewSpaceClick, onLogout }) => {
-  const { t, language, setLanguage } = useThemeLanguage();
+  const { language, setLanguage } = useThemeLanguage();
 
   return (
     <aside className="owner-sidebar">
@@ -60,7 +62,7 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activePage, onNaviga
       <nav className="owner-sidebar-nav">
         {navItems.map((item) => {
           const isActive = activePage === item.id;
-          const keys = getTranslationKeys(item.id);
+          const labels = getPageLabels(item.id, language);
           return (
             <button
               key={item.id}
@@ -69,8 +71,8 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activePage, onNaviga
             >
               <span className="owner-sidebar-icon">{item.icon}</span>
               <div className="owner-sidebar-text">
-                <span className="owner-sidebar-label">{t(keys.label) || item.id.toUpperCase()}</span>
-                <span className="owner-sidebar-sublabel">{t(keys.sub) || 'Manage section'}</span>
+                <span className="owner-sidebar-label">{labels.title}</span>
+                <span className="owner-sidebar-sublabel">{labels.sub}</span>
               </div>
             </button>
           );
@@ -79,24 +81,24 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activePage, onNaviga
 
       <div className="sidebar-footer">
         <div className="sidebar-divider" />
+        {/* Nút to dưới cùng để thêm Mặt bằng */}
         <button className="sidebar-cta" onClick={onNewSpaceClick || (() => onNavigate('spaces'))}>
           <Plus size={16} />
-          {t('sidebar.newTransaction') || 'NEW SPACE'}
+          {language === 'en' ? 'NEW SPACE' : 'THÊM MẶT BẰNG'}
         </button>
         
         <div className="sidebar-footer-actions">
           <button 
             className="sidebar-action-btn" 
-            title={t('sidebar.languageNetwork')}
+            title="Ngôn ngữ"
             onClick={() => setLanguage(language === 'en' ? 'vi' : 'en')}
           >
             <Globe size={16} />
           </button>
           <div className="sidebar-footer-divider" />
-          {/* Đã xóa nút Theme ở đây */}
           <button 
             className="sidebar-action-btn" 
-            title={t('sidebar.logout')} 
+            title="Đăng xuất" 
             onClick={() => {
               if (onLogout) {
                 onLogout();

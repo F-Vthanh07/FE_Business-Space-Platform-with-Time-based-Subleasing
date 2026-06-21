@@ -1,21 +1,25 @@
-  .listing-form-backdrop {
+.listing-form-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: 99999 !important;
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
+    
+    /* 1. Đổi cách hiển thị để hỗ trợ cuộn */
+    display: block; 
+    overflow-y: auto; /* Bật thanh cuộn dọc cho toàn bộ màn hình tối */
+    padding: 40px 24px; /* Tạo khoảng hở trên/dưới cho đẹp */
   }
 
   .listing-form-modal {
     width: 820px;
     max-width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
+    
+    /* 2. Ép nó tự động căn giữa mà không bị cắt đầu */
+    margin: 0 auto; 
+    height: fit-content; /* Để chiều cao tự giãn theo nội dung bên trong */
+    
     border-radius: var(--radius-3xl);
     border-color: rgba(255, 255, 255, 0.08);
     padding: 32px;

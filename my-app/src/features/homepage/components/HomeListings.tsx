@@ -7,9 +7,9 @@ interface HomeListingsProps {
 }
 
 export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selectedId }) => {
-  // --- STATE DỮ LIỆU TỪ API ---
+  // --- ĐỔI TÊN STATE CHO CHUẨN LISTING ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [spaces, setSpaces] = useState<any[]>([]);
+  const [listings, setListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // --- LOGIC PHÂN TRANG ---
@@ -18,35 +18,39 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selecte
 
   // FETCH API KHI LOAD TRANG CHỦ
   useEffect(() => {
-    const fetchPublicSpaces = async () => {
+    const fetchPublicListings = async () => {
       try {
-        const response = await fetch('https://localhost:7069/api/Space/GetAll', {
+        // ĐỔI TỪ Space/GetAll SANG Listing/GetAll
+        const response = await fetch('https://localhost:7069/api/Listing/GetAll', {
           headers: { 'accept': '*/*' }
         });
         if (response.ok) {
           const data = await response.json();
           // Áo giáp chống null/undefined
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-          setSpaces(safeData);
+          
+          // NẾU CÓ STATUS THÌ LỌC CHỈ LẤY BÀI ĐÃ DUYỆT (Published) 
+          // Tạm thời lấy hết để test cho dễ thấy
+          setListings(safeData);
         }
       } catch (error) {
-        console.error("Lỗi tải danh sách mặt bằng trang chủ:", error);
+        console.error("Lỗi tải danh sách bài đăng trang chủ:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchPublicSpaces();
+    fetchPublicListings();
   }, []);
 
-  // Tính toán phân trang dựa trên mảng data thật
-  const totalPages = Math.max(1, Math.ceil(spaces.length / ITEMS_PER_PAGE));
-  const currentItems = spaces.slice(
+  // Tính toán phân trang
+  const totalPages = Math.max(1, Math.ceil(listings.length / ITEMS_PER_PAGE));
+  const currentItems = listings.slice(
     (currentPage - 1) * ITEMS_PER_PAGE, 
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Khối ảnh và Agent giả lập (Tạm thời dùng khi BE chưa có data ảnh)
+  // Ảnh giả lập (Chờ BE làm tính năng upload ảnh thật)
   const DUMMY_IMAGES = [
     "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800",
     "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=400",
@@ -58,22 +62,23 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selecte
       <div className="listings-header">
         <h3>Cho Thuê Mặt Bằng, Kiot TP.HCM Giá Tốt Nhất</h3>
         <span className="sort-by">
-          Hiện có {spaces.length} bất động sản. &nbsp;&nbsp;|&nbsp;&nbsp; Sắp xếp: <span className="active-sort">Mặc định</span>
+          Hiện có {listings.length} bài đăng. &nbsp;&nbsp;|&nbsp;&nbsp; Sắp xếp: <span className="active-sort">Mới nhất</span>
         </span>
       </div>
 
       {isLoading ? (
         <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b7280' }}>
-          Đang tải danh sách mặt bằng...
+          Đang tải danh sách bài đăng...
         </div>
-      ) : spaces.length === 0 ? (
+      ) : listings.length === 0 ? (
         <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b7280' }}>
-          Hiện chưa có mặt bằng nào được đăng tải.
+          Hiện chưa có bài đăng nào trên hệ thống.
         </div>
       ) : (
         currentItems.map((item) => {
           // Lấy ID thật ra để map
-          const itemId = item.id.toString();
+          // eslint-disable-next-line react-hooks/purity
+          const itemId = item.id?.toString() || item.Id?.toString() || Math.random().toString();
           
           return (
             <div
@@ -81,7 +86,6 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selecte
               className={`listing-card-complex gsap-listing-card ${selectedId === itemId ? 'selected' : ''}`}
               onClick={() => onCardClick(itemId)}
             >
-              {/* Khối Ảnh (Sử dụng dummy image tạm thời) */}
               <div className="complex-images-block">
                 <div className="img-main">
                   <img src={DUMMY_IMAGES[0]} alt="Main" />
@@ -93,28 +97,31 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selecte
                 </div>
               </div>
               
-              {/* Khối Thông Tin Thật (Map từ API) */}
               <div className="complex-info-block">
-                <h4 className="complex-title">{item.name || 'Mặt bằng chưa có tên'}</h4>
+                {/* Lấy description làm tiêu đề tạm nếu name chưa có */}
+                <h4 className="complex-title">{item.name || item.description?.substring(0, 50) || 'Bài đăng cho thuê mặt bằng'}</h4>
+                
                 <div className="complex-price-row">
-                  <span className="price-text">Thỏa thuận</span>
+                  <span className="price-text" style={{ color: 'var(--color-positive)', fontWeight: 'bold' }}>
+                    {item.price ? `${item.price.toLocaleString('vi-VN')} ₫/giờ` : 'Thỏa thuận'}
+                  </span>
                   <span className="dot-sep">•</span>
                   <span>{item.area ? `${item.area} m²` : 'N/A'}</span>
                   <span className="dot-sep">•</span>
                   <span>Mặt bằng kinh doanh</span>
                 </div>
-                <p className="complex-loc">📍 {item.address || 'Chưa cập nhật địa chỉ'}</p>
+                
+                <p className="complex-loc">📍 {item.location || item.address || 'Đang cập nhật địa chỉ'}</p>
                 <p className="complex-desc" style={{ 
                   display: '-webkit-box', 
                   WebkitLineClamp: 2, 
                   WebkitBoxOrient: 'vertical', 
                   overflow: 'hidden' 
                 }}>
-                  Không gian vật lý với các tiện ích: {item.amenities?.length > 0 ? item.amenities.join(', ') : 'Cơ bản'}. 
-                  Phù hợp cho các mô hình kinh doanh đa dạng.
+                  {item.description || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này.'}
                 </p>
                 
-                {/* Khối Agent ở đáy (Giả lập) */}
+                {/* Agent Footer */}
                 <div className="complex-agent-footer">
                   <div className="agent-info-left">
                     <div className="agent-avatar-mini">CH</div>
@@ -125,7 +132,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selecte
                   </div>
                   <div className="agent-actions">
                     <button className="btn-call" onClick={(e) => { e.stopPropagation(); alert('Tính năng gọi điện đang phát triển!'); }}>
-                      <Phone size={14}/> 0909 *** ***
+                      <Phone size={14}/> Liên hệ
                     </button>
                     <button className="btn-heart" onClick={(e) => { e.stopPropagation(); }}>
                       <Heart size={16} color="#6B7280" />
@@ -138,8 +145,8 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selecte
         })
       )}
 
-      {/* THANH PHÂN TRANG (PAGINATION) DYNAMIC - Chỉ hiện khi có > 0 trang */}
-      {!isLoading && spaces.length > 0 && (
+      {/* THANH PHÂN TRANG (PAGINATION) DYNAMIC */}
+      {!isLoading && listings.length > 0 && (
         <div className="pagination-container">
           <button 
             className="page-btn" 
