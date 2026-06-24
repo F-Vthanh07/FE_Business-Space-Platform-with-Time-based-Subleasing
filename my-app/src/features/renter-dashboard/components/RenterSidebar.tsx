@@ -119,8 +119,11 @@ export const RenterSidebar: React.FC<RenterSidebarProps> = ({ activePage, onNavi
               if (onLogout) {
                 onLogout();
               } else {
-                localStorage.removeItem('portal_role');
-                localStorage.removeItem('portal_token');
+                const keepKeys = ['app-language', 'app-theme'];
+                const saved: Record<string, string> = {};
+                keepKeys.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
+                localStorage.clear();
+                Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
                 window.location.reload();
               }
             }}

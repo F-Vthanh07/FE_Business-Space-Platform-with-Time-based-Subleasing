@@ -3,39 +3,16 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { MeshBackground } from './components/MeshBackground';
 import { OwnerDashboardPage } from './features/owner-dashboard/OwnerDashboardPage';
 import { RenterDashboardPage } from './features/renter-dashboard/RenterDashboardPage';
+import { AdminDashboardPage } from './features/admin-dashboard/AdminDashboardPage';
+import { AccessDeniedPage } from './components/AccessDeniedPage';
 import { Homepage } from './features/homepage/Homepage';
-import { AuthPage } from './features/auth/AuthPage';
+import { LoginPage } from './features/auth/LoginPage';
+import { RegisterPage } from './features/auth/RegisterPage';
 import ClickSpark from './components/ClickSpark'; 
 import './App.css';
 
-type PortalRole = 'owner' | 'renter';
-
-// Export route paths of each page as requested
- const ROUTES = {
-  HOME: '/',
-  OWNER: '/owner',
-  RENTER: '/renter',
-  LOGIN: '/login',
-};
-
-// ProtectedRoute component inside App.tsx for role checking and redirection
-interface ProtectedRouteProps {
-  allowedRoles: PortalRole[];
-  currentRole: PortalRole | null;
-  children: React.ReactElement;
-}
-
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, currentRole, children }) => {
-  if (!currentRole) {
-    return <Navigate to={ROUTES.LOGIN} replace />;
-  }
-
-  if (!allowedRoles.includes(currentRole)) {
-    return <Navigate to={ROUTES.LOGIN} replace />;
-  }
-
-  return children;
-};
+import { ROUTES, type PortalRole } from './routes/routes';
+import { ProtectedRoute } from './routes/ProtectedRoute';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -46,8 +23,12 @@ const App: React.FC = () => {
   });
 
   const handleLogout = () => {
-    localStorage.removeItem('portal_role');
-    localStorage.removeItem('portal_token');
+    // Giữ lại preference của người dùng, xóa hết các key còn lại
+    const keepKeys = ['app-language', 'app-theme'];
+    const saved: Record<string, string> = {};
+    keepKeys.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
+    localStorage.clear();
+    Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
     setRole(null);
     navigate(ROUTES.LOGIN);
   };
@@ -73,10 +54,16 @@ const App: React.FC = () => {
           element={<Homepage onLaunch={() => navigate(ROUTES.LOGIN)} />} 
         />
 
-        {/* Login / Register Page */}
+        {/* Login Page */}
         <Route 
           path={ROUTES.LOGIN} 
-          element={<AuthPage onLoginSuccess={(selectedRole) => setRole(selectedRole)} />} 
+          element={<LoginPage onLoginSuccess={(selectedRole) => setRole(selectedRole)} />} 
+        />
+
+        {/* Register Page */}
+        <Route 
+          path={ROUTES.REGISTER} 
+          element={<RegisterPage />} 
         />
 
         {/* Space Owner Dashboard - Protected */}
@@ -101,6 +88,24 @@ const App: React.FC = () => {
               </MeshBackground>
             </ProtectedRoute>
           } 
+        />
+
+        {/* Admin Dashboard - Protected */}
+        <Route 
+          path="/admin/*" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']} currentRole={role}>
+              <MeshBackground>
+                <AdminDashboardPage onLogout={handleLogout} />
+              </MeshBackground>
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Access Denied Page */}
+        <Route 
+          path={ROUTES.ACCESS_DENIED} 
+          element={<AccessDeniedPage />} 
         />
 
         {/* Fallback Catch All */}

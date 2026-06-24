@@ -35,17 +35,22 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('portal_token');
-    localStorage.removeItem('portal_role');
+    // Giữ lại preference của người dùng, xóa hết các key còn lại
+    const keepKeys = ['app-language', 'app-theme'];
+    const saved: Record<string, string> = {};
+    keepKeys.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
+    localStorage.clear();
+    Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
     setShowDropdown(false);
     navigate('/');
-    window.location.reload(); 
+    window.location.reload();
   };
 
   const handleDashboardClick = () => {
     setShowDropdown(false);
     if (role === 'owner') navigate('/owner');
     else if (role === 'renter') navigate('/renter');
+    else if (role === 'admin') navigate('/admin');
     else navigate('/auth');
   };
 
@@ -103,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
                 <div className="glass-card animate-in" style={{ position: 'absolute', top: 'calc(100% + 12px)', right: 0, minWidth: '200px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px', zIndex: 100, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', border: '1px solid #2A3A4A' }}>
                   <div style={{ padding: '8px 12px', borderBottom: '1px solid #2A3A4A', marginBottom: '4px' }}>
                     <p style={{ fontSize: '13px', fontWeight: 700, color: '#fff', margin: 0 }}>{userName || (language === 'en' ? 'System User' : 'Người dùng hệ thống')}</p>
-                    <p style={{ fontSize: '11px', color: '#00D4A0', margin: '2px 0 0 0', fontWeight: 600 }}>{userRole || (role === 'owner' ? 'Owner' : 'Renter')}</p>
+                    <p style={{ fontSize: '11px', color: '#00D4A0', margin: '2px 0 0 0', fontWeight: 600 }}>{userRole || (role === 'owner' ? 'Owner' : role === 'admin' ? 'Admin' : 'Renter')}</p>
                   </div>
                   
                   <button className="sidebar-nav-item" onClick={handleDashboardClick} style={{ background: 'transparent', padding: '10px 12px' }}>
