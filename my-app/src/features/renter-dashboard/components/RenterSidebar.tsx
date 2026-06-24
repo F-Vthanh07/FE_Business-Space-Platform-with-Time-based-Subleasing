@@ -59,61 +59,61 @@ export const RenterSidebar: React.FC<RenterSidebarProps> = ({ activePage, onNavi
 
   return (
     <aside className="renter-sidebar glass-card">
-      <div className="sidebar-header">
-        <h2 className="sidebar-title">Ether UI</h2>
-        <p className="sidebar-subtitle">EDITORIAL SOFT-FORM</p>
-        <div className="sidebar-role-badge">
+      <div className="renter-sidebar-header">
+        <h2 className="renter-sidebar-title">Ether UI</h2>
+        <p className="renter-sidebar-subtitle">EDITORIAL SOFT-FORM</p>
+        <div className="renter-sidebar-role-badge">
           <span>{t('sidebar.renterRoleBadge')}</span>
         </div>
       </div>
 
-      <nav className="sidebar-nav">
+      <nav className="renter-sidebar-nav">
         {navItems.map((item) => {
           const isActive = activePage === item.id;
           const labels = getNavLabel(item.id);
           return (
             <button
               key={item.id}
-              className={`sidebar-nav-item ${isActive ? 'sidebar-nav-item--active' : ''}`}
+              className={`renter-sidebar-item ${isActive ? 'renter-sidebar-item--active' : ''}`}
               onClick={() => onNavigate(item.id)}
             >
-              <span className="sidebar-nav-icon">{item.icon}</span>
-              <div className="sidebar-nav-text">
-                <span className="sidebar-nav-label">{labels.label}</span>
-                <span className="sidebar-nav-sublabel">{labels.sub}</span>
+              <span className="renter-sidebar-icon">{item.icon}</span>
+              <div className="renter-sidebar-text">
+                <span className="renter-sidebar-label">{labels.label}</span>
+                <span className="renter-sidebar-sublabel">{labels.sub}</span>
               </div>
             </button>
           );
         })}
       </nav>
 
-      <div className="sidebar-footer">
-        <div className="sidebar-divider" />
-        <button className="btn-primary sidebar-cta" onClick={onNewSlotClick || (() => onNavigate('sublease-listings'))}>
+      <div className="renter-sidebar-footer">
+        <div className="renter-sidebar-divider" />
+        <button className="btn-primary renter-sidebar-cta" onClick={onNewSlotClick || (() => onNavigate('sublease-listings'))}>
           <Plus size={14} />
           {t('sidebar.newTransactionRenter')}
         </button>
         
-        <div className="sidebar-footer-actions">
+        <div className="renter-sidebar-footer-actions">
           <button 
-            className="sidebar-action-btn" 
+            className="renter-sidebar-action-btn" 
             title={t('sidebar.languageNetwork')}
             onClick={() => setLanguage(language === 'en' ? 'vi' : 'en')}
           >
             <Globe size={14} />
           </button>
-          <div className="sidebar-footer-divider" />
+          <div className="renter-sidebar-footer-divider" />
           <button 
-            className="sidebar-action-btn" 
+            className="renter-sidebar-action-btn" 
             title={theme === 'dark' ? t('common.themeLight') : t('common.themeDark')}
             onClick={toggleTheme}
             type="button"
           >
             {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
           </button>
-          <div className="sidebar-footer-divider" />
+          <div className="renter-sidebar-footer-divider" />
           <button 
-            className="sidebar-action-btn" 
+            className="renter-sidebar-action-btn" 
             title={t('sidebar.logout')} 
             onClick={() => {
               if (onLogout) {

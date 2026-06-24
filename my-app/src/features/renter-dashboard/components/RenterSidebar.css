@@ -14,21 +14,21 @@
   height: 100%;
 }
 
-.sidebar-header {
+.renter-sidebar-header {
   padding: 0 var(--space-3) var(--space-6) var(--space-3);
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.sidebar-title {
+.renter-sidebar-title {
   font-size: 18px;
   font-weight: 700;
   color: #fff;
   letter-spacing: -0.2px;
 }
 
-.sidebar-subtitle {
+.renter-sidebar-subtitle {
   font-size: 8px;
   font-weight: 600;
   color: var(--color-text-muted);
@@ -37,7 +37,7 @@
   margin-top: 2px;
 }
 
-.sidebar-role-badge {
+.renter-sidebar-role-badge {
   display: inline-flex;
   align-items: center;
   align-self: flex-start;
@@ -50,14 +50,14 @@
   color: var(--color-accent);
 }
 
-.sidebar-nav {
+.renter-sidebar-nav {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.sidebar-nav-item {
+.renter-sidebar-item {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -69,63 +69,64 @@
   text-align: left;
   width: 100%;
   border: 1px solid transparent;
+  cursor: pointer;
 }
 
-.sidebar-nav-item:hover {
+.renter-sidebar-item:hover {
   color: #fff;
   background: var(--color-bg-hover);
 }
 
-.sidebar-nav-item--active {
+.renter-sidebar-item--active {
   color: #fff;
   background: var(--color-bg-card-deep);
   box-shadow: var(--shadow-inner);
   border-color: rgba(255, 255, 255, 0.02);
 }
 
-.sidebar-nav-icon {
+.renter-sidebar-icon {
   display: flex;
   align-items: center;
   flex-shrink: 0;
   color: var(--color-text-secondary);
 }
 
-.sidebar-nav-item--active .sidebar-nav-icon {
+.renter-sidebar-item--active .renter-sidebar-icon {
   color: #fff;
 }
 
-.sidebar-nav-text {
+.renter-sidebar-text {
   display: flex;
   flex-direction: column;
 }
 
-.sidebar-nav-label {
+.renter-sidebar-label {
   font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
 }
 
-.sidebar-nav-sublabel {
+.renter-sidebar-sublabel {
   font-size: 10px;
   color: var(--color-text-muted);
   line-height: 1.2;
   margin-top: 1px;
 }
 
-.sidebar-footer {
+.renter-sidebar-footer {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   padding-top: var(--space-4);
 }
 
-.sidebar-divider {
+.renter-sidebar-divider {
   height: 1px;
   background: var(--color-border);
   width: 100%;
 }
 
-.sidebar-cta {
+.renter-sidebar-cta {
   width: 100%;
   justify-content: center;
   font-size: var(--font-size-xs);
@@ -136,14 +137,19 @@
   background: var(--color-accent);
   box-shadow: 0 4px 12px rgba(45, 83, 200, 0.2);
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  cursor: pointer;
 }
 
-.sidebar-cta:hover {
+.renter-sidebar-cta:hover {
   background: var(--color-accent-hover);
   box-shadow: 0 4px 16px rgba(45, 83, 200, 0.4);
 }
 
-.sidebar-footer-actions {
+.renter-sidebar-footer-actions {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -151,7 +157,7 @@
   padding: 0 var(--space-2);
 }
 
-.sidebar-action-btn {
+.renter-sidebar-action-btn {
   background: transparent;
   border: none;
   color: var(--color-text-muted);
@@ -162,15 +168,75 @@
   height: 28px;
   border-radius: var(--radius-md);
   transition: all 0.2s ease;
+  cursor: pointer;
 }
 
-.sidebar-action-btn:hover {
+.renter-sidebar-action-btn:hover {
   color: #fff;
   background: var(--color-bg-hover);
 }
 
-.sidebar-footer-divider {
+.renter-sidebar-footer-divider {
   width: 1px;
   height: 14px;
+  background: var(--color-border);
+}
+
+/* ==============================================
+   LIGHT THEME OVERRIDES FOR RENTER SIDEBAR
+   ============================================== */
+.light-theme .renter-sidebar {
+  background: var(--color-bg-sidebar);
+  border-color: var(--color-border);
+}
+
+.light-theme .renter-sidebar-title {
+  color: var(--color-text-primary);
+}
+
+.light-theme .renter-sidebar-subtitle {
+  color: var(--color-text-secondary);
+}
+
+.light-theme .renter-sidebar-role-badge {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.15);
+  color: var(--color-accent);
+}
+
+.light-theme .renter-sidebar-item {
+  color: var(--color-text-secondary);
+}
+
+.light-theme .renter-sidebar-item:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+}
+
+.light-theme .renter-sidebar-item--active {
+  color: var(--color-accent);
+  background: var(--color-card-highlight);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.light-theme .renter-sidebar-item--active .renter-sidebar-icon {
+  color: var(--color-accent);
+}
+
+.light-theme .renter-sidebar-divider {
+  background: var(--color-border);
+}
+
+.light-theme .renter-sidebar-action-btn {
+  color: var(--color-text-muted);
+}
+
+.light-theme .renter-sidebar-action-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+}
+
+.light-theme .renter-sidebar-footer-divider {
   background: var(--color-border);
 }

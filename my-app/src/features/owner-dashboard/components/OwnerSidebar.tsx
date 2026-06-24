@@ -54,9 +54,9 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activePage, onNaviga
 
   return (
     <aside className="owner-sidebar">
-      <div className="sidebar-header">
-        <h2 className="sidebar-title">Ether UI</h2>
-        <p className="sidebar-subtitle">System Console</p>
+      <div className="owner-sidebar-header">
+        <h2 className="owner-sidebar-title">Ether UI</h2>
+        <p className="owner-sidebar-subtitle">System Console</p>
       </div>
 
       <nav className="owner-sidebar-nav">
@@ -79,25 +79,25 @@ export const OwnerSidebar: React.FC<OwnerSidebarProps> = ({ activePage, onNaviga
         })}
       </nav>
 
-      <div className="sidebar-footer">
-        <div className="sidebar-divider" />
+      <div className="owner-sidebar-footer">
+        <div className="owner-sidebar-divider" />
         {/* Nút to dưới cùng để thêm Mặt bằng */}
-        <button className="sidebar-cta" onClick={onNewSpaceClick || (() => onNavigate('spaces'))}>
+        <button className="owner-sidebar-cta" onClick={onNewSpaceClick || (() => onNavigate('spaces'))}>
           <Plus size={16} />
           {language === 'en' ? 'NEW SPACE' : 'THÊM MẶT BẰNG'}
         </button>
         
-        <div className="sidebar-footer-actions">
+        <div className="owner-sidebar-footer-actions">
           <button 
-            className="sidebar-action-btn" 
+            className="owner-sidebar-action-btn" 
             title="Ngôn ngữ"
             onClick={() => setLanguage(language === 'en' ? 'vi' : 'en')}
           >
             <Globe size={16} />
           </button>
-          <div className="sidebar-footer-divider" />
+          <div className="owner-sidebar-footer-divider" />
           <button 
-            className="sidebar-action-btn" 
+            className="owner-sidebar-action-btn" 
             title="Đăng xuất" 
             onClick={() => {
               if (onLogout) {

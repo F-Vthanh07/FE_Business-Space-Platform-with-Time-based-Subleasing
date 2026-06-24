@@ -6,10 +6,11 @@
   padding: 0 40px; /* Padding rộng ra 2 bên giống ảnh */
   flex-shrink: 0;
   
-  /* Đổi sang nền đen tĩnh và viền mỏng theo design mới */
+  /* Nền đen tĩnh và viền mỏng theo design mới */
   background: #0D1117;
   border-bottom: 1px solid #1A2332;
-  position: static; /* Nằm tĩnh bên trên, không cuộn theo màn hình */
+  position: relative; /* Đặt relative và z-index để tạo stacking context */
+  z-index: 100;
 }
 
 .header-left {
@@ -164,4 +165,167 @@
 
 .header-avatar:hover {
   border-color: #00D4A0;
+}
+
+/* User Profile Dropdown Styling */
+.header-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  min-width: 200px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1000; /* Đảm bảo nằm trên mọi layer trang */
+  background: #161C26;
+  border: 1px solid #2A3A4A;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.header-dropdown-info {
+  padding: 8px 12px;
+  border-bottom: 1px solid #2A3A4A;
+  margin-bottom: 4px;
+}
+
+.header-dropdown-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.header-dropdown-role {
+  font-size: 11px;
+  color: #00D4A0;
+  margin: 2px 0 0 0;
+  font-weight: 600;
+}
+
+.header-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: transparent;
+  color: #A0AABC;
+  border: none;
+  font-size: 12px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-dropdown-item:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.header-dropdown-item.logout {
+  color: #f85149;
+}
+
+.header-dropdown-item.logout:hover {
+  background: rgba(248, 81, 73, 0.1);
+  color: #f85149;
+}
+
+/* ==============================================
+   LIGHT THEME OVERRIDES FOR HEADER
+   ============================================== */
+.light-theme .dashboard-header {
+  background: #ffffff;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.light-theme .header-logo-text {
+  color: #0F172A;
+}
+
+.light-theme .header-nav-item {
+  color: #475569;
+}
+
+.light-theme .header-nav-item:hover,
+.light-theme .header-nav-item--active {
+  color: #0F172A;
+}
+
+.light-theme .header-nav-item--active::after {
+  background-color: var(--color-accent);
+}
+
+.light-theme .btn-post-listing {
+  background-color: #0F172A;
+  color: #ffffff;
+  border: 1px solid #0F172A;
+}
+
+.light-theme .arrow-icon {
+  background: #ffffff;
+  color: #0F172A;
+}
+
+.light-theme .header-icon-btn {
+  color: #475569;
+}
+
+.light-theme .header-icon-btn:hover {
+  color: #0F172A;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.light-theme .notif-dot {
+  border-color: #ffffff;
+}
+
+.light-theme .header-avatar {
+  background: #F1F5F9;
+  border-color: #E2E8F0;
+  color: #0F172A;
+}
+
+.light-theme .header-avatar:hover {
+  border-color: var(--color-accent);
+}
+
+/* Light Theme overrides for dropdown */
+.light-theme .header-dropdown-menu {
+  background: #ffffff;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.light-theme .header-dropdown-info {
+  border-bottom-color: #E2E8F0;
+}
+
+.light-theme .header-dropdown-name {
+  color: #0F172A;
+}
+
+.light-theme .header-dropdown-role {
+  color: var(--color-accent);
+}
+
+.light-theme .header-dropdown-item {
+  color: #475569;
+}
+
+.light-theme .header-dropdown-item:hover {
+  color: #0F172A;
+  background: #F1F5F9;
+}
+
+.light-theme .header-dropdown-item.logout {
+  color: #dc2626;
+}
+
+.light-theme .header-dropdown-item.logout:hover {
+  background: rgba(220, 38, 38, 0.05);
+  color: #dc2626;
 }
