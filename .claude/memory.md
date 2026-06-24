@@ -6,4 +6,5 @@ Tài liệu này lưu lại những bài học kinh nghiệm, các quyết đị
 - [2026-05-25] Khởi tạo cây thư mục cấu trúc `.claude/` theo thiết kế Claude Design.
 - [2026-05-25] Phân tích và tích hợp thông tin đề xuất đề tài Capstone Project: "AI-powered Shared Business Space Platform with Time-based Subleasing" vào `CLAUDE.md` và `rules/tech-defaults.md`.
 - [2026-05-25] Khởi tạo file `rules/architecture.md` đặc tả cấu trúc cây thư mục Frontend và quy chuẩn code của AI.
+- [2026-06-24] Tổng hợp Swagger API (https://localhost:7069) + Yêu cầu nghiệp vụ + DB Schema vào `rules/api-reference.md`. Đây là nguồn tham chiếu chính xác duy nhất cho mọi tác vụ liên quan đến API — field names, data types, enum values, business logic.
 
