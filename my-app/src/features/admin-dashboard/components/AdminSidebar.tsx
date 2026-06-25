@@ -9,11 +9,12 @@ import {
   LogOut,
   Sun,
   Moon,
+  Tag,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import './AdminSidebar.css';
 
-export type AdminPage = 'overview' | 'users' | 'spaces' | 'listings' | 'transactions';
+export type AdminPage = 'overview' | 'users' | 'spaces' | 'listings' | 'transactions' | 'categories';
 
 interface AdminSidebarProps {
   activePage: AdminPage;
@@ -32,6 +33,7 @@ const navItems: NavItem[] = [
   { id: 'spaces', icon: <Building2 size={16} /> },
   { id: 'listings', icon: <FileText size={16} /> },
   { id: 'transactions', icon: <CreditCard size={16} /> },
+  { id: 'categories', icon: <Tag size={16} /> },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNavigate, onLogout }) => {
@@ -50,6 +52,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNaviga
         return { title: isEn ? 'Listings Approval' : 'Duyệt tin đăng', sub: isEn ? 'Market offers' : 'Tin thuê chờ duyệt' };
       case 'transactions':
         return { title: isEn ? 'Transactions' : 'Giao dịch', sub: isEn ? 'Escrow & payouts' : 'Ví ký quỹ & thanh toán' };
+      case 'categories':
+        return { title: isEn ? 'Categories' : 'Ngành nghề', sub: isEn ? 'Business niches' : 'Ngành hàng kinh doanh' };
       default:
         return { title: id, sub: '' };
     }

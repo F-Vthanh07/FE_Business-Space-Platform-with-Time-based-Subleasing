@@ -1,51 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { AdminSidebar } from './components/AdminSidebar';
-import type { AdminPage } from './components/AdminSidebar';
-import { 
-  Users, Building, FileText, Check, X, 
-  Activity, DollarSign, MapPin, 
-  User as UserIcon, ShieldAlert as BlockIcon
-} from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './AdminDashboardPage.css';
 
-// Kiểu dữ liệu Mock & Real
-interface UserAccount {
-  id: string;
-  name: string;
-  email: string;
-  role: 'ADMIN' | 'OWNER' | 'RENTER';
-  status: 'ACTIVE' | 'BLOCKED';
-  createdAt: string;
-}
+// Types & API imports
+import type { AdminPage, UserAccount, SpaceApprovalItem, AdminListingItem, SystemStat, BusinessCategory } from './types';
+import { 
+  fetchPendingSpaces, 
+  fetchListings, 
+  approveSpace, 
+  rejectSpace, 
+  approveListing, 
+  rejectListing,
+  fetchBusinessCategories,
+  createSingleCategory,
+  createCategoryList,
+  updateCategory,
+  deleteCategory
+} from './api/admin.api';
 
-interface SpaceApprovalItem {
-  id: string;
-  name: string;
-  address: string;
-  area: number;
-  ownerName: string;
-  ownerId: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  createdAt: string;
-}
-
-interface ListingApprovalItem {
-  id: string;
-  title: string;
-  price: number;
-  spaceName: string;
-  ownerName: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  createdAt: string;
-}
-
-interface SystemStat {
-  totalUsers: number;
-  totalSpaces: number;
-  totalListings: number;
-  totalRevenue: number;
-}
+// Components imports
+import { OverviewModule } from './components/OverviewModule';
+import { UsersModule } from './components/UsersModule';
+import { SpacesModule } from './components/SpacesModule';
+import { ListingsModule } from './components/ListingsModule';
+import { TransactionsModule } from './components/TransactionsModule';
+import { CategoriesModule } from './components/CategoriesModule';
 
 export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { language } = useThemeLanguage();
@@ -61,7 +42,9 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [pendingSpaces, setPendingSpaces] = useState<SpaceApprovalItem[]>([]);
-  const [pendingListings, setPendingListings] = useState<ListingApprovalItem[]>([]);
+  const [listings, setListings] = useState<AdminListingItem[]>([]);
+  const [listingsFilter, setListingsFilter] = useState<'all' | 'pending' | 'accepted' | 'canceled'>('all');
+  const [categories, setCategories] = useState<BusinessCategory[]>([]);
   
   // Loading & Notification states
   const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +59,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Mock initial data
+  // Mock initial data as fallback
   useEffect(() => {
     // Mock Users
     setUsers([
@@ -94,34 +77,133 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       { id: 'SP003', name: 'Co-working Space Cầu Giấy', address: '88 Cầu Giấy, Hà Nội', area: 90, ownerName: 'Nguyễn Văn A', ownerId: 'US001', status: 'PENDING', createdAt: '2026-06-24' },
     ]);
 
-    // Mock Pending Listings
-    setPendingListings([
-      { id: 'LT001', title: 'Thuê mặt bằng Cafe tầng trệt tối thứ 7 và chủ nhật', price: 1500000, spaceName: 'Ether Workspace Quận 1', ownerName: 'Nguyễn Văn A', status: 'PENDING', createdAt: '2026-06-22' },
-      { id: 'LT002', title: 'Không gian tổ chức Workshop thời trang tối thứ 6', price: 2000000, spaceName: 'Co-working Space Cầu Giấy', ownerName: 'Nguyễn Văn A', status: 'PENDING', createdAt: '2026-06-24' },
+    // Mock Listings
+    setListings([
+      {
+        id: 1,
+        spaceId: 1,
+        creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35",
+        allowedStartTime: "0001-01-01",
+        allowedEndTime: "0001-01-01",
+        description: "Chia sẻ mặt bằng quán cafe buổi sáng. Vị trí góc ngã tư đông người qua lại, rất phù hợp bán đồ ăn sáng mang đi hoặc ăn tại chỗ.",
+        listingType: "SharedSpace",
+        status: "Pending",
+        lessorName: "Nguyễn Văn A",
+        spaceAddress: "123 Nguyễn Đình Chiểu, Phường Võ Thị Sáu",
+        createdAt: "2026-06-25T11:40:32.55648",
+        updatedAt: "0001-01-01T00:00:00",
+        isDeleted: false,
+        isActive: false,
+        cancelReason: null,
+        listingPictures: [
+          "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800",
+          "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=400"
+        ],
+        shareSpaceDetailMaxSubRenter: 1,
+        shareSpaceDetailIsOwner: false,
+        shareSpaceDetailIsLegalCommitted: true,
+        shareSpaceDetailLegalCommittedAt: "2026-06-25T11:40:32.556599",
+        shareSpaceDetailShareSpaceAmenities: [
+          { id: 1, amenityId: 1, shareSpaceDetailId: 1, isIncluded: true, price: 0 },
+          { id: 2, amenityId: 2, shareSpaceDetailId: 1, isIncluded: false, price: 500000 }
+        ],
+        shareSpaceDetailAvailabilitiesTimes: [
+          {
+            id: 1,
+            shareSpaceDetailId: 1,
+            daysOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            specificdate: "0001-01-01",
+            startTime: "05:30:00",
+            endTime: "11:00:00",
+            validFrom: "2026-07-01",
+            validTo: "2026-12-31"
+          }
+        ],
+        shareSpaceDetailShareSpaceCategories: [
+          { id: 1, bussinessCategoryId: 1, shareSpaceDetailId: 1, note: "Chỉ ưu tiên bán thức ăn nhẹ, bánh mì, đồ ăn sáng không gây nhiều khói." }
+        ]
+      },
+      {
+        id: 2,
+        spaceId: 2,
+        creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC36",
+        allowedStartTime: "0001-01-01",
+        allowedEndTime: "0001-01-01",
+        description: "Không gian tổ chức Workshop thời trang tối thứ 6. Mặt bằng rộng rãi, có hệ thống đèn chiếu sáng hiện đại, điều hòa công suất lớn.",
+        listingType: "SharedSpace",
+        status: "Pending",
+        lessorName: "Phạm Minh D",
+        spaceAddress: "88 Cầu Giấy, Hà Nội",
+        createdAt: "2026-06-24T18:30:00",
+        updatedAt: "0001-01-01T00:00:00",
+        isDeleted: false,
+        isActive: false,
+        cancelReason: null,
+        listingPictures: [
+          "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&q=80&w=800"
+        ],
+        shareSpaceDetailMaxSubRenter: 2,
+        shareSpaceDetailIsOwner: true,
+        shareSpaceDetailIsLegalCommitted: true,
+        shareSpaceDetailLegalCommittedAt: "2026-06-24T18:30:00",
+        shareSpaceDetailShareSpaceAmenities: [
+          { id: 3, amenityId: 3, shareSpaceDetailId: 2, isIncluded: true, price: 0 }
+        ],
+        shareSpaceDetailAvailabilitiesTimes: [
+          {
+            id: 2,
+            shareSpaceDetailId: 2,
+            daysOfWeek: ["Friday"],
+            specificdate: "0001-01-01",
+            startTime: "18:00:00",
+            endTime: "22:00:00",
+            validFrom: "2026-07-01",
+            validTo: "2026-12-31"
+          }
+        ],
+        shareSpaceDetailShareSpaceCategories: [
+          { id: 2, bussinessCategoryId: 2, shareSpaceDetailId: 2, note: "Phù hợp cho các hoạt động workshop, seminar nhỏ." }
+        ]
+      }
     ]);
     
-    // Gọi API thực tế nếu có backend
+    // Mock Business Categories
+    setCategories([
+      { id: 1, name: "Dịch vụ ăn uống", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.44544" },
+      { id: 2, name: "Bán lẻ", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445861" },
+      { id: 3, name: "Bất động sản", isActive: false, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445865" },
+      { id: 4, name: "Công nghệ thông tin", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445866" },
+      { id: 5, name: "Dịch vụ làm đẹp và Spa", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445868" },
+      { id: 6, name: "Du lịch và Lữ hành", isActive: false, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445869" },
+      { id: 7, name: "Giáo dục và Đào tạo", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445869" },
+      { id: 8, name: "Vận tải và Logistics", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.44587" }
+    ] as any);
+
+    // Gọi API thực tế
     fetchRealAdminData();
   }, []);
 
   const fetchRealAdminData = async () => {
     if (!token) return;
     try {
-      // Ví dụ gọi API lấy danh sách Spaces chờ duyệt thực tế
-      const response = await fetch('https://localhost:7069/api/Admin/Spaces/pending', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'accept': '*/*'
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setPendingSpaces(data);
-        }
-      }
+      const spacesData = await fetchPendingSpaces(token);
+      setPendingSpaces(spacesData);
     } catch (e) {
-      console.warn("Không kết nối được API thật, đang sử dụng dữ liệu mô phỏng local.");
+      console.warn("Không kết nối được API thật cho Spaces.");
+    }
+
+    try {
+      const listingsData = await fetchListings(token);
+      setListings(listingsData);
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Listings, đang sử dụng dữ liệu mô phỏng local.");
+    }
+
+    try {
+      const categoriesData = await fetchBusinessCategories(token);
+      setCategories(categoriesData);
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Business Categories.");
     }
   };
 
@@ -129,22 +211,12 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   const handleApproveSpace = async (spaceId: string) => {
     setIsLoading(true);
     try {
-      // Gọi API thật
-      await fetch(`https://localhost:7069/api/Admin/Spaces/${spaceId}/approve`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'accept': '*/*'
-        }
-      });
-
-      // Bất kể API OK hay fail (do dev environment offline), ta vẫn update giao diện local cho mượt
+      await approveSpace(spaceId, token || '');
       setPendingSpaces(prev => prev.filter(item => item.id !== spaceId));
       setStats(prev => ({ ...prev, totalSpaces: prev.totalSpaces + 1 }));
       showNotification(language === 'en' ? "Property space approved successfully!" : "Đã duyệt mặt bằng thành công!");
     } catch (err) {
       console.error(err);
-      // Fallback
       setPendingSpaces(prev => prev.filter(item => item.id !== spaceId));
       setStats(prev => ({ ...prev, totalSpaces: prev.totalSpaces + 1 }));
       showNotification(language === 'en' ? "Property approved (Demo mode)" : "Phê duyệt thành công (Chế độ mô phỏng)");
@@ -156,13 +228,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   const handleRejectSpace = async (spaceId: string) => {
     setIsLoading(true);
     try {
-      await fetch(`https://localhost:7069/api/Admin/Spaces/${spaceId}/reject`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'accept': '*/*'
-        }
-      });
+      await rejectSpace(spaceId, token || '');
       setPendingSpaces(prev => prev.filter(item => item.id !== spaceId));
       showNotification(language === 'en' ? "Property space rejected." : "Đã từ chối mặt bằng.", 'error');
     } catch (err) {
@@ -175,22 +241,16 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   };
 
   // --- ACTIONS XỬ LÝ DUYỆT / TỪ CHỐI TIN ĐĂNG (LISTINGS) ---
-  const handleApproveListing = async (listingId: string) => {
+  const handleApproveListing = async (listingId: number) => {
     setIsLoading(true);
     try {
-      await fetch(`https://localhost:7069/api/Admin/Listings/${listingId}/approve`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'accept': '*/*'
-        }
-      });
-      setPendingListings(prev => prev.filter(item => item.id !== listingId));
+      await approveListing(listingId, token || '');
+      setListings(prev => prev.map(item => item.id === listingId ? { ...item, status: 'Accepted' } : item));
       setStats(prev => ({ ...prev, totalListings: prev.totalListings + 1 }));
       showNotification(language === 'en' ? "Rental listing approved!" : "Đã phê duyệt bài đăng cho thuê!");
     } catch (err) {
       console.error(err);
-      setPendingListings(prev => prev.filter(item => item.id !== listingId));
+      setListings(prev => prev.map(item => item.id === listingId ? { ...item, status: 'Accepted' } : item));
       setStats(prev => ({ ...prev, totalListings: prev.totalListings + 1 }));
       showNotification(language === 'en' ? "Listing approved (Demo mode)" : "Phê duyệt tin đăng thành công (Chế độ mô phỏng)");
     } finally {
@@ -198,21 +258,15 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     }
   };
 
-  const handleRejectListing = async (listingId: string) => {
+  const handleRejectListing = async (listingId: number, reason: string) => {
     setIsLoading(true);
     try {
-      await fetch(`https://localhost:7069/api/Admin/Listings/${listingId}/reject`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'accept': '*/*'
-        }
-      });
-      setPendingListings(prev => prev.filter(item => item.id !== listingId));
+      await rejectListing(listingId, reason, token || '');
+      setListings(prev => prev.map(item => item.id === listingId ? { ...item, status: 'Canceled', cancelReason: reason } : item));
       showNotification(language === 'en' ? "Rental listing rejected." : "Đã từ chối tin đăng.", 'error');
     } catch (err) {
       console.error(err);
-      setPendingListings(prev => prev.filter(item => item.id !== listingId));
+      setListings(prev => prev.map(item => item.id === listingId ? { ...item, status: 'Canceled', cancelReason: reason } : item));
       showNotification(language === 'en' ? "Listing rejected (Demo mode)" : "Từ chối tin đăng (Chế độ mô phỏng)", 'error');
     } finally {
       setIsLoading(false);
@@ -233,6 +287,99 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       }
       return u;
     }));
+  };
+
+  // --- ACTIONS QUẢN LÝ NGÀNH NGHỀ (BUSINESS CATEGORIES) ---
+  const handleCreateCategory = async (name: string, isActive: boolean) => {
+    setIsLoading(true);
+    try {
+      await createSingleCategory(name, isActive, token || '');
+      showNotification(language === 'en' ? "Business category created successfully!" : "Đã tạo ngành nghề thành công!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      // Fallback
+      const newCat: BusinessCategory = {
+        id: categories.length > 0 ? Math.max(...categories.map(c => c.id)) + 1 : 1,
+        name,
+        isActive,
+        createdBy: 'US004', // Super admin mock
+        createdAt: new Date().toISOString(),
+        updatedBy: null,
+        updatedAt: '0001-01-01T00:00:00'
+      };
+      setCategories(prev => [...prev, newCat]);
+      showNotification(language === 'en' ? "Category created (Demo mode)" : "Tạo ngành nghề thành công (Chế độ mô phỏng)");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBulkCreateCategories = async () => {
+    setIsLoading(true);
+    const defaultList = [
+      { name: "Dịch vụ ăn uống", isActive: true },
+      { name: "Bán lẻ", isActive: true },
+      { name: "Bất động sản", isActive: false },
+      { name: "Công nghệ thông tin", isActive: true },
+      { name: "Dịch vụ làm đẹp và Spa", isActive: true },
+      { name: "Du lịch và Lữ hành", isActive: false },
+      { name: "Giáo dục và Đào tạo", isActive: true },
+      { name: "Vận tải và Logistics", isActive: true }
+    ];
+    try {
+      await createCategoryList(defaultList, token || '');
+      showNotification(language === 'en' ? "Categories initialized successfully!" : "Đã khởi tạo danh sách ngành nghề thành công!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      // Fallback: overwrite categories state
+      const mappedList: BusinessCategory[] = defaultList.map((c, idx) => ({
+        id: idx + 1,
+        name: c.name,
+        isActive: c.isActive,
+        createdBy: 'US004',
+        createdAt: new Date().toISOString(),
+        updatedBy: null,
+        updatedAt: '0001-01-01T00:00:00'
+      }));
+      setCategories(mappedList);
+      showNotification(language === 'en' ? "Categories initialized (Demo mode)" : "Khởi tạo danh sách thành công (Chế độ mô phỏng)");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateCategory = async (id: number, name: string, isActive: boolean) => {
+    setIsLoading(true);
+    try {
+      await updateCategory(id, name, isActive, token || '');
+      showNotification(language === 'en' ? "Category updated successfully!" : "Đã cập nhật ngành nghề thành công!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      // Fallback
+      setCategories(prev => prev.map(c => c.id === id ? { ...c, name, isActive, updatedAt: new Date().toISOString() } : c));
+      showNotification(language === 'en' ? "Category updated (Demo mode)" : "Cập nhật ngành nghề thành công (Chế độ mô phỏng)");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    setIsLoading(true);
+    try {
+      await deleteCategory(id, token || '');
+      showNotification(language === 'en' ? "Category deleted successfully!" : "Đã xóa ngành nghề thành công!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      // Fallback
+      setCategories(prev => prev.filter(c => c.id !== id));
+      showNotification(language === 'en' ? "Category deleted (Demo mode)" : "Xóa ngành nghề thành công (Chế độ mô phỏng)", 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -257,305 +404,55 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
 
         {/* --- MODULE 1: OVERVIEW --- */}
         {activeTab === 'overview' && (
-          <div className="admin-module animate-fade-in">
-            <header className="module-header">
-              <h1>{language === 'en' ? 'System Overview' : 'Tổng quan Hệ thống'}</h1>
-              <p>{language === 'en' ? 'Live analytics and nodes monitoring' : 'Thông số hoạt động và phân tích trực tiếp'}</p>
-            </header>
-
-            {/* Stats Cards */}
-            <div className="admin-stats-grid">
-              <div className="admin-stat-card glass-card">
-                <div className="stat-icon-wrapper blue"><Users size={20} /></div>
-                <div className="stat-data">
-                  <span className="stat-label">{language === 'en' ? 'ACTIVE USERS' : 'NGƯỜI DÙNG HOẠT ĐỘNG'}</span>
-                  <h2 className="stat-value">{stats.totalUsers}</h2>
-                </div>
-              </div>
-
-              <div className="admin-stat-card glass-card">
-                <div className="stat-icon-wrapper green"><Building size={20} /></div>
-                <div className="stat-data">
-                  <span className="stat-label">{language === 'en' ? 'VERIFIED SPACES' : 'MẶT BẰNG ĐÃ XÁC MINH'}</span>
-                  <h2 className="stat-value">{stats.totalSpaces}</h2>
-                </div>
-              </div>
-
-              <div className="admin-stat-card glass-card">
-                <div className="stat-icon-wrapper orange"><FileText size={20} /></div>
-                <div className="stat-data">
-                  <span className="stat-label">{language === 'en' ? 'PUBLISHED LISTINGS' : 'TIN ĐĂNG CHO THUÊ'}</span>
-                  <h2 className="stat-value">{stats.totalListings}</h2>
-                </div>
-              </div>
-
-              <div className="admin-stat-card glass-card">
-                <div className="stat-icon-wrapper purple"><DollarSign size={20} /></div>
-                <div className="stat-data">
-                  <span className="stat-label">{language === 'en' ? 'ESTIMATED VOLUME' : 'TỔNG DOANH THU'}</span>
-                  <h2 className="stat-value">{(stats.totalRevenue).toLocaleString('vi-VN')} đ</h2>
-                </div>
-              </div>
-            </div>
-
-            {/* Activity Block */}
-            <div className="admin-activity-section glass-card">
-              <div className="section-title-row">
-                <Activity size={18} className="text-neon-green" />
-                <h3>{language === 'en' ? 'Realtime Node Analytics' : 'Biểu đồ hoạt động hệ thống'}</h3>
-              </div>
-              <div className="simulated-chart">
-                <div className="chart-bar-container">
-                  <div className="chart-bar" style={{ height: '70%' }}><span className="bar-label">May</span></div>
-                  <div className="chart-bar" style={{ height: '85%' }}><span className="bar-label">Jun</span></div>
-                  <div className="chart-bar" style={{ height: '60%' }}><span className="bar-label">Jul</span></div>
-                  <div className="chart-bar" style={{ height: '90%' }}><span className="bar-label">Aug</span></div>
-                  <div className="chart-bar active" style={{ height: '95%' }}><span className="bar-label">Current</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <OverviewModule stats={stats} language={language} />
         )}
 
         {/* --- MODULE 2: USERS --- */}
         {activeTab === 'users' && (
-          <div className="admin-module animate-fade-in">
-            <header className="module-header">
-              <h1>{language === 'en' ? 'User Accounts' : 'Quản lý Người dùng'}</h1>
-              <p>{language === 'en' ? 'Manage roles, permission layers, and access keys' : 'Quản lý quyền hạn, vai trò và trạng thái tài khoản'}</p>
-            </header>
-
-            <div className="admin-table-container glass-card">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>{language === 'en' ? 'User Info' : 'Người dùng'}</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map(u => (
-                    <tr key={u.id} className={u.status === 'BLOCKED' ? 'blocked-row' : ''}>
-                      <td className="font-mono">{u.id}</td>
-                      <td>
-                        <div className="user-info-cell">
-                          <div className="user-avatar-mini">{u.name[0]}</div>
-                          <span className="user-name">{u.name}</span>
-                        </div>
-                      </td>
-                      <td>{u.email}</td>
-                      <td>
-                        <span className={`badge-role ${u.role.toLowerCase()}`}>{u.role}</span>
-                      </td>
-                      <td>
-                        <span className={`badge-status ${u.status.toLowerCase()}`}>
-                          {u.status === 'ACTIVE' ? (language === 'en' ? 'Active' : 'Hoạt động') : (language === 'en' ? 'Blocked' : 'Bị Khóa')}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        {u.role !== 'ADMIN' && (
-                          <button 
-                            className={`btn-action-icon ${u.status === 'ACTIVE' ? 'block' : 'unblock'}`}
-                            onClick={() => toggleUserStatus(u.id)}
-                            title={u.status === 'ACTIVE' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
-                          >
-                            <BlockIcon size={14} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <UsersModule users={users} toggleUserStatus={toggleUserStatus} language={language} />
         )}
 
         {/* --- MODULE 3: SPACES APPROVAL --- */}
         {activeTab === 'spaces' && (
-          <div className="admin-module animate-fade-in">
-            <header className="module-header">
-              <h1>{language === 'en' ? 'Spaces Verification' : 'Phê duyệt Mặt bằng'}</h1>
-              <p>{language === 'en' ? 'Review properties registered by Space Owners' : 'Xét duyệt tính pháp lý và thông tin mặt bằng do Chủ nhà đăng tải'}</p>
-            </header>
-
-            <div className="approval-list-grid">
-              {pendingSpaces.length === 0 ? (
-                <div className="empty-approval glass-card">
-                  <Check size={36} className="text-neon-green" />
-                  <h3>{language === 'en' ? 'All spaces approved' : 'Không có mặt bằng nào đang chờ duyệt'}</h3>
-                  <p>{language === 'en' ? 'Everything is clear for now' : 'Hệ thống đã cập nhật đầy đủ thông tin'}</p>
-                </div>
-              ) : (
-                pendingSpaces.map(sp => (
-                  <div key={sp.id} className="approval-card glass-card">
-                    <div className="approval-card-header">
-                      <span className="approval-id">ID: {sp.id}</span>
-                      <span className="approval-date">{sp.createdAt}</span>
-                    </div>
-
-                    <h2 className="approval-title">{sp.name}</h2>
-                    
-                    <div className="approval-details">
-                      <div className="detail-item">
-                        <MapPin size={14} />
-                        <span>{sp.address}</span>
-                      </div>
-                      <div className="detail-item">
-                        <Building size={14} />
-                        <span>{sp.area} sqm</span>
-                      </div>
-                      <div className="detail-item">
-                        <UserIcon size={14} />
-                        <span>Owner: <strong className="text-neon-green">{sp.ownerName}</strong> (ID: {sp.ownerId})</span>
-                      </div>
-                    </div>
-
-                    <div className="approval-card-actions">
-                      <button 
-                        className="btn-approve" 
-                        disabled={isLoading}
-                        onClick={() => handleApproveSpace(sp.id)}
-                      >
-                        <Check size={15} />
-                        {language === 'en' ? 'Approve' : 'Duyệt'}
-                      </button>
-
-                      <button 
-                        className="btn-reject" 
-                        disabled={isLoading}
-                        onClick={() => handleRejectSpace(sp.id)}
-                      >
-                        <X size={15} />
-                        {language === 'en' ? 'Reject' : 'Từ chối'}
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <SpacesModule 
+            pendingSpaces={pendingSpaces} 
+            handleApproveSpace={handleApproveSpace} 
+            handleRejectSpace={handleRejectSpace} 
+            isLoading={isLoading} 
+            language={language} 
+          />
         )}
 
         {/* --- MODULE 4: LISTINGS APPROVAL --- */}
         {activeTab === 'listings' && (
-          <div className="admin-module animate-fade-in">
-            <header className="module-header">
-              <h1>{language === 'en' ? 'Listings Verification' : 'Phê duyệt Tin đăng'}</h1>
-              <p>{language === 'en' ? 'Review lease and time-sharing offers before publishing' : 'Kiểm tra và duyệt các gói tin đăng cho thuê trước khi công khai lên sàn giao dịch'}</p>
-            </header>
-
-            <div className="approval-list-grid">
-              {pendingListings.length === 0 ? (
-                <div className="empty-approval glass-card">
-                  <Check size={36} className="text-neon-green" />
-                  <h3>{language === 'en' ? 'All listings approved' : 'Không có bài đăng nào đang chờ duyệt'}</h3>
-                  <p>{language === 'en' ? 'Everything is clear for now' : 'Hệ thống đã cập nhật đầy đủ thông tin'}</p>
-                </div>
-              ) : (
-                pendingListings.map(lt => (
-                  <div key={lt.id} className="approval-card glass-card">
-                    <div className="approval-card-header">
-                      <span className="approval-id">ID: {lt.id}</span>
-                      <span className="approval-date">{lt.createdAt}</span>
-                    </div>
-
-                    <h2 className="approval-title">{lt.title}</h2>
-                    
-                    <div className="approval-details">
-                      <div className="detail-item">
-                        <Building size={14} />
-                        <span>Space: {lt.spaceName}</span>
-                      </div>
-                      <div className="detail-item">
-                        <DollarSign size={14} />
-                        <span>Price: <strong className="text-neon-green">{(lt.price).toLocaleString('vi-VN')} đ/slot</strong></span>
-                      </div>
-                      <div className="detail-item">
-                        <UserIcon size={14} />
-                        <span>Poster: <strong>{lt.ownerName}</strong></span>
-                      </div>
-                    </div>
-
-                    <div className="approval-card-actions">
-                      <button 
-                        className="btn-approve" 
-                        disabled={isLoading}
-                        onClick={() => handleApproveListing(lt.id)}
-                      >
-                        <Check size={15} />
-                        {language === 'en' ? 'Approve' : 'Duyệt'}
-                      </button>
-
-                      <button 
-                        className="btn-reject" 
-                        disabled={isLoading}
-                        onClick={() => handleRejectListing(lt.id)}
-                      >
-                        <X size={15} />
-                        {language === 'en' ? 'Reject' : 'Từ chối'}
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <ListingsModule 
+            listings={listings}
+            listingsFilter={listingsFilter}
+            setListingsFilter={setListingsFilter}
+            handleApproveListing={handleApproveListing}
+            handleRejectListing={handleRejectListing}
+            isLoading={isLoading}
+            language={language}
+            categories={categories}
+          />
         )}
 
         {/* --- MODULE 5: TRANSACTIONS --- */}
         {activeTab === 'transactions' && (
-          <div className="admin-module animate-fade-in">
-            <header className="module-header">
-              <h1>{language === 'en' ? 'Subleasing Transactions' : 'Hệ thống Giao dịch'}</h1>
-              <p>{language === 'en' ? 'Monitor escrow nodes and hourly contract payouts' : 'Theo dõi hệ thống ví ký quỹ và dòng tiền thanh toán dịch vụ'}</p>
-            </header>
+          <TransactionsModule language={language} />
+        )}
 
-            <div className="admin-table-container glass-card">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>TXID</th>
-                    <th>{language === 'en' ? 'Space Location' : 'Địa điểm'}</th>
-                    <th>{language === 'en' ? 'Renter' : 'Người thuê'}</th>
-                    <th>{language === 'en' ? 'Amount' : 'Số tiền'}</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="font-mono">TX88301</td>
-                    <td>Ether Workspace Quận 1</td>
-                    <td>Trần Thị B</td>
-                    <td>1,500,000 đ</td>
-                    <td><span className="badge-status active">{language === 'en' ? 'Completed' : 'Hoàn thành'}</span></td>
-                    <td>2026-06-24</td>
-                  </tr>
-                  <tr>
-                    <td className="font-mono">TX88302</td>
-                    <td>Co-working Space Cầu Giấy</td>
-                    <td>Nguyễn Văn A</td>
-                    <td>2,000,000 đ</td>
-                    <td><span className="badge-status active">{language === 'en' ? 'Completed' : 'Hoàn thành'}</span></td>
-                    <td>2026-06-23</td>
-                  </tr>
-                  <tr>
-                    <td className="font-mono">TX88303</td>
-                    <td>Nhà kho thương mại Thủ Đức</td>
-                    <td>Lê Hoàng C</td>
-                    <td>3,200,000 đ</td>
-                    <td><span className="badge-status pending">{language === 'en' ? 'Escrow Escaped' : 'Ký quỹ tạm giữ'}</span></td>
-                    <td>2026-06-22</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+        {/* --- MODULE 6: CATEGORIES MANAGEMENT --- */}
+        {activeTab === 'categories' && (
+          <CategoriesModule
+            categories={categories}
+            handleCreateCategory={handleCreateCategory}
+            handleBulkCreateCategories={handleBulkCreateCategories}
+            handleUpdateCategory={handleUpdateCategory}
+            handleDeleteCategory={handleDeleteCategory}
+            isLoading={isLoading}
+            language={language}
+          />
         )}
 
       </main>
