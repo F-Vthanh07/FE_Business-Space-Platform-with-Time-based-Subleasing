@@ -82,6 +82,10 @@ const translations: Translations = {
     en: 'Space Owner',
     vi: 'Chủ mặt bằng',
   },
+  'app.userTitle': {
+    en: 'User',
+    vi: 'Người dùng',
+  },
   'app.ownerDesc': {
     en: 'Register spaces, manage rental listings, and track monthly tenants.',
     vi: 'Đăng ký mặt bằng, quản lý bài đăng cho thuê và theo dõi người thuê hàng tháng',

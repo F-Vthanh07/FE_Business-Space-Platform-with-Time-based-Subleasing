@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { MeshBackground } from './components/MeshBackground';
-import { OwnerDashboardPage } from './features/owner-dashboard/OwnerDashboardPage';
-import { RenterDashboardPage } from './features/renter-dashboard/RenterDashboardPage';
+import { UserDashboardPage } from './features/user-dashboard/UserDashboardPage';
 import { AdminDashboardPage } from './features/admin-dashboard/AdminDashboardPage';
 import { AccessDeniedPage } from './components/AccessDeniedPage';
 import { Homepage } from './features/homepage/Homepage';
@@ -66,28 +65,16 @@ const App: React.FC = () => {
           element={<RegisterPage />} 
         />
 
-        {/* Space Owner Dashboard - Protected */}
-        <Route 
-          path="/owner/*" 
+        {/* User Dashboard (Space Owner + Renter merged) - Protected */}
+        <Route
+          path={`${ROUTES.USER}/*`}
           element={
-            <ProtectedRoute allowedRoles={['owner']} currentRole={role}>
+            <ProtectedRoute allowedRoles={['user']} currentRole={role}>
               <MeshBackground>
-                <OwnerDashboardPage onLogout={handleLogout} />
+                <UserDashboardPage onLogout={handleLogout} />
               </MeshBackground>
             </ProtectedRoute>
-          } 
-        />
-
-        {/* Primary Tenant Dashboard - Protected */}
-        <Route 
-          path="/renter/*" 
-          element={
-            <ProtectedRoute allowedRoles={['renter']} currentRole={role}>
-              <MeshBackground>
-                <RenterDashboardPage onLogout={handleLogout} />
-              </MeshBackground>
-            </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Admin Dashboard - Protected */}

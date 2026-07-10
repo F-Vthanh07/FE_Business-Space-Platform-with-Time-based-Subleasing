@@ -1,9 +1,8 @@
-export type PortalRole = 'owner' | 'renter' | 'admin';
+export type PortalRole = 'admin' | 'user';
 
 export const ROUTES = {
   HOME: '/',
-  OWNER: '/owner',
-  RENTER: '/renter',
+  USER: '/user',
   LOGIN: '/login',
   REGISTER: '/register',
   ADMIN: '/admin',

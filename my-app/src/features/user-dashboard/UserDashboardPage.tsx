@@ -2,15 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { Header } from '../../components/Header';
-import { RenterSidebar } from './components/RenterSidebar';
-import type { RenterPage, SubSlot } from './types';
-import { RenterOverview } from './components/RenterOverview';
+import { UserSidebar } from './components/UserSidebar';
+import { OwnerOverview } from './components/OwnerOverview';
+import { OwnerListings } from './components/OwnerListings';
+import { OwnerTenants } from './components/OwnerTenants';
+import { OwnerSpaces } from './components/OwnerSpaces';
+import { SpaceForm } from './components/SpaceForm';
 import { SlotCalendar } from './components/SlotCalendar';
 import { SubleaseListings } from './components/SubleaseListings';
 import { SubleaseSlotForm } from './components/SubleaseSlotForm';
 import { RenterSubTenants } from './components/RenterSubTenants';
+import type { UserPage, SubSlot } from './types';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
-import './RenterDashboardPage.css';
+import './UserDashboardPage.css';
 
 const initialMockSlots: SubSlot[] = [
   { id: 's1', date: '2025-05-26', startTime: '08:00', endTime: '12:00', tenantName: 'Trần Văn B', tenantInitials: 'TB', status: 'booked', price: '500.000₫', spaceId: 'space-leloi' },
@@ -27,20 +31,21 @@ const initialMockSlots: SubSlot[] = [
   { id: 's12', date: '2025-06-05', startTime: '08:00', endTime: '20:00', tenantName: 'Bùi Văn I', tenantInitials: 'BI', status: 'booked', price: '1.100.000₫', spaceId: 'space-quangtrung' },
 ];
 
-interface RenterDashboardPageProps {
+interface UserDashboardPageProps {
   onLogout: () => void;
 }
 
-export const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onLogout }) => {
+export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isNewSpaceFormOpen, setIsNewSpaceFormOpen] = useState(false);
   const [isNewSlotFormOpen, setIsNewSlotFormOpen] = useState(false);
   const [slots, setSlots] = useState<SubSlot[]>(initialMockSlots);
   const { t } = useThemeLanguage();
 
-  // Extract activePage from the router pathname, e.g. /renter/calendar -> calendar
+  // Extract activePage from the router pathname, e.g. /user/spaces -> spaces
   const pathParts = location.pathname.split('/');
-  const activePage = (pathParts[2] || 'overview') as RenterPage;
+  const activePage = (pathParts[2] || 'overview') as UserPage;
 
   useEffect(() => {
     const tl = gsap.timeline({ defaults: { ease: 'power4.out', duration: 0.8 } });
@@ -51,7 +56,7 @@ export const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onLogo
       { y: 0, opacity: 1 }
     );
     tl.fromTo(
-      '.renter-sidebar',
+      '.user-sidebar',
       { x: -250, opacity: 0 },
       { x: 0, opacity: 1 },
       '-=0.6'
@@ -64,6 +69,11 @@ export const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onLogo
     );
   }, []);
 
+  const handleNewSpaceSubmit = () => {
+    setIsNewSpaceFormOpen(false);
+    navigate('/user/spaces');
+  };
+
   const handleCreateSlot = (newSlot: SubSlot) => {
     setSlots(prev => [...prev, newSlot]);
   };
@@ -72,16 +82,18 @@ export const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onLogo
     setSlots(prev => prev.map(s => s.id === updatedSlot.id ? updatedSlot : s));
   };
 
-  const handleNewSlotSubmit = (data: any) => {
+  const handleNewSlotSubmit = (data: SubSlot) => {
     handleCreateSlot(data);
     setIsNewSlotFormOpen(false);
-    navigate('/renter/calendar');
+    navigate('/user/calendar');
   };
 
   const renderContent = () => {
     switch (activePage) {
-      case 'overview':
-        return <RenterOverview />;
+      case 'overview': return <OwnerOverview />;
+      case 'spaces': return <OwnerSpaces />;
+      case 'listings': return <OwnerListings />;
+      case 'tenants': return <OwnerTenants />;
       case 'calendar':
         return (
           <div className="renter-page-wrap">
@@ -93,10 +105,10 @@ export const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onLogo
                 </p>
               </div>
             </div>
-            <SlotCalendar 
-              slots={slots} 
-              onUpdateSlot={handleUpdateSlot} 
-              onCreateSlot={handleCreateSlot} 
+            <SlotCalendar
+              slots={slots}
+              onUpdateSlot={handleUpdateSlot}
+              onCreateSlot={handleCreateSlot}
             />
           </div>
         );
@@ -104,9 +116,9 @@ export const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onLogo
         return <SubleaseListings />;
       case 'sub-tenants':
         return (
-          <RenterSubTenants 
-            slots={slots} 
-            onUpdateSlot={handleUpdateSlot} 
+          <RenterSubTenants
+            slots={slots}
+            onUpdateSlot={handleUpdateSlot}
           />
         );
       default:
@@ -123,14 +135,15 @@ export const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onLogo
   return (
     <div className="app-shell">
       <Header
-        userName="Trần Văn Thuê"
-        userRole={t('sidebar.renterRoleBadge')}
-        userInitials="TT"
+        userName="Nguyễn Văn Dùng"
+        userRole={t('app.userTitle')}
+        userInitials="ND"
       />
       <div className="app-body">
-        <RenterSidebar 
-          activePage={activePage} 
-          onNavigate={(page) => navigate(`/renter/${page}`)} 
+        <UserSidebar
+          activePage={activePage}
+          onNavigate={(page) => navigate(`/user/${page}`)}
+          onNewSpaceClick={() => setIsNewSpaceFormOpen(true)}
           onNewSlotClick={() => setIsNewSlotFormOpen(true)}
           onLogout={onLogout}
         />
@@ -139,9 +152,16 @@ export const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onLogo
         </main>
       </div>
 
+      {isNewSpaceFormOpen && (
+        <SpaceForm
+          onClose={() => setIsNewSpaceFormOpen(false)}
+          onSubmit={handleNewSpaceSubmit}
+        />
+      )}
+
       {isNewSlotFormOpen && (
         <SubleaseSlotForm
-          selectedDate={new Date(2025, 4, 26)} // Ngày mặc định demo
+          selectedDate={new Date()}
           defaultSpaceId="space-leloi"
           onClose={() => setIsNewSlotFormOpen(false)}
           onSubmit={handleNewSlotSubmit}
@@ -150,4 +170,3 @@ export const RenterDashboardPage: React.FC<RenterDashboardPageProps> = ({ onLogo
     </div>
   );
 };
-

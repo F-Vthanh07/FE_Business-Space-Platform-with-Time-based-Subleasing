@@ -47,7 +47,7 @@ export const OwnerListings: React.FC = () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('portal_token');
-      const ownerId = localStorage.getItem('current_owner_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
+      const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
 
       // BƯỚC 1: Lấy danh sách Mặt bằng (Space) của chính ông này
       const spaceRes = await fetch(`https://localhost:7069/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`, {
