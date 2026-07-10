@@ -1,5 +1,8 @@
-export type RenterPage =
+export type UserPage =
   | 'overview'
+  | 'spaces'
+  | 'listings'
+  | 'tenants'
   | 'calendar'
   | 'sublease-listings'
   | 'sub-tenants'

@@ -1,7 +1,7 @@
 {
-  "permissions": [],
-  "hooks": {
-    "pre-command": "",
-    "post-command": ""
+  "permissions": {
+    "allow": [],
+    "deny": [],
+    "ask": []
   }
 }

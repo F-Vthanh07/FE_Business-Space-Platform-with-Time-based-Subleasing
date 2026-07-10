@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 // IMPORT THÊM Building2 VÀ FileText Ở ĐÂY NÈ
 import { Bell, Globe, LogOut, LayoutDashboard, User, Building2, FileText } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
+import { ROUTES } from '../routes/routes';
 import './Header.css';
 import { Shuffle } from '../components/Shuffle';
 
@@ -48,10 +49,9 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
 
   const handleDashboardClick = () => {
     setShowDropdown(false);
-    if (role === 'owner') navigate('/owner');
-    else if (role === 'renter') navigate('/renter');
-    else if (role === 'admin') navigate('/admin');
-    else navigate('/auth');
+    if (role === 'user') navigate(ROUTES.USER);
+    else if (role === 'admin') navigate(ROUTES.ADMIN);
+    else navigate(ROUTES.LOGIN);
   };
 
   return (
@@ -108,20 +108,20 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
                 <div className="header-dropdown-menu animate-in">
                   <div className="header-dropdown-info">
                     <p className="header-dropdown-name">{userName || (language === 'en' ? 'System User' : 'Người dùng hệ thống')}</p>
-                    <p className="header-dropdown-role">{userRole || (role === 'owner' ? 'Owner' : role === 'admin' ? 'Admin' : 'Renter')}</p>
+                    <p className="header-dropdown-role">{userRole || (role === 'admin' ? 'Admin' : 'User')}</p>
                   </div>
-                  
+
                   <button className="header-dropdown-item" onClick={handleDashboardClick}>
                     <LayoutDashboard size={14} /> <span>{language === 'en' ? 'Dashboard' : 'Bảng điều khiển'}</span>
                   </button>
 
-                  {/* MENU DÀNH RIÊNG CHO OWNER */}
-                  {role === 'owner' && (
+                  {/* MENU DÀNH CHO USER (quản lý mặt bằng + tin đăng) */}
+                  {role === 'user' && (
                     <>
-                      <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/owner/spaces'); }}>
+                      <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/spaces'); }}>
                         <Building2 size={14} /> <span>{language === 'en' ? 'Manage Spaces' : 'Quản lý Mặt bằng'}</span>
                       </button>
-                      <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/owner/listings'); }}>
+                      <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/listings'); }}>
                         <FileText size={14} /> <span>{language === 'en' ? 'Manage Listings' : 'Quản lý Tin đăng'}</span>
                       </button>
                     </>

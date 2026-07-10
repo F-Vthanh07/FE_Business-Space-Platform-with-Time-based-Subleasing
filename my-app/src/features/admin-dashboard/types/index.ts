@@ -4,7 +4,7 @@ export interface UserAccount {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'OWNER' | 'RENTER';
+  role: 'ADMIN' | 'USER';
   status: 'ACTIVE' | 'BLOCKED';
   createdAt: string;
 }

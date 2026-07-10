@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { gsap } from 'gsap';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { ROUTES, type PortalRole } from '../../routes/routes';
 import './AuthPage.css';
 
-type UserRole = 'owner' | 'renter' | 'admin';
-
 interface LoginPageProps {
-  onLoginSuccess: (role: UserRole) => void;
+  onLoginSuccess: (role: PortalRole) => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
@@ -72,30 +71,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       const userId = idMatch ? idMatch[1] : null;
       const parsedRole = roleMatch ? roleMatch[1].toLowerCase() : null;
 
-      let finalRole: UserRole = 'renter';
-      if (parsedRole === 'admin') {
-        finalRole = 'admin';
-      } else if (parsedRole === 'owner') {
-        finalRole = 'owner';
-      } else if (parsedRole === 'renter') {
-        finalRole = 'renter';
-      }
+      const finalRole: PortalRole = parsedRole === 'admin' ? 'admin' : 'user';
 
       if (data.accessToken) localStorage.setItem('portal_token', data.accessToken);
       localStorage.setItem('portal_role', finalRole);
       if (userId) {
         localStorage.setItem('current_user_id', userId);
-        if (finalRole === 'owner') {
-          localStorage.setItem('current_owner_id', userId);
-        }
       }
 
       onLoginSuccess(finalRole);
-      if (finalRole === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate(finalRole === 'owner' ? '/owner' : '/renter');
-      }
+      navigate(finalRole === 'admin' ? ROUTES.ADMIN : ROUTES.USER);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
@@ -110,9 +95,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
   const handleGoogleLogin = (e: React.MouseEvent) => {
     e.preventDefault();
-    localStorage.setItem('portal_role', 'owner');
-    onLoginSuccess('owner');
-    navigate('/owner');
+    localStorage.setItem('portal_role', 'user');
+    onLoginSuccess('user');
+    navigate(ROUTES.USER);
   };
 
   const trans = {

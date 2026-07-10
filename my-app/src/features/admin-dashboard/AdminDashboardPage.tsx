@@ -63,11 +63,11 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   useEffect(() => {
     // Mock Users
     setUsers([
-      { id: 'US001', name: 'Nguyễn Văn A', email: 'vana@gmail.com', role: 'OWNER', status: 'ACTIVE', createdAt: '2026-05-12' },
-      { id: 'US002', name: 'Trần Thị B', email: 'thib@gmail.com', role: 'RENTER', status: 'ACTIVE', createdAt: '2026-05-15' },
-      { id: 'US003', name: 'Lê Hoàng C', email: 'hoangc@gmail.com', role: 'RENTER', status: 'BLOCKED', createdAt: '2026-05-20' },
+      { id: 'US001', name: 'Nguyễn Văn A', email: 'vana@gmail.com', role: 'USER', status: 'ACTIVE', createdAt: '2026-05-12' },
+      { id: 'US002', name: 'Trần Thị B', email: 'thib@gmail.com', role: 'USER', status: 'ACTIVE', createdAt: '2026-05-15' },
+      { id: 'US003', name: 'Lê Hoàng C', email: 'hoangc@gmail.com', role: 'USER', status: 'BLOCKED', createdAt: '2026-05-20' },
       { id: 'US004', name: 'Super Admin', email: 'admin@flexispace.com', role: 'ADMIN', status: 'ACTIVE', createdAt: '2026-01-01' },
-      { id: 'US005', name: 'Phạm Minh D', email: 'minhd@gmail.com', role: 'OWNER', status: 'ACTIVE', createdAt: '2026-06-02' },
+      { id: 'US005', name: 'Phạm Minh D', email: 'minhd@gmail.com', role: 'USER', status: 'ACTIVE', createdAt: '2026-06-02' },
     ]);
 
     // Mock Pending Spaces

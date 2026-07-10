@@ -48,7 +48,7 @@ useEffect(() => {
         const token = localStorage.getItem('portal_token');
         
         // Luôn luôn có ID (Lấy từ localStorage hoặc dùng mã dự phòng)
-        const ownerId = localStorage.getItem('current_owner_id') || '01KVJGBEXR0X7A2PN520FJTVZT'; 
+        const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
         
         // Nối thẳng ?OwnerId= vào URL
         const url = `https://localhost:7069/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;

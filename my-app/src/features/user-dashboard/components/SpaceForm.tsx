@@ -129,7 +129,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
 
     const token = localStorage.getItem('portal_token');
     // Ông có thể lấy ownerId từ LocalStorage nếu BE bắt buộc truyền
-    const ownerId = localStorage.getItem('current_owner_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
+    const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
     
     // --- CHUẨN BỊ PAYLOAD ---
     const payload = {
