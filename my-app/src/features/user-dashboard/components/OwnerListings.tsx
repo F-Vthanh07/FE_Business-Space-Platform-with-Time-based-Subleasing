@@ -3,11 +3,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import {
   Plus, Search, Eye, Edit3, Trash2, MoreHorizontal,
-  Building2, MapPin, Clock, CheckCircle2, XCircle, Star,
+  Building2, MapPin, Clock, CheckCircle2, XCircle, Star, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { ListingForm } from './ListingForm';
 import './OwnerListings.css';
+import { createPortal } from 'react-dom';
 
 const statusConfig: Record<string, { className: string, icon: React.ReactNode }> = {
   published: { className: 'badge--positive', icon: <CheckCircle2 size={11} /> },
@@ -27,6 +28,9 @@ export const OwnerListings: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editingListing, setEditingListing] = useState<any | null>(null);
+
+  const [viewingListing, setViewingListing] = useState<any | null>(null); 
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const { t, language } = useThemeLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -249,8 +253,28 @@ export const OwnerListings: React.FC = () => {
                 </div>
               </div>
 
-              <div className="listing-visual">
-                <Building2 size={32} style={{ color: 'rgba(0, 212, 160, 0.4)' }} />
+              <div className="listing-visual" style={{ overflow: 'hidden' }}>
+                {/* ÁO GIÁP HIỂN THỊ ẢNH: 
+                  Kiểm tra xem BE có trả về mảng listingPictures không.
+                  Dự phòng cả 2 trường hợp: BE trả về chuỗi URL trực tiếp HOẶC trả về Object có chứa imageUrl
+                */}
+                {listing.listingPictures && listing.listingPictures.length > 0 ? (
+                  <img 
+                    src={typeof listing.listingPictures[0] === 'string' 
+                          ? listing.listingPictures[0] 
+                          : (listing.listingPictures[0].imageUrl || listing.listingPictures[0].url)} 
+                    alt="cover" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    onError={(e) => {
+                      // Nếu link ảnh bị lỗi (404), tự động fallback về icon tòa nhà
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).parentElement?.classList.add('fallback-icon');
+                    }}
+                  />
+                ) : (
+                  <Building2 className="fallback-icon" size={32} style={{ color: 'rgba(0, 212, 160, 0.4)' }} />
+                )}
+                
                 <div className="listing-area-badge">{listing.area || 'N/A'}</div>
                 {listing.subleasing && (
                   <div className="sublease-badge">{t('listings.subleaseBadge') || 'Cho thuê lại'}</div>
@@ -292,7 +316,14 @@ export const OwnerListings: React.FC = () => {
               </div>
 
               <div className="listing-card-actions">
-                <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>
+                <button 
+                  className="btn-ghost" 
+                  style={{ flex: 1, justifyContent: 'center' }} 
+                  onClick={() => {
+                    setViewingListing(listing);
+                    setCurrentImageIndex(0); // Reset lướt ảnh về tấm đầu tiên
+                  }}
+                >
                   <Eye size={14} /> {language === 'en' ? 'View' : 'Xem'}
                 </button>
                 {/* Nút sửa */}
@@ -315,6 +346,96 @@ export const OwnerListings: React.FC = () => {
           onSuccess={handleFormSuccess} 
           initialData={editingListing} 
         />
+      )}
+      
+      {/* ========================================== */}
+      {/* POP-UP XEM CHI TIẾT BÀI ĐĂNG (FACEBOOK STYLE) */}
+      {/* ========================================== */}
+      {viewingListing && createPortal(
+        <div className="listing-form-backdrop" onClick={() => setViewingListing(null)}>
+          <div 
+            className="listing-form-modal" 
+            onClick={(e) => e.stopPropagation()} // Chặn click xuyên thủng
+            style={{ maxWidth: '700px', width: '95%', padding: 0, overflow: 'hidden' }}
+          >
+            {/* Header Pop-up */}
+            <div className="listing-form-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>{viewingListing.name || 'Chi tiết bài đăng'}</h2>
+              <button type="button" className="btn-icon" onClick={() => setViewingListing(null)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+              {/* KHU VỰC LƯỚT ẢNH (SLIDER) */}
+              {viewingListing.listingPictures && viewingListing.listingPictures.length > 0 ? (
+                <div style={{ position: 'relative', width: '100%', height: '400px', backgroundColor: '#111' }}>
+                  <img 
+                    src={typeof viewingListing.listingPictures[currentImageIndex] === 'string' 
+                      ? viewingListing.listingPictures[currentImageIndex] 
+                      : (viewingListing.listingPictures[currentImageIndex].imageUrl || viewingListing.listingPictures[currentImageIndex].url)} 
+                    alt="gallery" 
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }} // contain để ảnh không bị cắt xén
+                  />
+                  
+                  {/* Nút lướt Trái/Phải (Chỉ hiện khi có nhiều hơn 1 ảnh) */}
+                  {viewingListing.listingPictures.length > 1 && (
+                    <>
+                      <button 
+                        onClick={() => setCurrentImageIndex(prev => prev > 0 ? prev - 1 : viewingListing.listingPictures.length - 1)}
+                        style={{ position: 'absolute', top: '50%', left: '10px', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
+                      >
+                        <ChevronLeft size={20} color="#000" />
+                      </button>
+                      <button 
+                        onClick={() => setCurrentImageIndex(prev => prev < viewingListing.listingPictures.length - 1 ? prev + 1 : 0)}
+                        style={{ position: 'absolute', top: '50%', right: '10px', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
+                      >
+                        <ChevronRight size={20} color="#000" />
+                      </button>
+                      {/* Cục hiển thị 1/5, 2/5... */}
+                      <div style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 10px', borderRadius: '12px', fontSize: '12px' }}>
+                        {currentImageIndex + 1} / {viewingListing.listingPictures.length}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div style={{ width: '100%', height: '200px', backgroundColor: 'rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-secondary)' }}>
+                  <Building2 size={40} style={{ opacity: 0.5, marginRight: 10 }} /> Không có hình ảnh
+                </div>
+              )}
+
+              {/* KHU VỰC THÔNG TIN TEXT */}
+              <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '22px', color: 'var(--color-primary)' }}>
+                      {viewingListing.price ? `${viewingListing.price.toLocaleString('vi-VN')} ₫ / giờ` : 'Thỏa thuận'}
+                    </h3>
+                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-secondary)' }}>
+                      <MapPin size={16} /> {viewingListing.location || viewingListing.address || 'Chưa cập nhật địa chỉ'}
+                    </p>
+                  </div>
+                  <span className={`badge ${statusConfig[viewingListing.status]?.className || 'badge--neutral'}`}>
+                    {getStatusLabel(viewingListing.status)}
+                  </span>
+                </div>
+
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '8px' }}>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>Mô tả chi tiết</h4>
+                  <p style={{ margin: 0, lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{viewingListing.description || 'Chưa có mô tả'}</p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                  <div><strong>Bắt đầu:</strong> {new Date(viewingListing.allowedStartTime).toLocaleString('vi-VN')}</div>
+                  <div><strong>Kết thúc:</strong> {new Date(viewingListing.allowedEndTime).toLocaleString('vi-VN')}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

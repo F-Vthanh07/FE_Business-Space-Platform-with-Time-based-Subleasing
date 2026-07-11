@@ -80,6 +80,21 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selecte
           // eslint-disable-next-line react-hooks/purity
           const itemId = item.id?.toString() || item.Id?.toString() || Math.random().toString();
           
+          // --- LOGIC LẤY ẢNH THẬT TỪ BE ---
+          const realImages = item.listingPictures || [];
+          
+          // Hàm lấy URL an toàn
+          const getImageUrl = (index: number, fallbackUrl: string) => {
+            if (!realImages[index]) return fallbackUrl;
+            const pic = realImages[index];
+            return typeof pic === 'string' ? pic : (pic.imageUrl || pic.url || fallbackUrl);
+          };
+
+          // Gán ảnh thật, nếu thiếu thì xài tạm ảnh giả lập cho giao diện không bị trống
+          const imgMain = getImageUrl(0, DUMMY_IMAGES[0]);
+          const imgThumb1 = getImageUrl(1, DUMMY_IMAGES[1]);
+          const imgThumb2 = getImageUrl(2, DUMMY_IMAGES[2]);
+          
           return (
             <div
               key={itemId}
@@ -88,12 +103,13 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selecte
             >
               <div className="complex-images-block">
                 <div className="img-main">
-                  <img src={DUMMY_IMAGES[0]} alt="Main" />
-                  <div className="img-count-badge">📸 3</div>
+                  <img src={imgMain} alt="Main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {/* Hiển thị số lượng ảnh thật */}
+                  <div className="img-count-badge">📸 {realImages.length > 0 ? realImages.length : 3}</div>
                 </div>
                 <div className="img-thumbs">
-                  <img src={DUMMY_IMAGES[1]} alt="Thumb 1" />
-                  <img src={DUMMY_IMAGES[2]} alt="Thumb 2" />
+                  <img src={imgThumb1} alt="Thumb 1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={imgThumb2} alt="Thumb 2" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               </div>
               
