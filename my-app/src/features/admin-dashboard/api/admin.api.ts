@@ -14,6 +14,19 @@ export const fetchUsers = async (token: string): Promise<any[]> => {
   return Array.isArray(data) ? data : (data?.data || data?.items || []);
 };
 
+export const changeUserStatus = async (userId: string, status: string, token: string): Promise<void> => {
+  const response = await fetch(`https://localhost:7069/api/User/status/${userId}?status=${status}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update user status');
+  }
+};
+
 export const fetchPendingSpaces = async (token: string): Promise<SpaceApprovalItem[]> => {
   const response = await fetch('https://localhost:7069/api/Admin/Spaces/pending', {
     headers: {

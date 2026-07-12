@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { ShieldAlert as BlockIcon, Eye, X } from 'lucide-react';
+import { ShieldAlert, CheckCircle, PauseCircle, Eye, X } from 'lucide-react';
 import type { UserAccount } from '../types';
 
 interface UsersModuleProps {
   users: UserAccount[];
-  toggleUserStatus: (userId: string) => void;
+  updateUserStatus: (userId: string, newStatus: string) => void;
   language: 'en' | 'vi';
 }
 
-export const UsersModule: React.FC<UsersModuleProps> = ({ users, toggleUserStatus, language }) => {
+export const UsersModule: React.FC<UsersModuleProps> = ({ users, updateUserStatus, language }) => {
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null);
 
   const renderValue = (val: string | null | undefined) => {
@@ -24,6 +24,73 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ users, toggleUserStatu
       return dateStr;
     }
   };
+
+  const renderStatusBadge = (status: string) => {
+    let bg = 'rgba(255, 255, 255, 0.1)';
+    let color = '#fff';
+    let text = status;
+
+    if (status === 'Active') {
+      bg = 'rgba(0, 212, 160, 0.1)';
+      color = '#00d4a0';
+      text = language === 'en' ? 'Active' : 'Hoạt động';
+    } else if (status === 'Suspended') {
+      bg = 'rgba(255, 122, 0, 0.1)';
+      color = '#ff7a00';
+      text = language === 'en' ? 'Suspended' : 'Đình chỉ';
+    } else if (status === 'Banned') {
+      bg = 'rgba(255, 82, 82, 0.1)';
+      color = '#ff5252';
+      text = language === 'en' ? 'Banned' : 'Bị Cấm';
+    }
+
+    return (
+      <span style={{
+        fontSize: '11px',
+        fontWeight: 700,
+        padding: '4px 10px',
+        borderRadius: '6px',
+        background: bg,
+        color: color,
+        border: `1px solid ${color}40`,
+        display: 'inline-block'
+      }}>
+        {text}
+      </span>
+    );
+  };
+
+  const ActionButton = ({ onClick, icon: Icon, text, color, hoverBg }: any) => (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      title={text}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        border: `1px solid ${color}40`,
+        background: `${color}15`,
+        color: color,
+        cursor: 'pointer',
+        fontSize: '12px',
+        fontWeight: 600,
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => { 
+        e.currentTarget.style.background = hoverBg; 
+        e.currentTarget.style.borderColor = color;
+      }}
+      onMouseLeave={(e) => { 
+        e.currentTarget.style.background = `${color}15`; 
+        e.currentTarget.style.borderColor = `${color}40`;
+      }}
+    >
+      <Icon size={16} />
+      <span>{text}</span>
+    </button>
+  );
 
   return (
     <div className="admin-module animate-fade-in">
@@ -47,7 +114,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ users, toggleUserStatu
             {users.map(u => (
               <tr 
                 key={u.id} 
-                className={`${u.status === 'BLOCKED' ? 'blocked-row' : ''} user-row-clickable`}
+                className={`${u.status === 'Banned' ? 'blocked-row' : ''} user-row-clickable`}
                 onClick={() => setSelectedUser(u)}
               >
                 <td>
@@ -67,27 +134,48 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ users, toggleUserStatu
                   <span className={`badge-role ${u.role.toLowerCase()}`}>{u.role}</span>
                 </td>
                 <td>
-                  <span className={`badge-status ${u.status.toLowerCase()}`}>
-                    {u.status === 'ACTIVE' ? (language === 'en' ? 'Active' : 'Hoạt động') : (language === 'en' ? 'Blocked' : 'Bị Khóa')}
-                  </span>
+                  {renderStatusBadge(u.status)}
                 </td>
                 <td style={{ textAlign: 'right' }}>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                    <button 
-                      className="btn-action-icon edit"
-                      onClick={() => setSelectedUser(u)}
-                      title={language === 'en' ? 'View Details' : 'Xem chi tiết'}
-                    >
-                      <Eye size={16} />
-                    </button>
+                    <ActionButton 
+                      icon={Eye} 
+                      text={language === 'en' ? 'View' : 'Xem'} 
+                      color="#4db8ff" 
+                      hoverBg="rgba(77, 184, 255, 0.25)"
+                      onClick={() => setSelectedUser(u)} 
+                    />
+                    
                     {u.role !== 'ADMIN' && (
-                      <button 
-                        className={`btn-action-icon ${u.status === 'ACTIVE' ? 'block' : 'unblock'}`}
-                        onClick={(e) => { e.stopPropagation(); toggleUserStatus(u.id); }}
-                        title={u.status === 'ACTIVE' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
-                      >
-                        <BlockIcon size={16} />
-                      </button>
+                      <>
+                        {u.status !== 'Active' && (
+                          <ActionButton 
+                            icon={CheckCircle} 
+                            text={language === 'en' ? 'Activate' : 'Kích hoạt'} 
+                            color="#00d4a0" 
+                            hoverBg="rgba(0, 212, 160, 0.25)"
+                            onClick={() => updateUserStatus(u.id, 'Active')} 
+                          />
+                        )}
+                        {u.status === 'Active' && (
+                          <ActionButton 
+                            icon={PauseCircle} 
+                            text={language === 'en' ? 'Suspend' : 'Đình chỉ'} 
+                            color="#ff7a00" 
+                            hoverBg="rgba(255, 122, 0, 0.25)"
+                            onClick={() => updateUserStatus(u.id, 'Suspended')} 
+                          />
+                        )}
+                        {u.status !== 'Banned' && (
+                          <ActionButton 
+                            icon={ShieldAlert} 
+                            text={language === 'en' ? 'Ban' : 'Cấm'} 
+                            color="#ff5252" 
+                            hoverBg="rgba(255, 82, 82, 0.25)"
+                            onClick={() => updateUserStatus(u.id, 'Banned')} 
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                 </td>
@@ -117,11 +205,9 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ users, toggleUserStatu
                 </div>
                 <div>
                   <h3 style={{margin: 0, fontSize: '1.25rem', color: '#fff'}}>{selectedUser.name}</h3>
-                  <div style={{display: 'flex', gap: '10px', marginTop: '6px'}}>
+                  <div style={{display: 'flex', gap: '10px', marginTop: '6px', alignItems: 'center'}}>
                     <span className={`badge-role ${selectedUser.role.toLowerCase()}`}>{selectedUser.role}</span>
-                    <span className={`badge-status ${selectedUser.status.toLowerCase()}`}>
-                      {selectedUser.status === 'ACTIVE' ? (language === 'en' ? 'Active' : 'Hoạt động') : (language === 'en' ? 'Blocked' : 'Bị Khóa')}
-                    </span>
+                    {renderStatusBadge(selectedUser.status)}
                   </div>
                 </div>
               </div>
