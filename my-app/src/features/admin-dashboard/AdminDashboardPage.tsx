@@ -17,7 +17,8 @@ import {
   createSingleCategory,
   createCategoryList,
   updateCategory,
-  deleteCategory
+  deleteCategory,
+  fetchUsers
 } from './api/admin.api';
 
 // Components imports
@@ -185,6 +186,30 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
 
   const fetchRealAdminData = async () => {
     if (!token) return;
+
+    try {
+      const usersData = await fetchUsers(token);
+      const mappedUsers: UserAccount[] = usersData.map((u: any) => ({
+        id: u.userId,
+        name: u.profileFullName || u.email,
+        email: u.email,
+        role: u.role as 'ADMIN' | 'USER',
+        status: (u.userStatus || '').toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'BLOCKED',
+        createdAt: u.dob || new Date().toISOString(),
+        phoneNumber: u.phoneNumber,
+        dob: u.dob,
+        profileFullName: u.profileFullName,
+        profileAvatarUrl: u.profileAvatarUrl,
+        profileBio: u.profileBio,
+        profileSocialLink: u.profileSocialLink,
+        profileGender: u.profileGender
+      }));
+      setUsers(mappedUsers);
+      setStats(prev => ({ ...prev, totalUsers: mappedUsers.length }));
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Users.");
+    }
+
     try {
       const spacesData = await fetchPendingSpaces(token);
       setPendingSpaces(spacesData);

@@ -7,6 +7,13 @@ export interface UserAccount {
   role: 'ADMIN' | 'USER';
   status: 'ACTIVE' | 'BLOCKED';
   createdAt: string;
+  phoneNumber?: string | null;
+  dob?: string | null;
+  profileFullName?: string | null;
+  profileAvatarUrl?: string | null;
+  profileBio?: string | null;
+  profileSocialLink?: string | null;
+  profileGender?: string | null;
 }
 
 export interface SpaceApprovalItem {
