@@ -19,7 +19,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
   const navigate = useNavigate();
   const { language, setLanguage } = useThemeLanguage();
   
-  const [activeTab, setActiveTab] = useState<'rent' | 'sale' | 'news'>('rent');
+  const [activeTab, setActiveTab] = useState<'rent' | 'sale' | 'news' | 'feed'>('rent');
   const [showDropdown, setShowDropdown] = useState(false);
 
   const token = localStorage.getItem('portal_token');
@@ -71,12 +71,18 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
       {/* 2. NAVIGATION TABS */}
       <div className="header-center">
         <nav className="header-nav">
-          <button className={`header-nav-item ${activeTab === 'rent' ? 'header-nav-item--active' : ''}`} onClick={() => setActiveTab('rent')}>
+          <button className={`header-nav-item ${activeTab === 'rent' ? 'header-nav-item--active' : ''}`} onClick={() => { setActiveTab('rent'); navigate('/'); }}>
             {language === 'en' ? 'FOR RENT' : 'CHO THUÊ'}
           </button>
           <button className={`header-nav-item ${activeTab === 'sale' ? 'header-nav-item--active' : ''}`} onClick={() => setActiveTab('sale')}>
             {language === 'en' ? 'FOR SALE' : 'MUA BÁN'}
           </button>
+
+          {/* TAB MỚI THÊM VÀO NÈ ÔNG */}
+          <button className={`header-nav-item ${activeTab === 'feed' ? 'header-nav-item--active' : ''}`} onClick={() => { setActiveTab('feed'); navigate('/feed'); }}>
+            {language === 'en' ? 'DISCOVER' : 'KHÁM PHÁ'}
+          </button>
+
           <button className={`header-nav-item ${activeTab === 'news' ? 'header-nav-item--active' : ''}`} onClick={() => setActiveTab('news')}>
             {language === 'en' ? 'NEWS' : 'TIN TỨC'}
           </button>

@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, ChevronLeft, ChevronRight, Phone } from 'lucide-react';
+import { Heart, ChevronLeft, ChevronRight, MessageCircle, Globe } from 'lucide-react'; // Đổi Phone thành MessageCircleimport { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+
 
 interface HomeListingsProps {
   onCardClick: (id: string) => void;
   selectedId: string;
 }
 
-export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selectedId }) => {
+export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
   // --- ĐỔI TÊN STATE CHO CHUẨN LISTING ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [listings, setListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const navigate = useNavigate();
 
   // --- LOGIC PHÂN TRANG ---
   const ITEMS_PER_PAGE = 4;
@@ -59,8 +63,29 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selecte
 
   return (
     <div className="listings-column">
-      <div className="listings-header">
-        <h3>Cho Thuê Mặt Bằng, Kiot TP.HCM Giá Tốt Nhất</h3>
+      <div className="listings-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        
+        {/* Bọc Tiêu đề và Nút vào một cụm Flexbox để nó nằm kế nhau */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <h3 style={{ margin: 0 }}>Cho Thuê Mặt Bằng, Kiot TP.HCM Giá Tốt Nhất</h3>
+          <button 
+              className="btn-primary" // Class này đã định nghĩa sẵn màu xanh của ông rồi
+              onClick={() => navigate('/feed')}
+              style={{ 
+                borderRadius: '20px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                fontSize: '13px', 
+                padding: '8px 16px', 
+                border: 'none',
+                cursor: 'pointer' 
+              }}
+            >
+              <Globe size={14} /> Khám phá Feed
+          </button>
+        </div>
+
         <span className="sort-by">
           Hiện có {listings.length} bài đăng. &nbsp;&nbsp;|&nbsp;&nbsp; Sắp xếp: <span className="active-sort">Mới nhất</span>
         </span>
@@ -99,7 +124,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selecte
             <div
               key={itemId}
               className={`listing-card-complex gsap-listing-card ${selectedId === itemId ? 'selected' : ''}`}
-              onClick={() => onCardClick(itemId)}
+              onClick={() => navigate(`/listing/${itemId}`)} // ĐỔI THÀNH DÒNG NÀY ĐỂ CLICK VÀO CARD LÀ BAY QUA TRANG CHI TIẾT
             >
               <div className="complex-images-block">
                 <div className="img-main">
@@ -147,8 +172,8 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ onCardClick, selecte
                     </div>
                   </div>
                   <div className="agent-actions">
-                    <button className="btn-call" onClick={(e) => { e.stopPropagation(); alert('Tính năng gọi điện đang phát triển!'); }}>
-                      <Phone size={14}/> Liên hệ
+                    <button className="btn-call" onClick={(e) => { e.stopPropagation(); alert('Chuẩn bị tích hợp API Chat!'); }}>
+                      <MessageCircle size={14}/> Nhắn tin
                     </button>
                     <button className="btn-heart" onClick={(e) => { e.stopPropagation(); }}>
                       <Heart size={16} color="#6B7280" />
