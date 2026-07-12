@@ -5,10 +5,15 @@ import { UserDashboardPage } from './features/user-dashboard/UserDashboardPage';
 import { AdminDashboardPage } from './features/admin-dashboard/AdminDashboardPage';
 import { AccessDeniedPage } from './components/AccessDeniedPage';
 import { Homepage } from './features/homepage/Homepage';
+import { ListingFeed } from './features/feed/ListingFeed';
+import { ListingDetail } from './features/feed/ListingDetail';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import ClickSpark from './components/ClickSpark'; 
 import './App.css';
+
+import { FloatingChat } from './components/FloatingChat'; // Sửa lại đường dẫn folder cho đúng nha
+
 
 import { ROUTES, type PortalRole } from './routes/routes';
 import { ProtectedRoute } from './routes/ProtectedRoute';
@@ -52,6 +57,13 @@ const App: React.FC = () => {
           path={ROUTES.HOME} 
           element={<Homepage onLaunch={() => navigate(ROUTES.LOGIN)} />} 
         />
+
+        <Route 
+          path="/feed" 
+          element={<ListingFeed />} 
+        />
+
+        <Route path="/listing/:id" element={<ListingDetail />} />
 
         {/* Login Page */}
         <Route 
@@ -98,6 +110,8 @@ const App: React.FC = () => {
         {/* Fallback Catch All */}
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
       </Routes>
+
+      <FloatingChat />
     </>
   );
 };
