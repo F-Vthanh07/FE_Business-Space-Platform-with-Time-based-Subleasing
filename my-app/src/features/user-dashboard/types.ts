@@ -7,6 +7,7 @@ export type UserPage =
   | 'sublease-listings'
   | 'sub-tenants'
   | 'analytics'
+  | 'profile'
   | 'settings';
 
 export interface SubSlot {

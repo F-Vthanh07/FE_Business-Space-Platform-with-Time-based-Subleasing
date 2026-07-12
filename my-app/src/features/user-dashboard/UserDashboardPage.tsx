@@ -12,6 +12,7 @@ import { SlotCalendar } from './components/SlotCalendar';
 import { SubleaseListings } from './components/SubleaseListings';
 import { SubleaseSlotForm } from './components/SubleaseSlotForm';
 import { RenterSubTenants } from './components/RenterSubTenants';
+import { ProfileOverviewPage } from './components/ProfileOverviewPage';
 import type { UserPage, SubSlot } from './types';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './UserDashboardPage.css';
@@ -121,6 +122,8 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
             onUpdateSlot={handleUpdateSlot}
           />
         );
+      case 'profile':
+        return <ProfileOverviewPage />;
       default:
         return (
           <div className="coming-soon">

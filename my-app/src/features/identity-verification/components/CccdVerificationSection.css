@@ -1,0 +1,85 @@
+.cccd-verification-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px;
+  border-radius: 28px;
+}
+
+.cccd-verification-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cccd-verification-status {
+  padding: 6px 12px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 20, 25, 0.5);
+  white-space: nowrap;
+}
+
+.cccd-source-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 9999px;
+  background: rgba(15, 20, 25, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  align-self: flex-start;
+}
+
+.cccd-source-toggle-btn {
+  padding: 8px 18px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.cccd-source-toggle-btn--active {
+  background: #4a72ff;
+  color: #ffffff;
+}
+
+.cccd-verification-error {
+  color: #ff4d6d;
+  font-size: 14px;
+}
+
+.cccd-review-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cccd-review-table td {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+}
+
+.cccd-review-table td:first-child {
+  width: 40%;
+}
+
+.cccd-review-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.cccd-review-rescan-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+  padding: 10px 20px;
+  color: #ffffff;
+  cursor: pointer;
+}

@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 // IMPORT THÊM Building2 VÀ FileText Ở ĐÂY NÈ
-import { Bell, Globe, LogOut, LayoutDashboard, User, Building2, FileText } from 'lucide-react';
+import { Bell, Globe, LogOut, LayoutDashboard, User, Building2, FileText, IdCard } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
 import { ROUTES } from '../routes/routes';
 import './Header.css';
@@ -132,6 +132,10 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
                       </button>
                     </>
                   )}
+
+                  <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/profile'); }}>
+                    <IdCard size={14} /> <span>{language === 'en' ? 'Profile' : 'Hồ sơ cá nhân'}</span>
+                  </button>
 
                   <button className="header-dropdown-item logout" onClick={handleLogout}>
                     <LogOut size={14} /> <span>{language === 'en' ? 'Log out' : 'Đăng xuất'}</span>

@@ -7,6 +7,7 @@ import {
   CalendarDays,
   BarChart3,
   Settings,
+  IdCard,
   Plus,
   Globe,
   LogOut,
@@ -45,6 +46,7 @@ const subleaseNavItems: NavItem[] = [
 
 const commonNavItems: NavItem[] = [
   { id: 'analytics', icon: <BarChart3 size={16} /> },
+  { id: 'profile', icon: <IdCard size={16} /> },
   { id: 'settings', icon: <Settings size={16} /> },
 ];
 
@@ -59,6 +61,7 @@ const getPageLabels = (id: UserPage, lang: string) => {
     case 'sublease-listings': return { title: isEn ? 'Sublease Market' : 'Chợ cho thuê lại', sub: isEn ? 'Your sublease ads' : 'Tin cho thuê lại' };
     case 'sub-tenants': return { title: isEn ? 'Sub-tenants' : 'Khách thuê phụ', sub: isEn ? 'Secondary renters' : 'Người thuê lại' };
     case 'analytics': return { title: isEn ? 'Analytics' : 'Doanh thu', sub: isEn ? 'Financial reports' : 'Báo cáo tài chính' };
+    case 'profile': return { title: isEn ? 'Profile' : 'Hồ sơ cá nhân', sub: isEn ? 'Identity verification' : 'Xác thực định danh' };
     case 'settings': return { title: isEn ? 'Settings' : 'Cài đặt', sub: isEn ? 'Account prefs' : 'Hệ thống' };
     default: return { title: id, sub: '' };
   }
