@@ -5,8 +5,15 @@ export interface UserAccount {
   name: string;
   email: string;
   role: 'ADMIN' | 'USER';
-  status: 'ACTIVE' | 'BLOCKED';
+  status: 'Active' | 'Suspended' | 'Banned';
   createdAt: string;
+  phoneNumber?: string | null;
+  dob?: string | null;
+  profileFullName?: string | null;
+  profileAvatarUrl?: string | null;
+  profileBio?: string | null;
+  profileSocialLink?: string | null;
+  profileGender?: string | null;
 }
 
 export interface SpaceApprovalItem {
