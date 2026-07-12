@@ -17,7 +17,9 @@ import {
   createSingleCategory,
   createCategoryList,
   updateCategory,
-  deleteCategory
+  deleteCategory,
+  fetchUsers,
+  changeUserStatus
 } from './api/admin.api';
 
 // Components imports
@@ -185,6 +187,30 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
 
   const fetchRealAdminData = async () => {
     if (!token) return;
+
+    try {
+      const usersData = await fetchUsers(token);
+      const mappedUsers: UserAccount[] = usersData.map((u: any) => ({
+        id: u.userId,
+        name: u.profileFullName || u.email,
+        email: u.email,
+        role: u.role as 'ADMIN' | 'USER',
+        status: (u.userStatus || 'Active') as 'Active' | 'Suspended' | 'Banned',
+        createdAt: u.dob || new Date().toISOString(),
+        phoneNumber: u.phoneNumber,
+        dob: u.dob,
+        profileFullName: u.profileFullName,
+        profileAvatarUrl: u.profileAvatarUrl,
+        profileBio: u.profileBio,
+        profileSocialLink: u.profileSocialLink,
+        profileGender: u.profileGender
+      }));
+      setUsers(mappedUsers);
+      setStats(prev => ({ ...prev, totalUsers: mappedUsers.length }));
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Users.");
+    }
+
     try {
       const spacesData = await fetchPendingSpaces(token);
       setPendingSpaces(spacesData);
@@ -274,19 +300,22 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   };
 
   // --- ACTIONS QUẢN LÝ USER ---
-  const toggleUserStatus = (userId: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        const nextStatus = u.status === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE';
-        showNotification(
-          language === 'en' 
-            ? `User status updated to ${nextStatus}` 
-            : `Đã cập nhật trạng thái người dùng thành ${nextStatus === 'ACTIVE' ? 'Hoạt động' : 'Bị Khóa'}`
-        );
-        return { ...u, status: nextStatus };
-      }
-      return u;
-    }));
+  const updateUserStatus = async (userId: string, newStatus: string) => {
+    setIsLoading(true);
+    try {
+      await changeUserStatus(userId, newStatus, token || '');
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus as 'Active' | 'Suspended' | 'Banned' } : u));
+      showNotification(
+        language === 'en' 
+          ? `User status updated to ${newStatus}` 
+          : `Đã cập nhật trạng thái người dùng thành ${newStatus === 'Active' ? 'Hoạt động' : newStatus === 'Suspended' ? 'Đình chỉ' : 'Cấm'}`
+      );
+    } catch (err) {
+      console.error(err);
+      showNotification(language === 'en' ? "Failed to update user status" : "Không thể cập nhật trạng thái", 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // --- ACTIONS QUẢN LÝ NGÀNH NGHỀ (BUSINESS CATEGORIES) ---
@@ -409,7 +438,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
 
         {/* --- MODULE 2: USERS --- */}
         {activeTab === 'users' && (
-          <UsersModule users={users} toggleUserStatus={toggleUserStatus} language={language} />
+          <UsersModule users={users} updateUserStatus={updateUserStatus} language={language} />
         )}
 
         {/* --- MODULE 3: SPACES APPROVAL --- */}
