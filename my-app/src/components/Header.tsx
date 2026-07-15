@@ -1,6 +1,6 @@
 // src/components/Header.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 // IMPORT THÊM Building2 VÀ FileText Ở ĐÂY NÈ
 import { Bell, Globe, LogOut, LayoutDashboard, User, Building2, FileText, IdCard } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
@@ -9,22 +9,34 @@ import './Header.css';
 import { Shuffle } from '../components/Shuffle';
 
 interface HeaderProps {
-  userInitials?: string; 
+  userInitials?: string;
   userName?: string;
   userRole?: string;
-  onPostListing?: () => void; 
 }
 
-export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole, onPostListing }) => {
+export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { language, setLanguage } = useThemeLanguage();
-  
-  const [activeTab, setActiveTab] = useState<'rent' | 'sale' | 'news' | 'feed'>('rent');
+
+  const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | null => {
+    if (pathname === '/') return 'home';
+    if (pathname.startsWith('/user/spaces')) return 'spaces';
+    if (pathname === '/feed') return 'feed';
+    return null;
+  };
+  const activeTab = getActiveTab(location.pathname);
+
   const [showDropdown, setShowDropdown] = useState(false);
 
   const token = localStorage.getItem('portal_token');
   const role = localStorage.getItem('portal_role');
   const isLoggedIn = !!token;
+
+  const handlePostListing = () => {
+    if (isLoggedIn) navigate('/user/listings');
+    else navigate('/login');
+  };
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -71,20 +83,19 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
       {/* 2. NAVIGATION TABS */}
       <div className="header-center">
         <nav className="header-nav">
-          <button className={`header-nav-item ${activeTab === 'rent' ? 'header-nav-item--active' : ''}`} onClick={() => { setActiveTab('rent'); navigate('/'); }}>
-            {language === 'en' ? 'FOR RENT' : 'CHO THUÊ'}
-          </button>
-          <button className={`header-nav-item ${activeTab === 'sale' ? 'header-nav-item--active' : ''}`} onClick={() => setActiveTab('sale')}>
-            {language === 'en' ? 'FOR SALE' : 'MUA BÁN'}
+          <button className={`header-nav-item ${activeTab === 'home' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/')}>
+            {language === 'en' ? 'HOME' : 'TRANG CHỦ'}
           </button>
 
-          {/* TAB MỚI THÊM VÀO NÈ ÔNG */}
-          <button className={`header-nav-item ${activeTab === 'feed' ? 'header-nav-item--active' : ''}`} onClick={() => { setActiveTab('feed'); navigate('/feed'); }}>
+          <button
+            className={`header-nav-item ${activeTab === 'spaces' ? 'header-nav-item--active' : ''}`}
+            onClick={() => navigate(isLoggedIn ? '/user/spaces' : '/login')}
+          >
+            {language === 'en' ? 'MANAGE SPACES' : 'QUẢN LÝ MẶT BẰNG'}
+          </button>
+
+          <button className={`header-nav-item ${activeTab === 'feed' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/feed')}>
             {language === 'en' ? 'DISCOVER' : 'KHÁM PHÁ'}
-          </button>
-
-          <button className={`header-nav-item ${activeTab === 'news' ? 'header-nav-item--active' : ''}`} onClick={() => setActiveTab('news')}>
-            {language === 'en' ? 'NEWS' : 'TIN TỨC'}
           </button>
         </nav>
       </div>
@@ -92,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
       {/* 3. RIGHT CONTROLS */}
       <div className="header-right">
         {/* Nút Đăng tin to oạch ngoài cùng */}
-        <button className="btn-post-listing" onClick={onPostListing}>
+        <button className="btn-post-listing" onClick={handlePostListing}>
           {language === 'en' ? 'Post Listing' : 'Đăng tin'} <span className="arrow-icon">→</span>
         </button>
         

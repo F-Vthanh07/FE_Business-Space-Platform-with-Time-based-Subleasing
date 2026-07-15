@@ -13,6 +13,7 @@ import {
   LogOut,
   Sun,
   Moon,
+  Wallet,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import './UserSidebar.css';
@@ -31,8 +32,11 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-const spaceNavItems: NavItem[] = [
+const dashboardNavItems: NavItem[] = [
   { id: 'overview', icon: <LayoutDashboard size={16} /> },
+];
+
+const spaceNavItems: NavItem[] = [
   { id: 'spaces', icon: <Building2 size={16} /> },
   { id: 'listings', icon: <FileText size={16} /> },
   { id: 'tenants', icon: <Users size={16} /> },
@@ -42,6 +46,10 @@ const subleaseNavItems: NavItem[] = [
   { id: 'calendar', icon: <CalendarDays size={16} /> },
   { id: 'sublease-listings', icon: <FileText size={16} /> },
   { id: 'sub-tenants', icon: <Users size={16} /> },
+];
+
+const walletNavItems: NavItem[] = [
+  { id: 'wallet', icon: <Wallet size={16} /> },
 ];
 
 const commonNavItems: NavItem[] = [
@@ -60,6 +68,7 @@ const getPageLabels = (id: UserPage, lang: string) => {
     case 'calendar': return { title: isEn ? 'Calendar' : 'Lịch cho thuê lại', sub: isEn ? 'Sublease slots' : 'Khung giờ cho thuê lại' };
     case 'sublease-listings': return { title: isEn ? 'Sublease Market' : 'Chợ cho thuê lại', sub: isEn ? 'Your sublease ads' : 'Tin cho thuê lại' };
     case 'sub-tenants': return { title: isEn ? 'Sub-tenants' : 'Khách thuê phụ', sub: isEn ? 'Secondary renters' : 'Người thuê lại' };
+    case 'wallet': return { title: isEn ? 'Wallet' : 'Ví của tôi', sub: isEn ? 'Balance & transactions' : 'Số dư & giao dịch' };
     case 'analytics': return { title: isEn ? 'Analytics' : 'Doanh thu', sub: isEn ? 'Financial reports' : 'Báo cáo tài chính' };
     case 'profile': return { title: isEn ? 'Profile' : 'Hồ sơ cá nhân', sub: isEn ? 'Identity verification' : 'Xác thực định danh' };
     case 'settings': return { title: isEn ? 'Settings' : 'Cài đặt', sub: isEn ? 'Account prefs' : 'Hệ thống' };
@@ -72,7 +81,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
 
   const renderNavGroup = (items: NavItem[]) =>
     items.map((item) => {
-      const isActive = activePage === item.id;
+      const isActive = activePage === item.id || activePage.startsWith(`${item.id}-`);
       const labels = getPageLabels(item.id, language);
       return (
         <button
@@ -97,6 +106,9 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
       </div>
 
       <nav className="user-sidebar-nav">
+        {renderNavGroup(dashboardNavItems)}
+        {renderNavGroup(walletNavItems)}
+
         <span className="user-sidebar-group-label">
           {language === 'en' ? 'MY SPACES' : 'MẶT BẰNG CỦA TÔI'}
         </span>

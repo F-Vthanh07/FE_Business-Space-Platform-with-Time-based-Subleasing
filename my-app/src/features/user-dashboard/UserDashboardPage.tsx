@@ -13,6 +13,7 @@ import { SubleaseListings } from './components/SubleaseListings';
 import { SubleaseSlotForm } from './components/SubleaseSlotForm';
 import { RenterSubTenants } from './components/RenterSubTenants';
 import { ProfileOverviewPage } from './components/ProfileOverviewPage';
+import { WalletOverview, WalletDeposit, WalletHistory } from '../wallet';
 import type { UserPage, SubSlot } from './types';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './UserDashboardPage.css';
@@ -124,6 +125,12 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
         );
       case 'profile':
         return <ProfileOverviewPage />;
+      case 'wallet':
+        return <WalletOverview onNavigate={(page) => navigate(`/user/${page}`)} />;
+      case 'wallet-deposit':
+        return <WalletDeposit onNavigate={(page) => navigate(`/user/${page}`)} />;
+      case 'wallet-history':
+        return <WalletHistory onNavigate={(page) => navigate(`/user/${page}`)} />;
       default:
         return (
           <div className="coming-soon">
