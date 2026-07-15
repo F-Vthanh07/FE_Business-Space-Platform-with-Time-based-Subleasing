@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import { WEBCAM_ROI } from '../hooks/useCccdScanner';
 import type { CccdScanState } from '../types';
 import './CccdWebcamCapture.css';
 
@@ -41,12 +42,21 @@ export const CccdWebcamCapture: React.FC<CccdWebcamCaptureProps> = ({ scanState,
     <div className="cccd-webcam-capture">
       <div className="cccd-webcam-video-wrap">
         <video ref={videoRef} className="cccd-webcam-video" muted playsInline />
+        <div
+          className="cccd-webcam-roi"
+          style={{
+            left: `${WEBCAM_ROI.xRatio * 100}%`,
+            top: `${WEBCAM_ROI.yRatio * 100}%`,
+            width: `${WEBCAM_ROI.widthRatio * 100}%`,
+            height: `${WEBCAM_ROI.heightRatio * 100}%`,
+          }}
+        />
       </div>
       {statusLabel && <p className="label-caps cccd-webcam-status">{statusLabel}</p>}
       <p className="text-secondary cccd-webcam-hint">
         {isEn
-          ? 'Hold your ID card steady in front of the camera. The QR code will be detected automatically.'
-          : 'Giữ CCCD ổn định trước camera. Mã QR sẽ được nhận diện tự động.'}
+          ? 'Align the QR code inside the frame. It will be detected automatically.'
+          : 'Đưa mã QR vào giữa khung. Hệ thống sẽ tự động nhận diện.'}
       </p>
     </div>
   );
