@@ -1,14 +1,16 @@
 import { useCallback, useRef, useState } from 'react';
 import { BrowserQRCodeReader } from '@zxing/browser';
 import { parseCccdQr } from '../utils/parseCccdQr';
-import { buildScanTiles, cropToCanvas } from '../utils/scanTiles';
+import { buildScanTiles, cropToCanvas, getCanvasContext } from '../utils/scanTiles';
+import { adaptiveThreshold } from '../utils/adaptiveThreshold';
 import type { CccdQrData, CccdScanState } from '../types';
 
 const NO_QR_FOUND_MESSAGE = 'Không tìm thấy mã QR trong ảnh, vui lòng thử ảnh rõ nét hơn.';
 const CAMERA_DENIED_MESSAGE = 'Quyền camera bị từ chối. Vui lòng chuyển sang tải ảnh lên.';
 const CAMERA_UNAVAILABLE_MESSAGE = 'Không thể mở camera. Vui lòng chuyển sang tải ảnh lên.';
 const TILE_UPSCALE_TARGET = 900;
-const WEBCAM_SCAN_INTERVAL_MS = 200;
+const ROI_UPSCALE_TARGET = 700;
+const WEBCAM_SCAN_INTERVAL_MS = 150;
 
 const qrCodeReader = new BrowserQRCodeReader();
 
@@ -21,24 +23,53 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-function tryDecodeTiles(
-  source: CanvasImageSource,
-  width: number,
-  height: number,
-  maxTiles?: number
-): string | null {
+function decodeCanvas(canvas: HTMLCanvasElement): string | null {
+  try {
+    return qrCodeReader.decodeFromCanvas(canvas).getText();
+  } catch {
+    return null;
+  }
+}
+
+function decodeCanvasWithThreshold(canvas: HTMLCanvasElement, allowThreshold: boolean): string | null {
+  const direct = decodeCanvas(canvas);
+  if (direct || !allowThreshold) return direct;
+
+  const ctx = getCanvasContext(canvas);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  ctx.putImageData(adaptiveThreshold(imageData), 0, 0);
+  return decodeCanvas(canvas);
+}
+
+function tryDecodeTiles(source: CanvasImageSource, width: number, height: number): string | null {
   const tiles = buildScanTiles(width, height);
-  const tilesToTry = maxTiles ? tiles.slice(0, maxTiles) : tiles;
-  for (const tile of tilesToTry) {
+  for (const tile of tiles) {
     const canvas = cropToCanvas(source, tile, TILE_UPSCALE_TARGET);
-    try {
-      const result = qrCodeReader.decodeFromCanvas(canvas);
-      return result.getText();
-    } catch {
-      // thử tile tiếp theo
-    }
+    const text = decodeCanvasWithThreshold(canvas, true);
+    if (text) return text;
   }
   return null;
+}
+
+export interface RoiRegion {
+  xRatio: number;
+  yRatio: number;
+  widthRatio: number;
+  heightRatio: number;
+}
+
+/** Vùng khung ROI gợi ý ở giữa khung hình webcam (tỉ lệ 0-1 so với video). */
+export const WEBCAM_ROI: RoiRegion = { xRatio: 0.22, yRatio: 0.22, widthRatio: 0.56, heightRatio: 0.56 };
+
+function decodeRoi(videoEl: HTMLVideoElement, roi: RoiRegion, allowThreshold: boolean): string | null {
+  const region = {
+    x: Math.round(videoEl.videoWidth * roi.xRatio),
+    y: Math.round(videoEl.videoHeight * roi.yRatio),
+    width: Math.round(videoEl.videoWidth * roi.widthRatio),
+    height: Math.round(videoEl.videoHeight * roi.heightRatio),
+  };
+  const canvas = cropToCanvas(videoEl, region, ROI_UPSCALE_TARGET);
+  return decodeCanvasWithThreshold(canvas, allowThreshold);
 }
 
 interface UseCccdScannerReturn {
@@ -57,6 +88,7 @@ export function useCccdScanner(): UseCccdScannerReturn {
   const [error, setError] = useState<string | null>(null);
   const webcamTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const webcamStreamRef = useRef<MediaStream | null>(null);
+  const webcamSessionRef = useRef(0);
 
   const applyParseResult = useCallback((rawText: string) => {
     // eslint-disable-next-line no-console
@@ -99,6 +131,12 @@ export function useCccdScanner(): UseCccdScannerReturn {
   }, [applyParseResult]);
 
   const stopWebcamScan = useCallback(() => {
+    // Vô hiệu hoá bất kỳ lần startWebcamScan nào đang chờ getUserMedia resolve,
+    // để nó không ghi đè state/stream sau khi phiên này đã bị dừng (quan trọng
+    // với React StrictMode: effect mount -> cleanup -> mount lại rất nhanh
+    // trong dev, có thể khiến lệnh getUserMedia cũ resolve muộn sau khi đã stop).
+    webcamSessionRef.current += 1;
+
     if (webcamTimerRef.current !== null) {
       clearInterval(webcamTimerRef.current);
       webcamTimerRef.current = null;
@@ -110,6 +148,7 @@ export function useCccdScanner(): UseCccdScannerReturn {
   }, []);
 
   const startWebcamScan = useCallback(async (videoEl: HTMLVideoElement) => {
+    const session = ++webcamSessionRef.current;
     setState('requesting-camera');
     setError(null);
     setData(null);
@@ -118,19 +157,35 @@ export function useCccdScanner(): UseCccdScannerReturn {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },
       });
+
+      if (session !== webcamSessionRef.current) {
+        // Phiên này đã bị stop/thay thế trong lúc chờ quyền camera — bỏ stream vừa xin.
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
       webcamStreamRef.current = stream;
       videoEl.srcObject = stream;
       await videoEl.play();
+
+      if (session !== webcamSessionRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
       setState('scanning');
 
+      // Chỉ decode đúng vùng khung ROI hiển thị cho người dùng — nhanh hơn hẳn
+      // so với quét nhiều tile trên toàn bộ khung hình, vì người dùng đã tự
+      // canh QR vào khung nên không cần dò các vị trí khác. adaptiveThreshold
+      // khá tốn (~35ms) nên chỉ bật mỗi 2 tick khi decode trực tiếp thất bại,
+      // tránh dồn chi phí vào mọi tick và làm giật vòng lặp quét.
       let tick = 0;
       webcamTimerRef.current = setInterval(() => {
         if (videoEl.videoWidth === 0 || videoEl.videoHeight === 0) return;
         tick += 1;
-        // Ưu tiên tile góc trên-phải (đa số các lần quét) để giữ tốc độ cao;
-        // mỗi vài tick thử thêm các tile còn lại để không bỏ sót vị trí khác.
-        const maxTiles = tick % 4 === 0 ? undefined : 1;
-        const text = tryDecodeTiles(videoEl, videoEl.videoWidth, videoEl.videoHeight, maxTiles);
+        const allowThreshold = tick % 2 === 0;
+        const text = decodeRoi(videoEl, WEBCAM_ROI, allowThreshold);
         if (text) {
           const succeeded = applyParseResult(text);
           if (succeeded) {
@@ -139,6 +194,7 @@ export function useCccdScanner(): UseCccdScannerReturn {
         }
       }, WEBCAM_SCAN_INTERVAL_MS);
     } catch (err) {
+      if (session !== webcamSessionRef.current) return;
       const name = err instanceof Error ? err.name : '';
       setError(name === 'NotAllowedError' ? CAMERA_DENIED_MESSAGE : CAMERA_UNAVAILABLE_MESSAGE);
       setState('error');

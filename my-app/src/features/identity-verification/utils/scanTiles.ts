@@ -51,3 +51,9 @@ export function cropToCanvas(
 
   return canvas;
 }
+
+export function getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Không thể xử lý ảnh.');
+  return ctx;
+}
