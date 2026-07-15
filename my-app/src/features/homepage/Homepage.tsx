@@ -111,7 +111,7 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
   return (
     <div className="homepage-wrapper" ref={containerRef}>
       <SidebarNav />
-      <Header onPostListing={onLaunch} />
+      <Header />
 
       {/* =========================================
           KHU VỰC TÌM KIẾM & DANH SÁCH

@@ -8,7 +8,10 @@ export type UserPage =
   | 'sub-tenants'
   | 'analytics'
   | 'profile'
-  | 'settings';
+  | 'settings'
+  | 'wallet'
+  | 'wallet-deposit'
+  | 'wallet-history';
 
 export interface SubSlot {
   id: string;

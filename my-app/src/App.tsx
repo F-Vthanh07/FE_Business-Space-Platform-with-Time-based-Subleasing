@@ -9,6 +9,7 @@ import { ListingFeed } from './features/feed/ListingFeed';
 import { ListingDetail } from './features/feed/ListingDetail';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
+import { PaymentSuccess, PaymentFailed } from './features/wallet';
 import ClickSpark from './components/ClickSpark'; 
 import './App.css';
 
@@ -101,10 +102,28 @@ const App: React.FC = () => {
           } 
         />
 
+        {/* Payment Result Pages (post-gateway redirect landing pages) - Protected */}
+        <Route
+          path="/payment/success"
+          element={
+            <ProtectedRoute allowedRoles={['user']} currentRole={role}>
+              <PaymentSuccess />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/payment/failed"
+          element={
+            <ProtectedRoute allowedRoles={['user']} currentRole={role}>
+              <PaymentFailed />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Access Denied Page */}
-        <Route 
-          path={ROUTES.ACCESS_DENIED} 
-          element={<AccessDeniedPage />} 
+        <Route
+          path={ROUTES.ACCESS_DENIED}
+          element={<AccessDeniedPage />}
         />
 
         {/* Fallback Catch All */}

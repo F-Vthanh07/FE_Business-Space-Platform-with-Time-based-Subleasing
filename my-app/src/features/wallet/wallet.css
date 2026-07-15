@@ -1,0 +1,471 @@
+/* Shared styles for Wallet, Deposit, and History pages */
+
+.wallet-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 1280px;
+}
+
+/* ---------- Hero balance card ---------- */
+.wallet-hero {
+  padding: var(--space-8);
+  position: relative;
+  overflow: hidden;
+}
+
+.wallet-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.wallet-hero-balance {
+  font-size: var(--font-size-4xl);
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin-top: var(--space-2);
+}
+
+.wallet-hero-id {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+  font-weight: 500;
+}
+
+.wallet-hero-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.wallet-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.wallet-stat-tile {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.wallet-stat-value {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+/* ---------- Transaction rows (shared by Wallet overview + History) ---------- */
+.txn-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.txn-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.txn-row-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 220px;
+}
+
+.txn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.txn-icon--in {
+  background: rgba(46, 234, 130, 0.12);
+  color: var(--color-positive);
+}
+
+.txn-icon--out {
+  background: rgba(255, 77, 109, 0.12);
+  color: var(--color-negative);
+}
+
+.txn-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.txn-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.txn-sub {
+  font-size: var(--font-size-xs);
+}
+
+.txn-row-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.txn-method {
+  font-size: var(--font-size-xs);
+  min-width: 80px;
+}
+
+.txn-amount {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  min-width: 120px;
+  text-align: right;
+}
+
+/* ---------- Empty state ---------- */
+.wallet-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+}
+
+.wallet-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+/* ---------- Deposit form ---------- */
+.deposit-layout {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.deposit-form-card {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.deposit-amount-input-wrap {
+  position: relative;
+}
+
+.deposit-amount-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.deposit-amount-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(45, 83, 200, 0.18);
+}
+
+.deposit-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.deposit-quick-btn {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.deposit-quick-btn:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
+}
+
+.deposit-quick-btn--active {
+  color: #fff;
+  background: rgba(45, 83, 200, 0.18);
+  border-color: var(--color-accent);
+}
+
+.deposit-methods-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.deposit-method-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card-deep);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deposit-method-item:hover {
+  border-color: var(--color-border-hover);
+}
+
+.deposit-method-item--active {
+  border-color: var(--color-accent);
+  background: rgba(45, 83, 200, 0.1);
+}
+
+.deposit-method-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-border-hover);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deposit-method-item--active .deposit-method-radio {
+  border-color: var(--color-accent);
+}
+
+.deposit-method-radio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+.deposit-method-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.deposit-method-name {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.deposit-method-desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.deposit-summary-card {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: sticky;
+  top: 0;
+}
+
+.deposit-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+}
+
+.deposit-summary-divider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+.deposit-summary-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.deposit-secure-note {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+/* ---------- History filters ---------- */
+.history-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  flex-wrap: wrap;
+}
+
+.history-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 220px;
+}
+
+.history-search .search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.history-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+/* ---------- Payment result pages (standalone, full screen) ---------- */
+.payment-result-screen {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background-color: var(--color-bg-global);
+}
+
+.payment-result-card {
+  width: 100%;
+  max-width: 480px;
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
+}
+
+.payment-result-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-3);
+}
+
+.payment-result-icon-wrap--success {
+  background: rgba(46, 234, 130, 0.12);
+  color: var(--color-positive);
+}
+
+.payment-result-icon-wrap--failed {
+  background: rgba(255, 77, 109, 0.12);
+  color: var(--color-negative);
+}
+
+.payment-result-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.payment-result-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-top: var(--space-1);
+}
+
+.payment-result-details {
+  width: 100%;
+  margin-top: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.payment-result-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+}
+
+.payment-result-detail-row:last-child {
+  border-bottom: none;
+}
+
+.payment-result-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+  width: 100%;
+}
+
+.payment-result-actions .btn-primary,
+.payment-result-actions .btn-ghost {
+  flex: 1;
+  justify-content: center;
+}
+
+.payment-result-logo {
+  position: absolute;
+  top: var(--space-6);
+  left: var(--space-8);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-family: 'Press Start 2P', cursive;
+}
+
+@media (max-width: 900px) {
+  .deposit-layout { grid-template-columns: 1fr; }
+  .deposit-summary-card { position: static; }
+  .wallet-stats-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .deposit-quick-grid { grid-template-columns: repeat(2, 1fr); }
+  .txn-row { flex-direction: column; align-items: flex-start; }
+  .txn-row-right { width: 100%; justify-content: space-between; }
+}
