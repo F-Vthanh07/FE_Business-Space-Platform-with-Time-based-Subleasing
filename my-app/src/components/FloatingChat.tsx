@@ -1,199 +1,289 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Minus, Send } from 'lucide-react';
-// IMPORT THƯ VIỆN SIGNALR VÀO ĐÂY
+import { MessageCircle, X, Minus, Send, Image as ImageIcon, ArrowLeft, BellRing } from 'lucide-react';
 import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr';
 
 export const FloatingChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [activeLessor, setActiveLessor] = useState<any | null>(null);
-  const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [view, setView] = useState<'LIST' | 'CHAT'>('LIST'); 
   
-  // State lưu trữ kết nối đường ống SignalR
+  const [conversations, setConversations] = useState<any[]>([]); 
+  const [activeChat, setActiveChat] = useState<any | null>(null); 
+  const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [message, setMessage] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0); 
+
   const [connection, setConnection] = useState<HubConnection | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const currentUserId = localStorage.getItem('current_user_id');
+  const token = localStorage.getItem('portal_token');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
-    if (isOpen) scrollToBottom();
-  }, [chatHistory, isOpen]);
+    if (view === 'CHAT') scrollToBottom();
+  }, [chatHistory, view]);
 
-  // --- LẮNG NGHE SỰ KIỆN MỞ CHAT TỪ TRANG CHI TIẾT ---
+  // ================================================================
+  // 1. CHẠY NGẦM: TẢI DANH SÁCH INBOX VÀ KẾT NỐI SIGNALR TOÀN CỤC
+  // ================================================================
   useEffect(() => {
-    const handleOpenChatEvent = async (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail) {
-        const { conversationId } = customEvent.detail;
-        setActiveLessor(customEvent.detail);
-        setIsOpen(true);
-        setChatHistory([]); // Xóa lịch sử cũ khi mở phòng mới
+    if (!currentUserId || !token) return;
 
-        // 1. KẾT NỐI TỚI ĐƯỜNG ỐNG CHATHUB CỦA BACKEND
-        const token = localStorage.getItem('portal_token');
-        const newConnection = new HubConnectionBuilder()
-          // Đảm bảo đường dẫn này khớp với cấu hình BE của ông (thường là /chathub)
-          .withUrl("https://localhost:7069/chatHub", { 
-            accessTokenFactory: () => token || "" 
-          })
+    let globalConnection: HubConnection;
+
+    const initGlobalChat = async () => {
+      try {
+        const res = await fetch(`https://localhost:7069/api/Conversation/User/${currentUserId}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+        });
+        
+        let myRooms: any[] = [];
+        if (res.ok) {
+          myRooms = await res.json();
+          setConversations(myRooms);
+        }
+
+        globalConnection = new HubConnectionBuilder()
+          .withUrl("https://localhost:7069/chatHub", { accessTokenFactory: () => token || "" })
           .configureLogging(LogLevel.Information)
           .withAutomaticReconnect()
           .build();
 
-        // 2. LẮNG NGHE SỰ KIỆN "ReceiveNewMessage" (Khớp với BE)
-        newConnection.on("ReceiveNewMessage", (savedMessage: any) => {
-          setChatHistory(prev => [...prev, {
-            id: savedMessage.id || Date.now(),
-            senderId: savedMessage.senderId,
-            text: savedMessage.content || savedMessage.message, // Tùy BE trả về thuộc tính gì
-            time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-          }]);
+        globalConnection.on("ReceiveNewMessage", (savedMessage: any) => {
+          // PHÒNG THỦ: Nếu BE gửi string tào lao (như "Tin nhắn đã được lưu...") thì bỏ qua luôn!
+          if (typeof savedMessage === 'string') {
+            console.warn("BE gửi sai định dạng SignalR:", savedMessage);
+            return; 
+          }
+
+          const incomingRoomId = savedMessage.conversationId;
+          const isMyOwnMessage = savedMessage.senderId === currentUserId;
+          
+          setActiveChat((currentActive: { id: any; conversationId: any; }) => {
+            if (currentActive && (currentActive.id === incomingRoomId || currentActive.conversationId === incomingRoomId)) {
+              setChatHistory(prev => {
+                if (prev.some(m => m.id === savedMessage.id)) return prev;
+                return [...prev, {
+                  id: savedMessage.id || Date.now(),
+                  senderId: savedMessage.senderId,
+                  text: savedMessage.content || savedMessage.message,
+                  time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                }];
+              });
+            } else {
+              // Đang đóng chat -> Tăng chấm đỏ
+              if (!isMyOwnMessage) setUnreadCount(prev => prev + 1);
+            }
+            return currentActive;
+          });
+
+          // BẮN THÔNG BÁO LÊN HEADER (Chỉ bắn khi ĐÓ KHÔNG PHẢI LÀ TIN NHẮN DO MÌNH GỬI)
+          if (!isMyOwnMessage) {
+            
+            // Đi tìm tên của người gửi từ danh sách conversations (Inbox)
+            let senderDisplayName = savedMessage.senderName || 'Khách hàng';
+            const roomInfo = myRooms.find(r => r.id === incomingRoomId || r.Id === incomingRoomId);
+            if (roomInfo) {
+               // Tùy theo vai trò, lấy tên người đối diện
+               senderDisplayName = roomInfo.lessorName || roomInfo.lesseeName || senderDisplayName;
+            }
+
+            const event = new CustomEvent('new-notification', {
+              detail: {
+                id: savedMessage.id || Date.now(),
+                conversationId: incomingRoomId,
+                senderName: senderDisplayName,
+                message: savedMessage.content || savedMessage.message,
+                time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+              }
+            });
+            window.dispatchEvent(event);
+          }
         });
 
-        // 3. KHỞI ĐỘNG KẾT NỐI VÀ VÀO PHÒNG
-        try {
-          await newConnection.start();
-          console.log("Đã kết nối ChatHub!");
-          
-          // Gọi hàm JoinConversation của C# BE
-          await newConnection.invoke("JoinConversation", conversationId);
-          console.log(`Đã join phòng: ${conversationId}`);
-          
-          setConnection(newConnection);
-        } catch (err) {
-          console.error("Lỗi kết nối SignalR: ", err);
+        await globalConnection.start();
+        console.log("Đã kết nối ngầm SignalR!");
+
+        for (const room of myRooms) {
+          await globalConnection.invoke("JoinConversation", room.id || room.Id);
         }
+        
+        setConnection(globalConnection);
+      } catch (error) {
+        console.error("Lỗi khởi tạo hệ thống Chat ngầm:", error);
       }
     };
 
+    initGlobalChat();
+
+    return () => {
+      if (globalConnection) globalConnection.stop();
+    };
+  }, [currentUserId, token]);
+
+  // ================================================================
+  // 2. LẮNG NGHE SỰ KIỆN TỪ TRANG DETAIL HOẶC HEADER (BẤM "NHẮN TIN")
+  // ================================================================
+  useEffect(() => {
+    const handleOpenChatEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        // eslint-disable-next-line react-hooks/immutability
+        openChatRoom(customEvent.detail);
+      }
+    };
     window.addEventListener('open-ether-chat', handleOpenChatEvent);
     return () => window.removeEventListener('open-ether-chat', handleOpenChatEvent);
-  }, []);
+  }, [connection]);
 
-  // Hàm ngắt kết nối khi đóng Chat
-  const handleCloseChat = async () => {
-    if (connection && activeLessor?.conversationId) {
-      try {
-        await connection.invoke("LeaveConversation", activeLessor.conversationId);
-        await connection.stop();
-      } catch (err) {
-        console.error("Lỗi khi ngắt kết nối:", err);
-      }
+  // ================================================================
+  // 3. HÀM MỞ PHÒNG CHAT
+  // ================================================================
+  const openChatRoom = async (roomData: any) => {
+    setActiveChat(roomData);
+    setView('CHAT');
+    setIsOpen(true);
+    setChatHistory([]);
+    setUnreadCount(0); 
+
+    const roomId = roomData.conversationId || roomData.id || roomData.Id;
+
+    // FIX LỖI 1: Bắt SignalR Join vào phòng này ngay lập tức (Phòng hờ đây là phòng mới tạo)
+    if (connection) {
+      connection.invoke("JoinConversation", roomId).catch(err => console.log("Lỗi join phòng mới:", err));
     }
-    setConnection(null);
-    setIsOpen(false);
-    setActiveLessor(null);
+
+    try {
+      const res = await fetch(`https://localhost:7069/api/Message/GetMessageHistory?conversationId=${roomId}&limit=50`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const historyData = await res.json();
+        const mappedHistory = historyData.map((msg: any) => ({
+          id: msg.id,
+          senderId: msg.senderId,
+          text: msg.content || msg.message || '',
+          time: new Date(msg.createdAt || msg.sentAt || new Date()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+        }));
+        // Nếu tin nhắn bị ngược, hãy thêm .reverse() vào mappedHistory
+        setChatHistory(mappedHistory); 
+      }
+    } catch (err) {
+      console.error("Lỗi lấy lịch sử:", err);
+    }
   };
 
+  // ================================================================
+  // 4. HÀM GỬI TIN NHẮN 
+  // ================================================================
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !connection || !activeLessor?.conversationId) return;
+    const roomId = activeChat?.conversationId || activeChat?.id || activeChat?.Id;
+    if (!message.trim() || !connection || !roomId) return;
     
     const textToSend = message;
-    setMessage(''); // Clear ô input ngay lập tức cho mượt
+    setMessage(''); // Vẫn giữ lại dòng này để lúc bấm gửi thì ô input xóa trống liền cho mượt
+    
+    // ĐÃ XÓA ĐOẠN OPTIMISTIC UI TẠO TEMP_ID Ở ĐÂY NHA ÔNG!
     
     try {
-      // 4. GỌI HÀM SendMessageToGroup XUỐNG BE C#
-      await connection.invoke("SendMessageToGroup", activeLessor.conversationId, textToSend);
+      // Bắn thẳng xuống SignalR, chờ nó phát thanh ngược lại "ReceiveNewMessage" là UI tự render
+      await connection.invoke("SendMessageToGroup", roomId, textToSend);
     } catch (err) {
       console.error("Lỗi gửi tin nhắn: ", err);
       alert("Lỗi khi gửi tin nhắn!");
     }
   };
 
+  // Giao diện giữ nguyên như cũ, tui chỉ chép lại phần Render
   return (
     <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontFamily: 'system-ui, sans-serif' }}>
-      
-      {isOpen && activeLessor && (
-        <div style={{ width: '340px', height: '460px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden', marginBottom: '12px', border: '1px solid #E0E0E0' }}>
-          
-          {/* HEADER CHAT */}
-          <div style={{ backgroundColor: '#1E293B', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '34px', height: '34px', borderRadius: '50%', backgroundColor: '#fff', color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>
-                {activeLessor.name?.substring(0, 2).toUpperCase() || 'CH'}
+      {isOpen && (
+        <div style={{ width: '340px', height: '480px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden', marginBottom: '12px', border: '1px solid #E0E0E0' }}>
+          {view === 'LIST' && (
+            <>
+              <div style={{ backgroundColor: '#1E293B', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '16px' }}>Tin nhắn của bạn</div>
+                <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 }}><Minus size={20} /></button>
               </div>
-              <div>
-                <div style={{ fontWeight: '600', fontSize: '14px', lineHeight: '1.2' }}>{activeLessor.name}</div>
-                <div style={{ fontSize: '11px', opacity: 0.9, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#4ADE80', display: 'inline-block' }}></span> 
-                  {connection ? "Đã kết nối" : "Đang kết nối..."}
-                </div>
+              <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#fff' }}>
+                {conversations.length === 0 ? (
+                  <div style={{ padding: '20px', textAlign: 'center', color: '#999', fontSize: '13px' }}>Chưa có cuộc trò chuyện nào.</div>
+                ) : (
+                  conversations.map((room, idx) => {
+                    const displayName = room.lessorName || room.lesseeName || `Phòng ${room.id || room.Id}`;
+                    return (
+                      <div key={idx} onClick={() => openChatRoom(room)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #F0F0F0', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#E4E6EB', color: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{displayName.substring(0, 2).toUpperCase()}</div>
+                        <div style={{ flex: 1, overflow: 'hidden' }}>
+                          <div style={{ fontWeight: '600', fontSize: '14px', color: '#2C2C2C', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
+                          <div style={{ fontSize: '12px', color: '#777', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Nhấp để xem tin nhắn...</div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
               </div>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 }}><Minus size={18} /></button>
-              <button onClick={handleCloseChat} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 }}><X size={18} /></button>
-            </div>
-          </div>
+            </>
+          )}
 
-          {/* NỘI DUNG TIN NHẮN REALTIME */}
-          <div style={{ flex: 1, padding: '14px', overflowY: 'auto', backgroundColor: '#F8F9FA', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {chatHistory.map((msg) => {
-              // So sánh ID người gửi với ID hiện tại của mình để biết cục tin nhắn nằm bên trái hay phải
-              const isMe = msg.senderId === currentUserId;
-              return (
-                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                  <div style={{ 
-                    maxWidth: '75%', padding: '10px 14px', 
-                    borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                    backgroundColor: isMe ? '#1E293B' : '#fff', 
-                    color: isMe ? '#fff' : '#2D3748',
-                    fontSize: '13.5px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                    lineHeight: '1.4',
-                    border: isMe ? 'none' : '1px solid #EDF2F7'
-                  }}>
-                    {msg.text}
+          {view === 'CHAT' && activeChat && (
+            <>
+              <div style={{ backgroundColor: '#1E293B', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button onClick={() => setView('LIST')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}><ArrowLeft size={20} /></button>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#fff', color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>{(activeChat.name || activeChat.lessorName || 'U').substring(0, 2).toUpperCase()}</div>
+                  <div>
+                    <div style={{ fontWeight: '600', fontSize: '14px', lineHeight: '1.2' }}>{activeChat.name || activeChat.lessorName || 'Chủ nhà'}</div>
+                    <div style={{ fontSize: '11px', opacity: 0.9, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#4ADE80', display: 'inline-block' }}></span> {connection ? "Đã kết nối" : "Đang kết nối..."}
+                    </div>
                   </div>
-                  <span style={{ fontSize: '10px', color: '#A0AEC0', marginTop: '3px', padding: '0 4px' }}>{msg.time}</span>
                 </div>
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
+                <div style={{ display: 'flex', gap: '10px' }}><button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 }}><X size={20} /></button></div>
+              </div>
 
-          {/* INPUT TIN NHẮN */}
-          <form onSubmit={handleSendMessage} style={{ padding: '10px 12px', borderTop: '1px solid #E0E0E0', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#fff' }}>
-            <input 
-              type="text" 
-              placeholder="Nhập tin nhắn..." 
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              disabled={!connection}
-              style={{ flex: 1, padding: '8px 14px', borderRadius: '20px', border: 'none', backgroundColor: '#EDF2F7', outline: 'none', fontSize: '13.5px', color: '#2D3748' }}
-            />
-            <button type="submit" disabled={!connection} style={{ background: 'none', border: 'none', color: message.trim() ? '#1E293B' : '#A0AEC0', cursor: 'pointer', padding: '4px' }}>
-              <Send size={18} />
-            </button>
-          </form>
+              <div style={{ flex: 1, padding: '14px', overflowY: 'auto', backgroundColor: '#F8F9FA', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {chatHistory.map((msg) => {
+                  const isMe = msg.senderId === currentUserId;
+                  return (
+                    <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                      <div style={{ maxWidth: '75%', padding: '10px 14px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px', backgroundColor: isMe ? '#1E293B' : '#fff', color: isMe ? '#fff' : '#2D3748', fontSize: '13.5px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', lineHeight: '1.4', border: isMe ? 'none' : '1px solid #EDF2F7', wordBreak: 'break-word' }}>
+                        {msg.text}
+                      </div>
+                      <span style={{ fontSize: '10px', color: '#A0AEC0', marginTop: '3px', padding: '0 4px' }}>{msg.time}</span>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
 
+              <form onSubmit={handleSendMessage} style={{ padding: '10px 12px', borderTop: '1px solid #E0E0E0', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#fff' }}>
+                <button type="button" style={{ background: 'none', border: 'none', color: '#A0AEC0', cursor: 'pointer', padding: '4px' }}><ImageIcon size={18} /></button>
+                <input type="text" placeholder="Nhập tin nhắn..." value={message} onChange={(e) => setMessage(e.target.value)} disabled={!connection} style={{ flex: 1, padding: '8px 14px', borderRadius: '20px', border: 'none', backgroundColor: '#EDF2F7', outline: 'none', fontSize: '13.5px', color: '#2D3748' }} />
+                <button type="submit" disabled={!connection} style={{ background: 'none', border: 'none', color: message.trim() ? '#1E293B' : '#A0AEC0', cursor: 'pointer', padding: '4px' }}><Send size={18} /></button>
+              </form>
+            </>
+          )}
         </div>
       )}
 
       {!isOpen && (
-        <button 
-          onClick={() => {
-            if(!activeLessor) {
-              setActiveLessor({ name: 'EtherSpace Bot' });
-              setChatHistory([{ id: 0, senderId: 'bot', text: 'Xin chào, hãy chọn một mặt bằng và nhắn tin với chủ nhà nhé!', time: 'Vừa xong' }]);
-            }
-            setIsOpen(true);
-          }}
-          style={{ 
-            width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#1E293B', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
-          }}
-        >
-          <MessageCircle size={26} />
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => { setView('LIST'); setIsOpen(true); setUnreadCount(0); }} style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#1E293B', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)' }}>
+            <MessageCircle size={28} />
+          </button>
+          {unreadCount > 0 && (
+            <div style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: '#ef4444', color: '#fff', fontSize: '12px', fontWeight: 'bold', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', animation: 'bounce 1s infinite' }}>
+              <BellRing size={12} style={{ marginRight: '1px' }} />
+            </div>
+          )}
+        </div>
       )}
-
     </div>
   );
 };

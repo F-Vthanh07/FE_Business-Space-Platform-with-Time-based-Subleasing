@@ -1,7 +1,6 @@
-// src/components/Header.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-// IMPORT THÊM Building2 VÀ FileText Ở ĐÂY NÈ
 import { Bell, Globe, LogOut, LayoutDashboard, User, Building2, FileText, IdCard } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
 import { ROUTES } from '../routes/routes';
@@ -28,6 +27,8 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
   const activeTab = getActiveTab(location.pathname);
 
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showNotif, setShowNotif] = useState(false); // Quản lý đóng mở bảng thông báo
+  const [notifications, setNotifications] = useState<any[]>([]); // Lưu trữ lịch sử thông báo
 
   const token = localStorage.getItem('portal_token');
   const role = localStorage.getItem('portal_role');
@@ -39,16 +40,30 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
   };
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  // Click ra ngoài thì đóng cả 2 popup (Avatar và Notif)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setShowDropdown(false);
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) setShowNotif(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // LẮNG NGHE SỰ KIỆN TỪ FLOATING CHAT BẮN LÊN
+  useEffect(() => {
+    const handleNewNotif = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      // Thêm thông báo mới lên trên đầu mảng
+      setNotifications(prev => [customEvent.detail, ...prev]);
+    };
+    window.addEventListener('new-notification', handleNewNotif);
+    return () => window.removeEventListener('new-notification', handleNewNotif);
+  }, []);
+
   const handleLogout = () => {
-    // Giữ lại preference của người dùng, xóa hết các key còn lại
     const keepKeys = ['app-language', 'app-theme'];
     const saved: Record<string, string> = {};
     keepKeys.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
@@ -66,16 +81,25 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
     else navigate(ROUTES.LOGIN);
   };
 
+  // KHI BẤM VÀO MỘT THÔNG BÁO -> MỞ FLOATING CHAT CỦA NGƯỜI ĐÓ
+  const handleNotifClick = (notif: any) => {
+    setShowNotif(false);
+    const event = new CustomEvent('open-ether-chat', {
+      detail: { 
+        conversationId: notif.conversationId, 
+        name: notif.senderName || 'Người dùng' 
+      }
+    });
+    window.dispatchEvent(event);
+  };
+
   return (
     <header className="dashboard-header">
       {/* 1. LOGO */}
       <div 
         className="header-logo-text" 
         onClick={() => window.location.href = 'http://localhost:5173/'}
-        style={{ 
-          display: 'flex', alignItems: 'center', fontFamily: "'Press Start 2P', cursive", 
-          fontSize: '24px', cursor: 'pointer' 
-        }}
+        style={{ display: 'flex', alignItems: 'center', fontFamily: "'Press Start 2P', cursive", fontSize: '24px', cursor: 'pointer' }}
       >
         <span>Ether</span><Shuffle text="Space" />
       </div>
@@ -86,14 +110,9 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
           <button className={`header-nav-item ${activeTab === 'home' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/')}>
             {language === 'en' ? 'HOME' : 'TRANG CHỦ'}
           </button>
-
-          <button
-            className={`header-nav-item ${activeTab === 'spaces' ? 'header-nav-item--active' : ''}`}
-            onClick={() => navigate(isLoggedIn ? '/user/spaces' : '/login')}
-          >
+          <button className={`header-nav-item ${activeTab === 'spaces' ? 'header-nav-item--active' : ''}`} onClick={() => navigate(isLoggedIn ? '/user/spaces' : '/login')}>
             {language === 'en' ? 'MANAGE SPACES' : 'QUẢN LÝ MẶT BẰNG'}
           </button>
-
           <button className={`header-nav-item ${activeTab === 'feed' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/feed')}>
             {language === 'en' ? 'DISCOVER' : 'KHÁM PHÁ'}
           </button>
@@ -102,7 +121,6 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
 
       {/* 3. RIGHT CONTROLS */}
       <div className="header-right">
-        {/* Nút Đăng tin to oạch ngoài cùng */}
         <button className="btn-post-listing" onClick={handlePostListing}>
           {language === 'en' ? 'Post Listing' : 'Đăng tin'} <span className="arrow-icon">→</span>
         </button>
@@ -113,9 +131,52 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
 
         {isLoggedIn ? (
           <>
-            <button className="header-icon-btn" title="Notifications">
-              <Bell size={15} /><span className="notif-dot" />
-            </button>
+            {/* ====== KHU VỰC CHUÔNG THÔNG BÁO ====== */}
+            <div style={{ position: 'relative' }} ref={notifRef}>
+              <button className="header-icon-btn" title="Notifications" onClick={() => setShowNotif(!showNotif)}>
+                <Bell size={15} />
+                {notifications.length > 0 && (
+                  <span className="notif-dot" style={{ position: 'absolute', top: '2px', right: '4px', width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%', border: '1px solid #fff' }} />
+                )}
+              </button>
+
+              {/* BOX XỔ XUỐNG KHI BẤM CHUÔNG */}
+              {showNotif && (
+                <div className="header-dropdown-menu animate-in" style={{ width: '320px', right: '-40px', padding: 0, overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 16px', fontWeight: 'bold', borderBottom: '1px solid #E0E0E0', backgroundColor: '#FAFAFA' }}>
+                    {language === 'en' ? 'Notifications' : 'Thông báo mới'}
+                  </div>
+                  
+                  <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '30px 20px', textAlign: 'center', fontSize: '13px', color: '#999' }}>
+                        Không có thông báo nào
+                      </div>
+                    ) : (
+                      notifications.map((notif, idx) => (
+                        <div 
+                          key={idx} 
+                          onClick={() => handleNotifClick(notif)} 
+                          style={{ padding: '12px 16px', borderBottom: '1px solid #F0F0F0', cursor: 'pointer', transition: 'background 0.2s', display: 'flex', flexDirection: 'column', gap: '4px' }}
+                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F4F6F8'}
+                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <div style={{ fontSize: '13.5px', color: '#2C2C2C', lineHeight: '1.4' }}>
+                            <strong>{notif.senderName}</strong> vừa nhắn tin cho bạn:
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#555', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            "{notif.message}"
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#999' }}>{notif.time}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* ====== KHU VỰC AVATAR USER ====== */}
             <div className="avatar-dropdown-container" ref={dropdownRef} style={{ position: 'relative' }}>
               <div className="header-avatar" onClick={() => setShowDropdown(!showDropdown)} style={{ cursor: 'pointer', userSelect: 'none' }}>
                 {userInitials || 'NC'}
@@ -132,7 +193,6 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
                     <LayoutDashboard size={14} /> <span>{language === 'en' ? 'Dashboard' : 'Bảng điều khiển'}</span>
                   </button>
 
-                  {/* MENU DÀNH CHO USER (quản lý mặt bằng + tin đăng) */}
                   {role === 'user' && (
                     <>
                       <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/spaces'); }}>
