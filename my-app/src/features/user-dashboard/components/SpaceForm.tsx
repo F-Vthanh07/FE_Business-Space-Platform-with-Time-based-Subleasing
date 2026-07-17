@@ -43,22 +43,16 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
   const [area, setArea] = useState(initialData?.area?.toString().replace(/[^\d]/g, '') || '');
   
   // --- STATE DỮ LIỆU ĐỘNG VÀ MAPPER KHI EDIT ---
-  
-  // Map từ [{ name: 'wifi' }] thành ['wifi']
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const initialAmenities = (initialData?.amenities || []).map((a: any) => a.name || a);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>(initialAmenities);
   
   const [operatingHours, setOperatingHours] = useState<any[]>([]);
   
-  // Category lấy từ Backend API
   const [apiCategories, setApiCategories] = useState<any[]>([]);
-  
-  // Lấy ID ngành nghề từ mảng spaceAllowedCategories của BE
   const initialCat = initialData?.spaceAllowedCategories?.[0]?.bussinessCategoryId || '';
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | ''>(initialCat);
 
-  // --- STATE UI ---
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -80,14 +74,22 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     fetchCategories();
   }, []);
 
-  // 2. KHỞI TẠO GIỜ HOẠT ĐỘNG KHI RENDER HOẶC KHI CÓ DATA EDIT
+  // 2. KHỞI TẠO GIỜ HOẠT ĐỘNG (CÓ FIX MAPPER LÚC EDIT)
   useEffect(() => {
     if (initialData?.operatingHours && initialData.operatingHours.length > 0) {
-      // Map data từ BE vào cấu hình 7 ngày của giao diện
       const mappedHours = DAYS_OF_WEEK_CONFIG.map(day => {
-        const found = initialData.operatingHours.find((h: any) => h.dayOfWeek === day.id);
+        // CHUYỂN ĐỔI: BE lưu T2 là 1, T7 là 6. UI lưu T2 là 2, T7 là 7.
+        const backendDayId = day.id === 0 ? 0 : day.id - 1; 
+        
+        const found = initialData.operatingHours.find((h: any) => h.dayOfWeek === backendDayId);
         if (found) {
-          return { dayOfWeek: day.id, enabled: true, openTime: found.openTime, closeTime: found.closeTime };
+          return { 
+            dayOfWeek: day.id, 
+            enabled: true, 
+            // Input time của HTML chỉ nhận định dạng "HH:mm" (cắt bỏ giây ":00" của BE)
+            openTime: found.openTime ? found.openTime.substring(0, 5) : '08:00', 
+            closeTime: found.closeTime ? found.closeTime.substring(0, 5) : '22:00' 
+          };
         }
         return { dayOfWeek: day.id, enabled: false, openTime: '08:00', closeTime: '22:00' };
       });
@@ -128,7 +130,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     }
 
     const token = localStorage.getItem('portal_token');
-    // Ông có thể lấy ownerId từ LocalStorage nếu BE bắt buộc truyền
     const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
     
     // --- CHUẨN BỊ PAYLOAD ---
@@ -138,23 +139,23 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
       city: city,
       area: Number(area),
       isActive: true,
-      ownerId: ownerId, // Nếu BE cần cái này
+      ownerId: ownerId,
       
-      // Mảng 1: Tiện ích
       amenities: selectedAmenities.map(am => ({
         name: am,
         quantity: 1,
         isActive: true
       })),
       
-      // Mảng 2: Giờ hoạt động (Chỉ lọc các ngày được tích xanh)
+      // FIX LỖI GIỜ HOẠT ĐỘNG Ở ĐÂY NÈ
       operatingHours: operatingHours.filter(h => h.enabled).map(h => ({
-        dayOfWeek: h.dayOfWeek,
-        openTime: h.openTime,
-        closeTime: h.closeTime
+        // CHUYỂN ĐỔI: Ép ID của UI về chuẩn BE (T2: 2->1, T7: 7->6, CN: 0->0)
+        dayOfWeek: h.dayOfWeek === 0 ? 0 : h.dayOfWeek - 1,
+        // Ép thêm giây (:00) vì C# TimeSpan bắt buộc phải có
+        openTime: h.openTime.length === 5 ? `${h.openTime}:00` : h.openTime,
+        closeTime: h.closeTime.length === 5 ? `${h.closeTime}:00` : h.closeTime
       })),
       
-      // Mảng 3: Ngành nghề
       spaceAllowedCategories: selectedCategoryId !== '' 
         ? [{ bussinessCategoryId: selectedCategoryId }] 
         : []
@@ -174,7 +175,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
           'Authorization': `Bearer ${token}`,
           'accept': '*/*'
         },
-        // Nhét thêm ID vào payload khi gọi PUT theo chuẩn của BE
         body: JSON.stringify(isEditing ? { ...payload, id: initialData.id } : payload)
       });
 
@@ -182,7 +182,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
         throw new Error(`Lỗi khi ${isEditing ? 'cập nhật' : 'tạo'} mặt bằng.`);
       }
 
-      onSubmit(); // Báo component cha (OwnerSpaces) load lại list
+      onSubmit(); 
 
     } catch (err: any) {
       setError(err.message);

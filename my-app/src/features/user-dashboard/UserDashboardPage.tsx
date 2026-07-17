@@ -13,6 +13,7 @@ import { SubleaseListings } from './components/SubleaseListings';
 import { SubleaseSlotForm } from './components/SubleaseSlotForm';
 import { RenterSubTenants } from './components/RenterSubTenants';
 import { ProfileOverviewPage } from './components/ProfileOverviewPage';
+import { OwnerBookingRequests } from './components/OwnerBookingRequests';
 import { WalletOverview, WalletDeposit, WalletHistory } from '../wallet';
 import type { UserPage, SubSlot } from './types';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
@@ -96,7 +97,9 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
       case 'spaces': return <OwnerSpaces />;
       case 'listings': return <OwnerListings />;
       case 'tenants': return <OwnerTenants />;
+      case 'booking-requests': return <OwnerBookingRequests />;
       case 'calendar':
+        
         return (
           <div className="renter-page-wrap">
             <div className="page-header animate-in">

@@ -172,7 +172,10 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
                     </div>
                   </div>
                   <div className="agent-actions">
-                    <button className="btn-call" onClick={(e) => { e.stopPropagation(); alert('Chuẩn bị tích hợp API Chat!'); }}>
+                    <button className="btn-call" onClick={(e) => { 
+                      e.stopPropagation(); 
+                      navigate(`/listing/${itemId}`); 
+                    }}>
                       <MessageCircle size={14}/> Nhắn tin
                     </button>
                     <button className="btn-heart" onClick={(e) => { e.stopPropagation(); }}>

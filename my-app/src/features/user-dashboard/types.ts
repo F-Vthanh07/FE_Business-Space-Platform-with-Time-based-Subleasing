@@ -11,7 +11,8 @@ export type UserPage =
   | 'settings'
   | 'wallet'
   | 'wallet-deposit'
-  | 'wallet-history';
+  | 'wallet-history'
+  | 'booking-requests';
 
 export interface SubSlot {
   id: string;

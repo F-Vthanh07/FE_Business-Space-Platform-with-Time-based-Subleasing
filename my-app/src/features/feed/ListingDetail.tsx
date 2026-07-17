@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Share2, Heart, MessageCircle, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3 } from 'lucide-react';
+import { MapPin, Share2, Heart, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3, Send, X, ClipboardSignature } from 'lucide-react';
 import { Header } from '../../components/Header'; // Chỉnh đường dẫn cho đúng nếu cần
 
 export const ListingDetail: React.FC = () => {
@@ -13,7 +13,18 @@ export const ListingDetail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // --- 1. LẤY THÔNG TIN NGƯỜI ĐANG ĐĂNG NHẬP ---
+  // --- THÊM STATE CHO MODAL ĐẶT CHỖ ---
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookingData, setBookingData] = useState({
+    offeredPrice: '',
+    duration: 1,
+    durationUnit: 'Months',
+    purpose: '',
+    note: '',
+    expectedStartDate: new Date().toISOString().split('T')[0]
+  });
+
   const currentUserId = localStorage.getItem('current_user_id'); 
   const token = localStorage.getItem('portal_token');
 
@@ -25,11 +36,14 @@ export const ListingDetail: React.FC = () => {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
           
-          // Tìm bài đăng hiện tại
           const found = safeData.find((item: any) => (item.id?.toString() === id || item.Id?.toString() === id));
           setListing(found || null);
 
-          // Lấy 3 bài đăng khác làm "Bất động sản dành cho bạn"
+          // Cập nhật giá mặc định cho form dựa trên giá bài đăng
+          if (found && found.price) {
+            setBookingData(prev => ({ ...prev, offeredPrice: found.price.toString() }));
+          }
+
           const others = safeData.filter((item: any) => (item.id?.toString() !== id && item.Id?.toString() !== id));
           setSimilarListings(others.slice(0, 3));
         }
@@ -42,50 +56,50 @@ export const ListingDetail: React.FC = () => {
     fetchDetail();
   }, [id]);
 
-  // --- 2. HÀM GỌI API TẠO PHÒNG CHAT ---
-  const handleCreateChat = async () => {
+  // --- HÀM XỬ LÝ GỬI YÊU CẦU THUÊ ---
+  const handleSubmitBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!currentUserId || !token) {
-      alert("Vui lòng đăng nhập để nhắn tin với chủ nhà!");
+      alert("Vui lòng đăng nhập để gửi yêu cầu thuê!");
       navigate('/login');
       return;
     }
 
-    // Đã đổi thành creatorId theo chuẩn JSON của Backend
-    const lessorId = listing.creatorId; 
-
-    if (!lessorId) {
-      alert("Không tìm thấy ID của chủ nhà để nhắn tin!");
-      return;
-    }
-
+    setIsSubmitting(true);
     try {
-      const response = await fetch(`https://localhost:7069/api/Conversation/Create?lessorId=${lessorId}&lesseeId=${currentUserId}`, {
+      // Ép kiểu chuẩn Payload theo Swagger
+      const payload = {
+        listingId: Number(listing.id || listing.Id),
+        offeredPrice: Number(bookingData.offeredPrice),
+        duration: Number(bookingData.duration),
+        durationUnit: bookingData.durationUnit,
+        purpose: bookingData.purpose,
+        note: bookingData.note,
+        expectedStartDate: new Date(bookingData.expectedStartDate).toISOString()
+      };
+
+      const response = await fetch('https://localhost:7069/api/PrimaryBookingRequest/Create', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'accept': '*/*'
-        }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
-        // QUAN TRỌNG: Lấy dạng Text vì BE trả về chuỗi ID trực tiếp
-        const conversationId = await response.text(); 
-        
-        // Bắn event kèm theo conversationId
-        const event = new CustomEvent('open-ether-chat', {
-          detail: {
-            id: lessorId,
-            name: ownerName,
-            conversationId: conversationId // TRUYỀN ID PHÒNG CHAT VÀO ĐÂY
-          }
-        });
-        window.dispatchEvent(event);
+        alert("🎉 Gửi yêu cầu thuê thành công! Vui lòng chờ chủ nhà duyệt trong mục Quản lý.");
+        setIsBookingModalOpen(false); // Đóng modal
       } else {
-        alert("Lỗi khi tạo phòng chat, vui lòng thử lại sau!");
+        const err = await response.json().catch(() => ({}));
+        alert(err.message || "Có lỗi xảy ra khi gửi yêu cầu.");
       }
     } catch (error) {
-      console.error("Lỗi API Chat:", error);
+      console.error("Lỗi API Booking:", error);
       alert("Lỗi kết nối máy chủ!");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -96,13 +110,12 @@ export const ListingDetail: React.FC = () => {
   const getUrl = (img: any) => typeof img === 'string' ? img : (img.imageUrl || img.url);
   const mainImage = realImages.length > 0 ? getUrl(realImages[currentImageIndex]) : "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=800";
 
-  // --- 3. KIỂM TRA CHÍNH CHỦ VÀ LẤY TÊN ---
   const isOwner = currentUserId && (currentUserId === listing.creatorId);
   const ownerName = listing.lessorName || 'Ẩn danh';
 
   return (
     <div style={{ backgroundColor: '#F9F9F9', minHeight: '100vh', color: '#333', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ position: 'sticky', top: 0, zIndex: 999 }}><Header /></div>
+      <div style={{ position: 'sticky', top: 0, zIndex: 99 }}><Header /></div>
 
       <div style={{ maxWidth: '1140px', margin: '0 auto', paddingTop: '20px', paddingBottom: '50px' }}>
         
@@ -119,9 +132,7 @@ export const ListingDetail: React.FC = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(auto, 780px) 320px', gap: '30px' }}>
           
-          {/* ================================================== */}
-          {/* CỘT TRÁI: NỘI DUNG CHÍNH (ẢNH, MÔ TẢ, MAP, TƯƠNG TỰ) */}
-          {/* ================================================== */}
+          {/* CỘT TRÁI */}
           <div>
             {/* THƯ VIỆN ẢNH */}
             <div style={{ backgroundColor: '#000', borderRadius: '8px', overflow: 'hidden', marginBottom: '12px', position: 'relative' }}>
@@ -280,9 +291,7 @@ export const ListingDetail: React.FC = () => {
 
           </div>
 
-          {/* ================================================== */}
           {/* CỘT PHẢI: THẺ LIÊN HỆ STICKY (BÁM DÍNH) */}
-          {/* ================================================== */}
           <div style={{ position: 'sticky', top: '90px', height: 'fit-content' }}>
             <div style={{ backgroundColor: '#fff', padding: '24px 20px', borderRadius: '8px', border: '1px solid #E0E0E0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               
@@ -293,7 +302,6 @@ export const ListingDetail: React.FC = () => {
                 Chủ nhà {ownerName}
               </div>
 
-              {/* RÀO LOGIC HIỂN THỊ NÚT DỰA TRÊN QUYỀN SỞ HỮU */}
               {isOwner ? (
                 <button 
                   onClick={() => navigate('/user/listings')} 
@@ -307,22 +315,86 @@ export const ListingDetail: React.FC = () => {
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16A34A', display: 'inline-block' }}></span> Đang hoạt động
                   </div>
 
+                  {/* NÚT MỞ FORM GỬI YÊU CẦU THUÊ */}
                   <button 
-                    onClick={handleCreateChat}
-                    style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '6px', border: '1px solid var(--color-primary)', backgroundColor: '#fff', color: 'var(--color-primary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0f9ff'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                    onClick={() => {
+                      if(!currentUserId) { alert("Vui lòng đăng nhập!"); navigate('/login'); return; }
+                      setIsBookingModalOpen(true);
+                    }}
+                    style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '6px', border: 'none', backgroundColor: '#1E293B', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
                   >
-                    <MessageCircle size={18} /> Nhắn tin ngay
+                    <Send size={16} /> Gửi yêu cầu thuê
                   </button>
                 </>
               )}
-
             </div>
           </div>
 
         </div>
       </div>
+
+      {/* ================================================== */}
+      {/* POPUP (MODAL) ĐIỀN FORM ĐẶT CHỖ */}
+      {/* ================================================== */}
+      {isBookingModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ backgroundColor: '#fff', width: '450px', borderRadius: '12px', padding: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E0E0E0', paddingBottom: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '18px', color: '#1E293B' }}>
+                <ClipboardSignature size={20} /> Gửi Yêu Cầu Thuê
+              </div>
+              <button onClick={() => setIsBookingModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitBooking} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              
+              <div>
+                <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Mức giá đề xuất (VNĐ)</label>
+                <input type="number" required value={bookingData.offeredPrice} onChange={(e) => setBookingData({...bookingData, offeredPrice: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Thời lượng thuê</label>
+                  <input type="number" required min={1} value={bookingData.duration} onChange={(e) => setBookingData({...bookingData, duration: Number(e.target.value)})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Đơn vị</label>
+                  <select value={bookingData.durationUnit} onChange={(e) => setBookingData({...bookingData, durationUnit: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}>
+                    <option value="Days">Ngày</option>
+                    <option value="Months">Tháng</option>
+                    <option value="Years">Năm</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Ngày bắt đầu dự kiến</label>
+                <input type="date" required value={bookingData.expectedStartDate} onChange={(e) => setBookingData({...bookingData, expectedStartDate: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Mục đích sử dụng</label>
+                <input type="text" required placeholder="VD: Mở quán cafe, làm kho..." value={bookingData.purpose} onChange={(e) => setBookingData({...bookingData, purpose: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Ghi chú cho chủ nhà (Tùy chọn)</label>
+                <textarea rows={3} placeholder="Bạn có yêu cầu gì thêm không?" value={bookingData.note} onChange={(e) => setBookingData({...bookingData, note: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', resize: 'none' }} />
+              </div>
+
+              <button type="submit" disabled={isSubmitting} style={{ marginTop: '8px', width: '100%', padding: '12px', borderRadius: '6px', border: 'none', backgroundColor: '#1E293B', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
+                {isSubmitting ? 'Đang gửi yêu cầu...' : 'Xác nhận gửi Yêu Cầu'}
+              </button>
+
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
