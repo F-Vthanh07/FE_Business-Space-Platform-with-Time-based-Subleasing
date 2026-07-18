@@ -147,10 +147,12 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
 
   return (
     <div className="app-shell">
+      {/* 
+        ĐÃ XÓA userName VÀ userInitials FIX CỨNG Ở ĐÂY.
+        Giờ Header sẽ tự móc tên từ LocalStorage lên hiển thị.
+      */}
       <Header
-        userName="Nguyễn Văn Dùng"
         userRole={t('app.userTitle')}
-        userInitials="ND"
       />
       <div className="app-body">
         <UserSidebar

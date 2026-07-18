@@ -6,6 +6,21 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import { ROUTES, type PortalRole } from '../../routes/routes';
 import './AuthPage.css';
 
+// HÀM GIẢI MÃ JWT TOKEN ĐỂ LẤY THÔNG TIN
+const parseJwt = (token: string) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (e) {
+    return null;
+  }
+};
+
 interface LoginPageProps {
   onLoginSuccess: (role: PortalRole) => void;
 }
@@ -73,8 +88,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
       const finalRole: PortalRole = parsedRole === 'admin' ? 'admin' : 'user';
 
-      if (data.accessToken) localStorage.setItem('portal_token', data.accessToken);
+      if (data.accessToken) {
+        localStorage.setItem('portal_token', data.accessToken);
+        
+        // BÓC TÁCH TOKEN Ở ĐÂY
+        const decodedToken = parseJwt(data.accessToken);
+        if (decodedToken && decodedToken.name) {
+          // Lấy đúng cái key "name" mà BE trả về
+          localStorage.setItem('current_user_name', decodedToken.name);
+        } else {
+          localStorage.setItem('current_user_name', 'Người dùng');
+        }
+      }
+
       localStorage.setItem('portal_role', finalRole);
+      
       if (userId) {
         localStorage.setItem('current_user_id', userId);
       }

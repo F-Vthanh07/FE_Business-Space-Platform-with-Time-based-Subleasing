@@ -1,13 +1,13 @@
 /* eslint-disable react-hooks/immutability */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Minus, Send, Image as ImageIcon, ArrowLeft, BellRing, FileSignature } from 'lucide-react';
+import { MessageCircle, X, Minus, Send, Image as ImageIcon, ArrowLeft, BellRing, FileSignature, FileText, Briefcase, Wallet, CalendarDays, Edit3 } from 'lucide-react';
 import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr';
+import { ContractViewModal } from './ContractViewModal';
 
 export const FloatingChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  // Thêm màn hình CONTRACT vào view
-  const [view, setView] = useState<'LIST' | 'CHAT' | 'CONTRACT'>('LIST'); 
+  const [view, setView] = useState<'LIST' | 'CHAT' | 'CONTRACT' | 'CONTRACT_DETAIL'>('LIST'); 
   
   const [conversations, setConversations] = useState<any[]>([]); 
   const [activeChat, setActiveChat] = useState<any | null>(null); 
@@ -21,15 +21,20 @@ export const FloatingChat: React.FC = () => {
   const currentUserId = localStorage.getItem('current_user_id');
   const token = localStorage.getItem('portal_token');
 
-  const isLessor = activeChat && (activeChat.lessorId === currentUserId || activeChat.LessorId === currentUserId);
+  const isLessor = activeChat && (String(activeChat.lessorId) === String(currentUserId) || String(activeChat.LessorId) === String(currentUserId));
 
-  // ================================================================
-  // STATE CHO FORM TẠO HỢP ĐỒNG
-  // ================================================================
+  const [contractDetail, setContractDetail] = useState<any>(null);
+
+  const getOtherPersonName = (room: any) => {
+    if (!room) return 'Khách';
+    const nameFromRoom = room.lesseeName || room.LesseeName || room.lessorName || room.LessorName;
+    if (nameFromRoom) return nameFromRoom;
+    const rLessorId = room.lessorId || room.LessorId;
+    return String(rLessorId) === String(currentUserId) ? "Khách thuê" : "Chủ nhà";
+  };
+
   const [isCreatingContract, setIsCreatingContract] = useState(false);
   const [mySpaces, setMySpaces] = useState<any[]>([]);
-
-  // Danh sách các Booking Request khớp giữa 2 người (lessor <-> lessee) của conversation hiện tại
   const [matchedBookingRequests, setMatchedBookingRequests] = useState<any[]>([]);
   const [isLoadingBookingRequests, setIsLoadingBookingRequests] = useState(false);
 
@@ -43,9 +48,7 @@ export const FloatingChat: React.FC = () => {
     price: 0,
     depositAmount: 0,
     description: '',
-    contractSchedules: [
-      { dayOfWeek: 'Monday', startTime: '08:00', endTime: '22:00' }
-    ]
+    contractSchedules: [{ dayOfWeek: 'Monday', startTime: '08:00', endTime: '22:00' }]
   });
 
   const scrollToBottom = () => {
@@ -56,7 +59,6 @@ export const FloatingChat: React.FC = () => {
     if (view === 'CHAT') scrollToBottom();
   }, [chatHistory, view]);
 
-  // TỰ ĐỘNG TẢI DANH SÁCH MẶT BẰNG CỦA CHỦ NHÀ KHI MỞ FORM TẠO HỢP ĐỒNG
   useEffect(() => {
     if (view === 'CONTRACT' && isLessor && currentUserId) {
       const fetchMySpaces = async () => {
@@ -66,22 +68,14 @@ export const FloatingChat: React.FC = () => {
           });
           if (res.ok) {
             const data = await res.json();
-            const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-            setMySpaces(safeData);
+            setMySpaces(Array.isArray(data) ? data : (data?.data || data?.items || []));
           }
-        } catch (err) {
-          console.error("Lỗi lấy danh sách mặt bằng:", err);
-        }
+        } catch (err) { console.error(err); }
       };
       fetchMySpaces();
     }
   }, [view, isLessor, currentUserId, token]);
 
-  // ================================================================
-  // TÌM CÁC BOOKING REQUEST KHỚP VỚI CUỘC TRÒ CHUYỆN HIỆN TẠI
-  // (PrimaryBookingRequest chưa lưu conversationId, nên phải lọc theo
-  //  lessorId + lesseeId lấy từ activeChat)
-  // ================================================================
   useEffect(() => {
     if (view === 'CONTRACT' && isLessor && activeChat) {
       const fetchMatchedRequests = async () => {
@@ -89,31 +83,16 @@ export const FloatingChat: React.FC = () => {
         try {
           const lesseeId = activeChat.lesseeId || activeChat.LesseeId;
           const lessorId = activeChat.lessorId || activeChat.LessorId;
-
-          // Enum status bên BE: Pending, Approved (đã xác nhận từ Swagger)
-          // Request đủ điều kiện tạo hợp đồng là khi chủ nhà đã đồng ý -> Approved
-          const statusesToCheck = ['Approved'];
           const responses = await Promise.all(
-            statusesToCheck.map(status =>
+            ['Approved'].map(status =>
               fetch(`https://localhost:7069/api/PrimaryBookingRequest/GetAll?status=${status}`, {
                 headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-              })
-                .then(res => (res.ok ? res.json() : []))
-                .catch(() => [])
+              }).then(res => (res.ok ? res.json() : [])).catch(() => [])
             )
           );
-
-          const allRequests = responses.flatMap((data: any) =>
-            Array.isArray(data) ? data : (data?.data || data?.items || [])
-          );
-
-          const matched = allRequests.filter((r: any) =>
-            r.lessorId === lessorId && r.lesseeId === lesseeId
-          );
-
+          const allRequests = responses.flatMap((data: any) => Array.isArray(data) ? data : (data?.data || data?.items || []));
+          const matched = allRequests.filter((r: any) => String(r.lessorId) === String(lessorId) && String(r.lesseeId) === String(lesseeId));
           setMatchedBookingRequests(matched);
-
-          // Nếu chỉ có đúng 1 request khớp -> auto điền luôn cho tiện
           if (matched.length === 1) {
             const only = matched[0];
             setContractData(prev => ({
@@ -124,34 +103,20 @@ export const FloatingChat: React.FC = () => {
               duration: only.duration ?? prev.duration,
             }));
           }
-        } catch (err) {
-          console.error("Lỗi lấy booking request khớp:", err);
-        } finally {
-          setIsLoadingBookingRequests(false);
-        }
+        } catch (err) { console.error(err); } finally { setIsLoadingBookingRequests(false); }
       };
       fetchMatchedRequests();
     }
   }, [view, isLessor, activeChat, token]);
 
-  // ================================================================
-  // 1. KẾT NỐI SIGNALR & LẤY DANH SÁCH PHÒNG
-  // ================================================================
   useEffect(() => {
     if (!currentUserId || !token) return;
     let globalConnection: HubConnection;
-
     const initGlobalChat = async () => {
       try {
-        const res = await fetch(`https://localhost:7069/api/Conversation/User/${currentUserId}`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-        });
-        
+        const res = await fetch(`https://localhost:7069/api/Conversation/User/${currentUserId}`, { headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }});
         let myRooms: any[] = [];
-        if (res.ok) {
-          myRooms = await res.json();
-          setConversations(myRooms);
-        }
+        if (res.ok) { myRooms = await res.json(); setConversations(myRooms); }
 
         globalConnection = new HubConnectionBuilder()
           .withUrl("https://localhost:7069/chatHub", { accessTokenFactory: () => token || "" })
@@ -161,11 +126,10 @@ export const FloatingChat: React.FC = () => {
 
         globalConnection.on("ReceiveNewMessage", (savedMessage: any) => {
           if (typeof savedMessage === 'string') return; 
-
           const incomingRoomId = savedMessage.conversationId;
-          const isMyOwnMessage = savedMessage.senderId === currentUserId;
+          const isMyOwnMessage = String(savedMessage.senderId) === String(currentUserId);
           
-          setActiveChat((currentActive: { id: any; conversationId: any; }) => {
+          setActiveChat((currentActive: any) => {
             if (currentActive && (currentActive.id === incomingRoomId || currentActive.conversationId === incomingRoomId)) {
               setChatHistory(prev => {
                 if (prev.some(m => m.id === savedMessage.id)) return prev;
@@ -176,48 +140,28 @@ export const FloatingChat: React.FC = () => {
                   time: new Date(savedMessage.createdAt || new Date()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
                 }];
               });
-            } else {
-              if (!isMyOwnMessage) setUnreadCount(prev => prev + 1);
-            }
+            } else { if (!isMyOwnMessage) setUnreadCount(prev => prev + 1); }
             return currentActive;
           });
 
           if (!isMyOwnMessage) {
-            let senderDisplayName = savedMessage.senderName || 'Khách';
             const roomInfo = myRooms.find(r => r.id === incomingRoomId || r.Id === incomingRoomId);
-            if (roomInfo) {
-               senderDisplayName = roomInfo.lessorName || roomInfo.lesseeName || senderDisplayName;
-            }
-
+            const senderDisplayName = roomInfo ? getOtherPersonName(roomInfo) : (savedMessage.senderName || 'Khách');
             const event = new CustomEvent('new-notification', {
-              detail: {
-                id: savedMessage.id || Date.now(),
-                conversationId: incomingRoomId,
-                senderName: senderDisplayName,
-                message: savedMessage.content || savedMessage.message,
-                time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-              }
+              detail: { id: savedMessage.id || Date.now(), conversationId: incomingRoomId, senderName: senderDisplayName, message: savedMessage.content || savedMessage.message, time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) }
             });
             window.dispatchEvent(event);
           }
         });
-
         await globalConnection.start();
-        for (const room of myRooms) {
-          await globalConnection.invoke("JoinConversation", room.id || room.Id);
-        }
+        for (const room of myRooms) await globalConnection.invoke("JoinConversation", room.id || room.Id);
         setConnection(globalConnection);
-      } catch (error) {
-        console.error("Lỗi khởi tạo hệ thống Chat ngầm:", error);
-      }
+      } catch (error) { console.error(error); }
     };
     initGlobalChat();
     return () => { if (globalConnection) globalConnection.stop(); };
   }, [currentUserId, token]);
 
-  // ================================================================
-  // 2. MỞ HỘP CHAT
-  // ================================================================
   useEffect(() => {
     const handleOpenChatEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -235,63 +179,38 @@ export const FloatingChat: React.FC = () => {
     setUnreadCount(0); 
 
     const roomId = roomData.conversationId || roomData.id || roomData.Id;
-    if (connection) {
-      connection.invoke("JoinConversation", roomId).catch(err => console.log("Lỗi join phòng mới:", err));
-    }
+    if (connection) connection.invoke("JoinConversation", roomId).catch(err => console.log(err));
 
     try {
-      const res = await fetch(`https://localhost:7069/api/Message/GetMessageHistory?conversationId=${roomId}&limit=50`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await fetch(`https://localhost:7069/api/Message/GetMessageHistory?conversationId=${roomId}&limit=50`, { headers: { 'Authorization': `Bearer ${token}` }});
       if (res.ok) {
         const historyData = await res.json();
         const mappedHistory = historyData.map((msg: any) => ({
-          id: msg.id,
-          senderId: msg.senderId,
-          text: msg.content || msg.message || '',
-          time: new Date(msg.createdAt || msg.sentAt || new Date()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+          id: msg.id, senderId: msg.senderId, text: msg.content || msg.message || '', time: new Date(msg.createdAt || msg.sentAt || new Date()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
         }));
         setChatHistory(mappedHistory); 
       }
-    } catch (err) {
-      console.error("Lỗi lấy lịch sử:", err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  // ================================================================
-  // 3. GỬI TIN NHẮN
-  // ================================================================
   const handleSendMessage = async (e: React.FormEvent, customText?: string) => {
     if (e) e.preventDefault();
     const textToSend = customText || message;
     const roomId = activeChat?.conversationId || activeChat?.id || activeChat?.Id;
     if (!textToSend.trim() || !connection || !roomId) return;
-    
     setMessage(''); 
-    try {
-      await connection.invoke("SendMessageToGroup", roomId, textToSend);
-    } catch (err) {
-      console.error("Lỗi gửi tin nhắn: ", err);
-      alert("Lỗi khi gửi tin nhắn!");
-    }
+    try { await connection.invoke("SendMessageToGroup", roomId, textToSend); } 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    catch (err) { alert("Lỗi khi gửi tin nhắn!"); }
   };
 
-  // ================================================================
-  // 4. LUỒNG TẠO VÀ SHARE HỢP ĐỒNG (THEO SWAGGER API)
-  // ================================================================
   const handleCreateAndShareContract = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!contractData.primaryBookingRequestId) {
-      alert('Vui lòng chọn yêu cầu đặt thuê liên quan trước khi tạo hợp đồng!');
-      return;
-    }
-
+    if (!contractData.primaryBookingRequestId) return alert('Vui lòng chọn yêu cầu đặt thuê!');
     setIsCreatingContract(true);
     const roomId = activeChat?.conversationId || activeChat?.id || activeChat?.Id;
 
     try {
-      // BƯỚC 1: Tạo Hợp Đồng
       const createPayload = {
         conversationId: roomId,
         spaceId: Number(contractData.spaceId) || 0,
@@ -303,55 +222,132 @@ export const FloatingChat: React.FC = () => {
         price: Number(contractData.price),
         depositAmount: Number(contractData.depositAmount),
         description: contractData.description,
-        contractSchedules: contractData.contractSchedules
+        contractSchedules: contractData.contractSchedules,
+        lessorId: activeChat?.lessorId || activeChat?.LessorId,
+        lesseeId: activeChat?.lesseeId || activeChat?.LesseeId
       };
 
       const createRes = await fetch('https://localhost:7069/api/Contract/Create', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(createPayload)
       });
 
-      if (!createRes.ok) throw new Error('Lỗi khi tạo hợp đồng (Create)');
+      if (!createRes.ok) throw new Error('Lỗi tạo hợp đồng');
       const createdContract = await createRes.json();
-      // BE thường trả về object có chứa ID vừa tạo
       const newContractId = createdContract.id || createdContract.Id; 
 
       if (newContractId) {
-        // BƯỚC 2: Share Hợp Đồng cho người thuê
-        const shareRes = await fetch(`https://localhost:7069/api/Contract/${newContractId}/share`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'accept': '*/*'
-          }
-        });
+        const shareRes = await fetch(`https://localhost:7069/api/Contract/${newContractId}/share`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }});
+        if (!shareRes.ok) throw new Error('Lỗi share hợp đồng');
 
-        if (!shareRes.ok) throw new Error('Lỗi khi share hợp đồng');
-
-        // BƯỚC 3: Gửi tin nhắn tự động báo cho người thuê biết
         await handleSendMessage(e, `📄 Tôi vừa tạo và gửi một Hợp đồng (Mã: #${newContractId}). Vui lòng kiểm tra và xác nhận nhé!`);
-        
-        alert('Tạo và gửi hợp đồng thành công!');
-        setView('CHAT'); // Quay lại màn hình chat
-      } else {
-        throw new Error('Không nhận được ID hợp đồng từ Backend');
+        alert('Tạo hợp đồng thành công!');
+        setView('CHAT'); 
       }
+    } catch (error: any) { alert(error.message); } finally { setIsCreatingContract(false); }
+  };
 
-    } catch (error: any) {
-      console.error(error);
-      alert(error.message || 'Có lỗi xảy ra khi tạo hợp đồng!');
-    } finally {
-      setIsCreatingContract(false);
+  const openContractDetail = async (contractId: string) => {
+    setView('CONTRACT_DETAIL');
+    setContractDetail(null); 
+    try {
+      const res = await fetch(`https://localhost:7069/api/Contract/GetById/${contractId}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setContractDetail(data);
+      }
+    } catch (err) {
+      console.error("Lỗi lấy chi tiết Hợp đồng:", err);
     }
+  };
+
+  const renderMessageContent = (text: string) => {
+    const contractRegex = /Hợp đồng \(Mã: #(\d+)\)/i;
+    const match = text.match(contractRegex);
+
+    if (match && match[1]) {
+      const cId = match[1];
+      return (
+        <div>
+          <span>{text}</span>
+          <div style={{ marginTop: '8px' }}>
+            <button 
+              onClick={() => openContractDetail(cId)}
+              style={{ padding: '6px 12px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <FileText size={14} /> Xem Hợp Đồng
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return <>{text}</>;
   };
 
 
   return (
     <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontFamily: 'system-ui, sans-serif' }}>
+      
+      {/* KHAI BÁO CSS NỘI BỘ CHO PHẦN GIAO DIỆN PREMIUM */}
+      <style>
+        {`
+          .premium-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            background-color: #F8FAFC;
+            font-size: 13px;
+            color: #1E293B;
+            transition: all 0.2s ease;
+            outline: none;
+            box-sizing: border-box;
+          }
+          .premium-input:focus {
+            border-color: #10B981;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+          }
+          .premium-label {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #475569;
+            display: block;
+            margin-bottom: 6px;
+          }
+          .premium-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 14px;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            margin-bottom: 12px;
+          }
+          .premium-card-header {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          /* Tùy chỉnh thanh cuộn cho mượt */
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #CBD5E1;
+            border-radius: 10px;
+          }
+        `}
+      </style>
+
       {isOpen && (
         <div style={{ width: '360px', height: '520px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', marginBottom: '12px', border: '1px solid #E0E0E0' }}>
           
@@ -362,12 +358,12 @@ export const FloatingChat: React.FC = () => {
                 <div style={{ fontWeight: 'bold', fontSize: '16px' }}>Tin nhắn của bạn</div>
                 <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 0 }}><Minus size={20} /></button>
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#fff' }}>
+              <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', backgroundColor: '#fff' }}>
                 {conversations.length === 0 ? (
                   <div style={{ padding: '20px', textAlign: 'center', color: '#999', fontSize: '13px' }}>Chưa có cuộc trò chuyện nào.</div>
                 ) : (
                   conversations.map((room, idx) => {
-                    const displayName = room.lessorId === currentUserId ? (room.lesseeName || 'Người thuê') : (room.lessorName || 'Chủ nhà');
+                    const displayName = getOtherPersonName(room);
                     return (
                       <div key={idx} onClick={() => openChatRoom(room)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #F0F0F0', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                         <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#E4E6EB', color: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{displayName.substring(0, 2).toUpperCase()}</div>
@@ -390,12 +386,10 @@ export const FloatingChat: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button onClick={() => setView('LIST')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}><ArrowLeft size={20} /></button>
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#fff', color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>
-                    {(activeChat.lessorId === currentUserId ? (activeChat.lesseeName || 'KH') : (activeChat.lessorName || 'CH')).substring(0, 2).toUpperCase()}
+                    {getOtherPersonName(activeChat).substring(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <div style={{ fontWeight: '600', fontSize: '14px', lineHeight: '1.2' }}>
-                      {activeChat.lessorId === currentUserId ? (activeChat.lesseeName || 'Khách Thuê') : (activeChat.lessorName || 'Chủ nhà')}
-                    </div>
+                    <div style={{ fontWeight: '600', fontSize: '14px', lineHeight: '1.2' }}>{getOtherPersonName(activeChat)}</div>
                     <div style={{ fontSize: '11px', opacity: 0.9, display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#4ADE80', display: 'inline-block' }}></span> {connection ? "Đã kết nối" : "Đang kết nối..."}
                     </div>
@@ -403,7 +397,6 @@ export const FloatingChat: React.FC = () => {
                 </div>
                 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  {/* NÚT TẠO HỢP ĐỒNG CHỈ DÀNH CHO CHỦ NHÀ */}
                   {isLessor && (
                     <button onClick={() => setView('CONTRACT')} title="Tạo Hợp Đồng" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
                       <FileSignature size={16} />
@@ -413,13 +406,16 @@ export const FloatingChat: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ flex: 1, padding: '14px', overflowY: 'auto', backgroundColor: '#F8F9FA', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="custom-scrollbar" style={{ flex: 1, padding: '14px', overflowY: 'auto', backgroundColor: '#F8F9FA', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {chatHistory.map((msg) => {
-                  const isMe = msg.senderId === currentUserId;
+                  const isMe = String(msg.senderId) === String(currentUserId);
+                  const senderName = isMe ? 'Bạn' : getOtherPersonName(activeChat);
+
                   return (
                     <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                      <span style={{ fontSize: '11px', color: '#64748B', marginBottom: '4px', padding: '0 4px' }}>{senderName}</span>
                       <div style={{ maxWidth: '75%', padding: '10px 14px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px', backgroundColor: isMe ? '#1E293B' : '#fff', color: isMe ? '#fff' : '#2D3748', fontSize: '13.5px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', lineHeight: '1.4', border: isMe ? 'none' : '1px solid #EDF2F7', wordBreak: 'break-word' }}>
-                        {msg.text}
+                        {renderMessageContent(msg.text)}
                       </div>
                       <span style={{ fontSize: '10px', color: '#A0AEC0', marginTop: '3px', padding: '0 4px' }}>{msg.time}</span>
                     </div>
@@ -436,109 +432,128 @@ export const FloatingChat: React.FC = () => {
             </>
           )}
 
-          {/* MÀN HÌNH 3: FORM TẠO HỢP ĐỒNG (CHỈ CHỦ NHÀ) */}
+          {/* MÀN HÌNH 3: FORM TẠO HỢP ĐỒNG MỚI (PREMIUM UI) */}
           {view === 'CONTRACT' && (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div style={{ backgroundColor: '#1E293B', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <button onClick={() => setView('CHAT')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '4px' }}><ArrowLeft size={20} /></button>
-                  <span style={{ fontWeight: '600', fontSize: '15px' }}>Tạo Hợp Đồng Thuê</span>
-                </div>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#F1F5F9' }}>
+              
+              {/* Header */}
+              <div style={{ backgroundColor: '#1E293B', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', color: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                <button onClick={() => setView('CHAT')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '0', display: 'flex' }}><ArrowLeft size={20} /></button>
+                <span style={{ fontWeight: '700', fontSize: '16px' }}>Tạo Hợp Đồng Thuê</span>
               </div>
               
-              <form onSubmit={handleCreateAndShareContract} style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#FAFAFA' }}>
-
-                {/* CHỌN YÊU CẦU ĐẶT THUÊ LIÊN QUAN (BOOKING REQUEST) */}
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Yêu cầu đặt thuê liên quan</div>
-                <select
-                  required
-                  value={contractData.primaryBookingRequestId}
-                  onChange={(e) => {
-                    const selectedId = Number(e.target.value);
-                    const selectedReq = matchedBookingRequests.find(r => r.id === selectedId);
-                    setContractData(prev => ({
-                      ...prev,
-                      primaryBookingRequestId: selectedId,
-                      // Auto-fill các trường liên quan từ request, chủ nhà vẫn có thể chỉnh lại
-                      spaceId: selectedReq?.spaceId ? String(selectedReq.spaceId) : prev.spaceId,
-                      price: selectedReq?.offeredPrice ?? prev.price,
-                      duration: selectedReq?.duration ?? prev.duration,
-                    }));
-                  }}
-                  disabled={isLoadingBookingRequests}
-                  style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px', width: '100%', backgroundColor: '#fff', cursor: 'pointer' }}
-                >
-                  <option value={0} disabled>
-                    {isLoadingBookingRequests ? '-- Đang tải... --' : '-- Vui lòng chọn yêu cầu đặt thuê --'}
-                  </option>
-                  {matchedBookingRequests.map(req => (
-                    <option key={req.id} value={req.id}>
-                      #{req.id} - {Number(req.offeredPrice).toLocaleString('vi-VN')}₫ - {req.purpose || 'Không ghi chú'}
-                    </option>
-                  ))}
-                </select>
-                {!isLoadingBookingRequests && matchedBookingRequests.length === 0 && (
-                  <div style={{ fontSize: '12px', color: '#e53e3e' }}>
-                    Không tìm thấy yêu cầu đặt thuê nào giữa hai bên. Không thể tạo hợp đồng.
+              {/* Body Form */}
+              <form className="custom-scrollbar" onSubmit={handleCreateAndShareContract} style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column' }}>
+                
+                {/* BLOCK 1: THÔNG TIN CHUNG */}
+                <div className="premium-card">
+                  <div className="premium-card-header"><Briefcase size={14} color="#64748B"/> Liên kết yêu cầu</div>
+                  
+                  <div style={{ marginBottom: '12px' }}>
+                    <label className="premium-label">Yêu cầu đặt thuê</label>
+                    <select className="premium-input" required value={contractData.primaryBookingRequestId} onChange={(e) => setContractData(prev => ({ ...prev, primaryBookingRequestId: Number(e.target.value) }))} disabled={isLoadingBookingRequests}>
+                      <option value={0} disabled>{isLoadingBookingRequests ? '-- Đang tải... --' : '-- Chọn yêu cầu --'}</option>
+                      {matchedBookingRequests.map(req => (
+                        <option key={req.id} value={req.id}>#{req.id} - {Number(req.offeredPrice).toLocaleString('vi-VN')}₫</option>
+                      ))}
+                    </select>
+                    {!isLoadingBookingRequests && matchedBookingRequests.length === 0 && (
+                      <span style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px', display: 'block' }}>Không tìm thấy yêu cầu khớp giữa 2 bên.</span>
+                    )}
                   </div>
-                )}
 
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Mặt bằng cho thuê</div>
-                <select 
-                  required 
-                  value={contractData.spaceId} 
-                  onChange={(e) => setContractData({...contractData, spaceId: e.target.value})} 
-                  style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px', width: '100%', backgroundColor: '#fff', cursor: 'pointer' }}
-                >
-                  <option value="" disabled>-- Vui lòng chọn mặt bằng --</option>
-                  {mySpaces.map(space => (
-                    <option key={space.id || space.Id} value={space.id || space.Id}>
-                      {space.name} (Diện tích: {space.area}m²)
-                    </option>
-                  ))}
-                </select>
-
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Giá thuê (VND)</div>
-                    <input type="number" required value={contractData.price} onChange={(e) => setContractData({...contractData, price: Number(e.target.value)})} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Tiền cọc (VND)</div>
-                    <input type="number" required value={contractData.depositAmount} onChange={(e) => setContractData({...contractData, depositAmount: Number(e.target.value)})} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Thời lượng</div>
-                    <input type="number" required value={contractData.duration} onChange={(e) => setContractData({...contractData, duration: Number(e.target.value)})} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Đơn vị</div>
-                    <select value={contractData.durationUnit} onChange={(e) => setContractData({...contractData, durationUnit: e.target.value})} style={{ width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px' }}>
-                      <option value="Days">Ngày (Days)</option>
-                      <option value="Months">Tháng (Months)</option>
-                      <option value="Years">Năm (Years)</option>
+                  <div>
+                    <label className="premium-label">Mặt bằng cấp phát</label>
+                    <select className="premium-input" required value={contractData.spaceId} onChange={(e) => setContractData({...contractData, spaceId: e.target.value})}>
+                      <option value="" disabled>-- Chọn mặt bằng --</option>
+                      {mySpaces.map(space => <option key={space.id || space.Id} value={space.id || space.Id}>{space.name}</option>)}
                     </select>
                   </div>
                 </div>
 
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Ngày Bắt Đầu</div>
-                <input type="date" required value={contractData.startDate} onChange={(e) => setContractData({...contractData, startDate: e.target.value})} style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Diện tích cho thuê (m2)</div>
-                <input type="number" required value={contractData.acreage} onChange={(e) => setContractData({...contractData, acreage: Number(e.target.value)})} style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px' }} />
+                {/* BLOCK 2: TÀI CHÍNH */}
+                <div className="premium-card">
+                  <div className="premium-card-header"><Wallet size={14} color="#64748B"/> Thông số Tài chính</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label className="premium-label">Giá thuê (VNĐ)</label>
+                      <input className="premium-input" type="number" required value={contractData.price} onChange={(e) => setContractData({...contractData, price: Number(e.target.value)})} />
+                    </div>
+                    <div>
+                      <label className="premium-label">Tiền cọc (VNĐ)</label>
+                      <input className="premium-input" type="number" required value={contractData.depositAmount} onChange={(e) => setContractData({...contractData, depositAmount: Number(e.target.value)})} />
+                    </div>
+                  </div>
+                </div>
 
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Ghi chú / Mô tả</div>
-                <textarea rows={3} value={contractData.description} onChange={(e) => setContractData({...contractData, description: e.target.value})} style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px', resize: 'none' }} />
+                {/* BLOCK 3: THỜI GIAN */}
+                <div className="premium-card">
+                  <div className="premium-card-header"><CalendarDays size={14} color="#64748B"/> Lịch trình Thuê</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                    <div>
+                      <label className="premium-label">Thời lượng</label>
+                      <input className="premium-input" type="number" required value={contractData.duration} onChange={(e) => setContractData({...contractData, duration: Number(e.target.value)})} />
+                    </div>
+                    <div>
+                      <label className="premium-label">Đơn vị tính</label>
+                      <select className="premium-input" value={contractData.durationUnit} onChange={(e) => setContractData({...contractData, durationUnit: e.target.value})}>
+                        <option value="Days">Ngày</option><option value="Months">Tháng</option><option value="Years">Năm</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="premium-label">Ngày bắt đầu</label>
+                    <input className="premium-input" type="date" required value={contractData.startDate} onChange={(e) => setContractData({...contractData, startDate: e.target.value})} />
+                  </div>
+                </div>
 
-                <button type="submit" disabled={isCreatingContract || !contractData.primaryBookingRequestId} style={{ marginTop: '12px', padding: '12px', backgroundColor: '#1E293B', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', opacity: (isCreatingContract || !contractData.primaryBookingRequestId) ? 0.6 : 1 }}>
-                  {isCreatingContract ? 'Đang tạo & Gửi...' : 'Tạo & Gửi Hợp Đồng'}
+                {/* BLOCK 4: CHI TIẾT KHÁC */}
+                <div className="premium-card">
+                  <div className="premium-card-header"><Edit3 size={14} color="#64748B"/> Bổ sung</div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label className="premium-label">Diện tích thực tế (m²)</label>
+                    <input className="premium-input" type="number" required value={contractData.acreage} onChange={(e) => setContractData({...contractData, acreage: Number(e.target.value)})} />
+                  </div>
+                  <div>
+                    <label className="premium-label">Ghi chú điều khoản</label>
+                    <textarea className="premium-input" rows={3} value={contractData.description} onChange={(e) => setContractData({...contractData, description: e.target.value})} style={{ resize: 'none' }} placeholder="Ghi chú thêm về quy định mặt bằng..." />
+                  </div>
+                </div>
+
+                {/* NÚT SUBMIT */}
+                <button 
+                  type="submit" 
+                  disabled={isCreatingContract || !contractData.primaryBookingRequestId} 
+                  style={{ 
+                    marginTop: '4px', 
+                    marginBottom: '16px',
+                    padding: '14px', 
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', 
+                    color: '#fff', 
+                    border: 'none', 
+                    borderRadius: '8px', 
+                    fontWeight: 'bold', 
+                    fontSize: '14px',
+                    cursor: 'pointer', 
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                    opacity: (isCreatingContract || !contractData.primaryBookingRequestId) ? 0.6 : 1,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {isCreatingContract ? 'Đang tạo & Gửi...' : 'Phát Hành Hợp Đồng'}
                 </button>
               </form>
             </div>
           )}
+
+          {/* MÀN HÌNH 4: XEM CHI TIẾT & KÝ HỢP ĐỒNG (Giữ nguyên) */}
+          {view === 'CONTRACT_DETAIL' && (
+            <ContractViewModal 
+              contract={contractDetail} 
+              onClose={() => setView('CHAT')} 
+            />
+          )}
+
         </div>
       )}
 
