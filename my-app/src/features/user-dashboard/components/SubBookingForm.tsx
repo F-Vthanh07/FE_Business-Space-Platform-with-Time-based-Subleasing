@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, CreditCard, User, AlertCircle } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
 import './SubBookingForm.css';
 
 interface SubBookingFormProps {
@@ -19,6 +20,7 @@ export const SubBookingForm: React.FC<SubBookingFormProps> = ({ onClose, onSubmi
   const [tenantName, setTenantName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('VNPay');
   const { t, language } = useThemeLanguage();
+  const { isVerified } = useIdentityVerification();
 
   const getInitials = (name: string) => {
     if (!name) return 'KH';
@@ -69,6 +71,7 @@ export const SubBookingForm: React.FC<SubBookingFormProps> = ({ onClose, onSubmi
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="sub-booking-body">
+          {!isVerified && <VerificationWarningBanner />}
           
           {/* Thông tin slot được đặt */}
           <div className="form-section">

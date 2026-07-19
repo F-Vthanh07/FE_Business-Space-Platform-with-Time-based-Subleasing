@@ -1,22 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, Globe, LogOut, LayoutDashboard, User, Building2, FileText, IdCard } from 'lucide-react';
+import { Bell, Globe, LogOut, User, CheckCircle2 } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
-import { ROUTES } from '../routes/routes';
+import { useIdentityVerification } from '../features/identity-verification';
 import './Header.css';
 import { Shuffle } from '../components/Shuffle';
 
 interface HeaderProps {
   userInitials?: string;
   userName?: string;
-  userRole?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole }) => {
+export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { language, setLanguage } = useThemeLanguage();
+  const { isVerified } = useIdentityVerification();
 
   const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | null => {
     if (pathname === '/') return 'home';
@@ -26,7 +26,6 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
   };
   const activeTab = getActiveTab(location.pathname);
 
-  const [showDropdown, setShowDropdown] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
 
@@ -50,12 +49,10 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
     else navigate('/login');
   };
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setShowDropdown(false);
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) setShowNotif(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -140,16 +137,8 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
     keepKeys.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
     localStorage.clear();
     Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
-    setShowDropdown(false);
     navigate('/');
     window.location.reload();
-  };
-
-  const handleDashboardClick = () => {
-    setShowDropdown(false);
-    if (role === 'user') navigate(ROUTES.USER);
-    else if (role === 'admin') navigate(ROUTES.ADMIN);
-    else navigate(ROUTES.LOGIN);
   };
 
   const handleNotifClick = (notif: any) => {
@@ -309,6 +298,15 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
                   </div>
                 )}
               </div>
+
+              {/* LOGOUT */}
+              <button
+                className="header-icon-btn"
+                title={language === 'en' ? 'Log out' : 'Đăng xuất'}
+                onClick={handleLogout}
+              >
+                <LogOut size={15} />
+              </button>
             </>
           ) : (
             <button className="btn-primary" onClick={() => navigate('/login')} style={{ padding: '8px 20px', fontSize: '12px', marginLeft: '8px' }}>

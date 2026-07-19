@@ -1,6 +1,5 @@
 import type { WalletAccount } from '../types';
-
-const WALLET_API_BASE = 'https://0n7np4db-7069.asse.devtunnels.ms';
+import { API_BASE_URL } from '../../../config/api';
 
 export interface CreateDepositRequest {
   amount: number;
@@ -9,7 +8,7 @@ export interface CreateDepositRequest {
 }
 
 export const fetchWalletAccount = async (token: string): Promise<WalletAccount> => {
-  const response = await fetch(`${WALLET_API_BASE}/api/Wallet/own`, {
+  const response = await fetch(`${API_BASE_URL}/api/Wallet/own`, {
     headers: {
       Authorization: `Bearer ${token}`,
       accept: '*/*',

@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock } from 'lucide-react';
 import { SpaceForm } from './SpaceForm';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import { API_BASE_URL } from '../../../config/api';
 import './OwnerSpaces.css';
 
 interface Space {

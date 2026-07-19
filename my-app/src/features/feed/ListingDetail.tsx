@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Share2, Heart, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3, Send, X, ClipboardSignature } from 'lucide-react';
 import { Header } from '../../components/Header'; // Chỉnh đường dẫn cho đúng nếu cần
+import { API_BASE_URL } from '../../config/api';
 
 export const ListingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();

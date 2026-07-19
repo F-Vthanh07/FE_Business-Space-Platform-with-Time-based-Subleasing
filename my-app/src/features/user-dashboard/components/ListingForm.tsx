@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, DollarSign, FileText, Camera, Plus, Trash2 } from 'lucide-react';
+import { API_BASE_URL } from '../../../config/api';
+import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
 import './ListingForm.css';
 
 interface ListingFormProps {
@@ -24,6 +26,7 @@ const getSafeDateString = (dateString: any) => {
 export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, initialData }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [mySpaces, setMySpaces] = useState<any[]>([]);
+  const { isVerified } = useIdentityVerification();
 
   // --- STATE DỮ LIỆU CƠ BẢN ---
   const [spaceId, setSpaceId] = useState<number | ''>(initialData?.spaceId || '');
@@ -217,6 +220,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {!isVerified && <VerificationWarningBanner />}
           
           <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

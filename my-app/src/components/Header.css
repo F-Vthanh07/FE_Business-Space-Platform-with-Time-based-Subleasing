@@ -167,6 +167,22 @@
   border-color: #00D4A0;
 }
 
+.header-avatar-verified-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #00D4A0;
+  color: #0D1117;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #0D1117;
+  line-height: 0;
+}
+
 /* User Profile Dropdown Styling */
 .header-dropdown-menu {
   position: absolute;
@@ -291,6 +307,10 @@
 
 .light-theme .header-avatar:hover {
   border-color: var(--color-accent);
+}
+
+.light-theme .header-avatar-verified-badge {
+  border-color: #ffffff;
 }
 
 /* Light Theme overrides for dropdown */

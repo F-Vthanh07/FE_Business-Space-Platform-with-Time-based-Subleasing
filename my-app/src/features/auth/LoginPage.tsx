@@ -4,6 +4,7 @@ import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { gsap } from 'gsap';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { ROUTES, type PortalRole } from '../../routes/routes';
+import { API_BASE_URL } from '../../config/api';
 import './AuthPage.css';
 
 // HÀM GIẢI MÃ JWT TOKEN ĐỂ LẤY THÔNG TIN

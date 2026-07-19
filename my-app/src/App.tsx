@@ -10,6 +10,7 @@ import { ListingDetail } from './features/feed/ListingDetail';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import { PaymentSuccess, PaymentFailed } from './features/wallet';
+import { OnboardingProfilePage } from './features/onboarding';
 import ClickSpark from './components/ClickSpark'; 
 import './App.css';
 
@@ -72,9 +73,15 @@ const App: React.FC = () => {
         />
 
         {/* Register Page */}
-        <Route 
-          path={ROUTES.REGISTER} 
-          element={<RegisterPage />} 
+        <Route
+          path={ROUTES.REGISTER}
+          element={<RegisterPage />}
+        />
+
+        {/* Post-registration onboarding: profile completion + optional CCCD verification */}
+        <Route
+          path={ROUTES.ONBOARDING}
+          element={<OnboardingProfilePage />}
         />
 
         {/* User Dashboard (Space Owner + Renter merged) - Protected */}

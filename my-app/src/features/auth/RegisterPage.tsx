@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { gsap } from 'gsap';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { API_BASE_URL } from '../../config/api';
+import { ROUTES } from '../../routes/routes';
 import './AuthPage.css';
 
 export const RegisterPage: React.FC = () => {
@@ -144,10 +146,10 @@ export const RegisterPage: React.FC = () => {
         throw new Error(data.message || (language === 'en' ? 'Invalid OTP.' : 'Xác thực OTP thất bại.'));
       }
 
-      setSuccessMsg(language === 'en' ? 'Account verified! You can now log in.' : 'Tài khoản đã xác thực! Bạn có thể đăng nhập.');
-      
+      setSuccessMsg(language === 'en' ? 'Account verified! Let\'s complete your profile.' : 'Tài khoản đã xác thực! Hãy hoàn tất hồ sơ của bạn.');
+
       setTimeout(() => {
-        navigate('/login');
+        navigate(ROUTES.ONBOARDING, { state: { name, phoneNumber, email } });
       }, 1500);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -167,6 +169,7 @@ export const RegisterPage: React.FC = () => {
     passPlaceholder: language === 'en' ? 'Enter Password' : 'Nhập Mật khẩu',
     confirmPassPlaceholder: language === 'en' ? 'Confirm Password' : 'Xác nhận Mật khẩu',
     namePlaceholder: language === 'en' ? 'Full Name' : 'Họ và tên',
+    userNamePlaceholder: language === 'en' ? 'Username' : 'Tên đăng nhập',
     phonePlaceholder: language === 'en' ? 'Phone Number' : 'Số điện thoại',
     otpPlaceholder: language === 'en' ? 'Enter 6-digit OTP' : 'Nhập mã OTP 6 số',
     signUp: language === 'en' ? (isLoading ? 'Creating...' : 'Sign Up') : (isLoading ? 'Đang tạo...' : 'Đăng ký'),
