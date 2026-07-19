@@ -158,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
         {/* LOGO */}
         <div 
           className="header-logo-text" 
-          onClick={() => window.location.href = 'http://localhost:5173/'}
+          onClick={() => navigate('/')}
           style={{ display: 'flex', alignItems: 'center', fontFamily: "'Press Start 2P', cursive", fontSize: '24px', cursor: 'pointer' }}
         >
           <span>Ether</span><Shuffle text="Space" />
