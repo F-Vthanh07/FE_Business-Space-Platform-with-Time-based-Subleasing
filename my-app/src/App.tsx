@@ -14,8 +14,7 @@ import { OnboardingProfilePage } from './features/onboarding';
 import ClickSpark from './components/ClickSpark'; 
 import './App.css';
 
-import { FloatingChat } from './components/FloatingChat'; // Sửa lại đường dẫn folder cho đúng nha
-
+import { FloatingChat } from './components/FloatingChat'; 
 
 import { ROUTES, type PortalRole } from './routes/routes';
 import { ProtectedRoute } from './routes/ProtectedRoute';

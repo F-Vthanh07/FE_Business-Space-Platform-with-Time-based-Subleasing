@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import { Heart, ChevronLeft, ChevronRight, MessageCircle, Globe } from 'lucide-react'; // Đổi Phone thành MessageCircleimport { useNavigate } from 'react-router-dom';
+import { Heart, ChevronLeft, ChevronRight, MessageCircle, Globe } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../../config/api';
-
 
 interface HomeListingsProps {
   onCardClick: (id: string) => void;
@@ -10,14 +10,12 @@ interface HomeListingsProps {
 }
 
 export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
-  // --- ĐỔI TÊN STATE CHO CHUẨN LISTING ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [listings, setListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const navigate = useNavigate();
 
-  // --- LOGIC PHÂN TRANG ---
   const ITEMS_PER_PAGE = 4;
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -25,18 +23,37 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
   useEffect(() => {
     const fetchPublicListings = async () => {
       try {
-        // ĐỔI TỪ Space/GetAll SANG Listing/GetAll
-        const response = await fetch(`${API_BASE_URL}/api/Listing/GetAll`, {
+        // BƯỚC 1: LẤY DANH SÁCH MẶT BẰNG ĐỂ LẤY ĐỊA CHỈ
+        const spaceResponse = await fetch('https://flexi-space-capstone-project.onrender.com/api/Space/GetAll', {
           headers: { 'accept': '*/*' }
         });
+        
+        let spaces: any[] = [];
+        if (spaceResponse.ok) {
+           const spaceData = await spaceResponse.json();
+           spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+        }
+
+        // BƯỚC 2: LẤY DANH SÁCH BÀI ĐĂNG
+        const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', {
+          headers: { 'accept': '*/*' }
+        });
+        
         if (response.ok) {
           const data = await response.json();
-          // Áo giáp chống null/undefined
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
           
-          // NẾU CÓ STATUS THÌ LỌC CHỈ LẤY BÀI ĐÃ DUYỆT (Published) 
-          // Tạm thời lấy hết để test cho dễ thấy
-          setListings(safeData);
+          // BƯỚC 3: GHÉP ĐỊA CHỈ TỪ MẶT BẰNG VÀO BÀI ĐĂNG
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const listingsWithAddress = safeData.map((l: any) => {
+             const parentSpace = spaces.find(s => (s.id || s.Id) === (l.spaceId || l.SpaceId));
+             return {
+                 ...l,
+                 address: l.location || l.address || parentSpace?.address || parentSpace?.location || ''
+             }
+          });
+
+          setListings(listingsWithAddress);
         }
       } catch (error) {
         console.error("Lỗi tải danh sách bài đăng trang chủ:", error);
@@ -48,14 +65,12 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
     fetchPublicListings();
   }, []);
 
-  // Tính toán phân trang
   const totalPages = Math.max(1, Math.ceil(listings.length / ITEMS_PER_PAGE));
   const currentItems = listings.slice(
     (currentPage - 1) * ITEMS_PER_PAGE, 
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Ảnh giả lập (Chờ BE làm tính năng upload ảnh thật)
   const DUMMY_IMAGES = [
     "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800",
     "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=400",
@@ -66,11 +81,10 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
     <div className="listings-column">
       <div className="listings-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         
-        {/* Bọc Tiêu đề và Nút vào một cụm Flexbox để nó nằm kế nhau */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <h3 style={{ margin: 0 }}>Cho Thuê Mặt Bằng, Kiot TP.HCM Giá Tốt Nhất</h3>
           <button 
-              className="btn-primary" // Class này đã định nghĩa sẵn màu xanh của ông rồi
+              className="btn-primary" 
               onClick={() => navigate('/feed')}
               style={{ 
                 borderRadius: '20px', 
@@ -102,21 +116,17 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
         </div>
       ) : (
         currentItems.map((item) => {
-          // Lấy ID thật ra để map
           // eslint-disable-next-line react-hooks/purity
           const itemId = item.id?.toString() || item.Id?.toString() || Math.random().toString();
           
-          // --- LOGIC LẤY ẢNH THẬT TỪ BE ---
           const realImages = item.listingPictures || [];
           
-          // Hàm lấy URL an toàn
           const getImageUrl = (index: number, fallbackUrl: string) => {
             if (!realImages[index]) return fallbackUrl;
             const pic = realImages[index];
             return typeof pic === 'string' ? pic : (pic.imageUrl || pic.url || fallbackUrl);
           };
 
-          // Gán ảnh thật, nếu thiếu thì xài tạm ảnh giả lập cho giao diện không bị trống
           const imgMain = getImageUrl(0, DUMMY_IMAGES[0]);
           const imgThumb1 = getImageUrl(1, DUMMY_IMAGES[1]);
           const imgThumb2 = getImageUrl(2, DUMMY_IMAGES[2]);
@@ -125,12 +135,11 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
             <div
               key={itemId}
               className={`listing-card-complex gsap-listing-card ${selectedId === itemId ? 'selected' : ''}`}
-              onClick={() => navigate(`/listing/${itemId}`)} // ĐỔI THÀNH DÒNG NÀY ĐỂ CLICK VÀO CARD LÀ BAY QUA TRANG CHI TIẾT
+              onClick={() => navigate(`/listing/${itemId}`)}
             >
               <div className="complex-images-block">
                 <div className="img-main">
                   <img src={imgMain} alt="Main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  {/* Hiển thị số lượng ảnh thật */}
                   <div className="img-count-badge">📸 {realImages.length > 0 ? realImages.length : 3}</div>
                 </div>
                 <div className="img-thumbs">
@@ -140,7 +149,6 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
               </div>
               
               <div className="complex-info-block">
-                {/* Lấy description làm tiêu đề tạm nếu name chưa có */}
                 <h4 className="complex-title">{item.name || item.description?.substring(0, 50) || 'Bài đăng cho thuê mặt bằng'}</h4>
                 
                 <div className="complex-price-row">
@@ -163,7 +171,6 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
                   {item.description || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này.'}
                 </p>
                 
-                {/* Agent Footer */}
                 <div className="complex-agent-footer">
                   <div className="agent-info-left">
                     <div className="agent-avatar-mini">CH</div>
@@ -190,7 +197,6 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
         })
       )}
 
-      {/* THANH PHÂN TRANG (PAGINATION) DYNAMIC */}
       {!isLoading && listings.length > 0 && (
         <div className="pagination-container">
           <button 

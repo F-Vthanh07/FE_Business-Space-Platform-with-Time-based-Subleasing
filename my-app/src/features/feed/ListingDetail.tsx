@@ -32,7 +32,7 @@ export const ListingDetail: React.FC = () => {
   useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/Listing/GetAll`, { headers: { 'accept': '*/*' } });
+        const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', { headers: { 'accept': '*/*' } });
         if (response.ok) {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
@@ -80,7 +80,7 @@ export const ListingDetail: React.FC = () => {
         expectedStartDate: new Date(bookingData.expectedStartDate).toISOString()
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/PrimaryBookingRequest/Create`, {
+      const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/Create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

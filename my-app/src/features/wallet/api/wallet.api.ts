@@ -32,7 +32,7 @@ export const createDepositTransaction = async (
     cancelUrl: `${window.location.origin}/payment/failed`,
   };
 
-  const response = await fetch(`${API_BASE_URL}/api/Transaction/create`, {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Transaction/create', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,

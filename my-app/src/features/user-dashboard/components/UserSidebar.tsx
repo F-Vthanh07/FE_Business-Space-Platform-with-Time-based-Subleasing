@@ -1,4 +1,5 @@
-import React from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   Building2,
@@ -83,19 +84,94 @@ const getPageLabels = (id: string, lang: string) => {
 export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate, onNewSpaceClick, onNewSlotClick, onLogout }) => {
   const { t, language, setLanguage, theme, toggleTheme } = useThemeLanguage();
 
+  // SỐ ĐƠN "YÊU CẦU CHỜ DUYỆT" CHƯA XEM (BADGE ĐỎ)
+  const [pendingBookingCount, setPendingBookingCount] = useState(0);
+
+  const getSeenBookingIds = (): Set<string | number> => {
+    try {
+      const raw = localStorage.getItem('seen_booking_request_ids');
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  };
+
+  const checkPendingBookingRequests = async () => {
+    const token = localStorage.getItem('portal_token');
+    const role = localStorage.getItem('portal_role');
+    const currentUserId = localStorage.getItem('current_user_id');
+    if (role !== 'user' || !token || !currentUserId) return;
+
+    try {
+      const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll?status=Pending', {
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
+      const myRequests = safeData.filter((req: any) => req.lessorId === currentUserId);
+
+      const seenIds = getSeenBookingIds();
+      const unseen = myRequests.filter((r: any) => !seenIds.has(r.id ?? r.Id));
+      setPendingBookingCount(unseen.length);
+    } catch (err) {
+      console.error('Lỗi kiểm tra booking request:', err);
+    }
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    checkPendingBookingRequests();
+    const interval = setInterval(checkPendingBookingRequests, 15000);
+
+    // Khi trang "Yêu cầu chờ duyệt" báo đã xem xong (hoặc Header check xong) -> cập nhật badge ngay
+    const handleSeen = () => checkPendingBookingRequests();
+    window.addEventListener('booking-request-seen', handleSeen);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('booking-request-seen', handleSeen);
+    };
+  }, []);
+
   const renderNavGroup = (items: NavItem[]) =>
     items.map((item) => {
       const isActive = activePage === item.id || activePage.startsWith(`${item.id}-`);
       const labels = getPageLabels(item.id as string, language);
+      const showBadge = item.id === 'booking-requests' && pendingBookingCount > 0;
       return (
         <button
           key={item.id}
           className={`user-sidebar-item ${isActive ? 'user-sidebar-item--active' : ''}`}
           onClick={() => onNavigate(item.id)}
         >
-          <span className="user-sidebar-icon">{item.icon}</span>
+          <span className="user-sidebar-icon" style={{ position: 'relative' }}>
+            {item.icon}
+            {showBadge && (
+              <span style={{
+                position: 'absolute',
+                top: '-6px',
+                right: '-8px',
+                backgroundColor: '#ef4444',
+                color: '#fff',
+                fontSize: '10px',
+                fontWeight: 700,
+                borderRadius: '999px',
+                padding: '0 5px',
+                minWidth: '16px',
+                height: '16px',
+                lineHeight: '16px',
+                textAlign: 'center',
+                border: '1.5px solid var(--bg-primary, #fff)'
+              }}>
+                {pendingBookingCount > 9 ? '9+' : pendingBookingCount}
+              </span>
+            )}
+          </span>
           <div className="user-sidebar-text">
-            <span className="user-sidebar-label">{labels.title}</span>
+            <span className="user-sidebar-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {labels.title}
+            </span>
             <span className="user-sidebar-sublabel">{labels.sub}</span>
           </div>
         </button>

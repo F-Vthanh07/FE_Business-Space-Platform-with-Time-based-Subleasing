@@ -50,7 +50,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       try {
         const token = localStorage.getItem('portal_token');
         const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
-        const url = `${API_BASE_URL}/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
+        const url = `https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
         
         const res = await fetch(url, {
           headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
@@ -117,8 +117,8 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       const isEditing = !!initialData;
       const targetId = initialData?.id || initialData?.Id;
       const url = isEditing
-        ? `${API_BASE_URL}/api/Listing/Update/${targetId}`
-        : `${API_BASE_URL}/api/Listing/Create`;
+        ? `https://flexi-space-capstone-project.onrender.com/api/Listing/Update/${targetId}`
+        : `https://flexi-space-capstone-project.onrender.com/api/Listing/Create`;
 
       const listingPayload = {
         spaceId: Number(spaceId),
@@ -176,7 +176,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
         // Bỏ hết mấy dòng append spaceId hay userProfileId đi nhé!
 
-        const picRes = await fetch(`${API_BASE_URL}/api/Picture`, {
+        const picRes = await fetch('https://flexi-space-capstone-project.onrender.com/api/Picture', {
           method: 'POST',
           headers: { 
             'Authorization': `Bearer ${token}`,

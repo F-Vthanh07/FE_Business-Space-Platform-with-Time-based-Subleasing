@@ -29,11 +29,16 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const [showNotif, setShowNotif] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
 
+  // SỐ ĐƠN "YÊU CẦU CHỜ DUYỆT" CHƯA XEM (BADGE ĐỎ)
+  const [pendingBookingCount, setPendingBookingCount] = useState(0);
+
   // STATE CHO TOAST THÔNG BÁO NỔI
   const [toastNotif, setToastNotif] = useState<{ show: boolean, title: string, message: string } | null>(null);
 
   const token = localStorage.getItem('portal_token');
-
+  const role = localStorage.getItem('portal_role');
+  const currentUserId = localStorage.getItem('current_user_id');
+  
   // LẤY TÊN TỪ LOCAL STORAGE RA ĐỂ HIỂN THỊ
   const storedName = localStorage.getItem('current_user_name') || userName || 'Khách';
   const displayInitials = userInitials || storedName.substring(0, 2).toUpperCase();
@@ -77,6 +82,54 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     window.addEventListener('new-notification', handleNewNotif);
     return () => window.removeEventListener('new-notification', handleNewNotif);
   }, []);
+
+  // LẤY SET CÁC ID ĐƠN ĐÃ XEM TỪ LOCALSTORAGE
+  const getSeenBookingIds = (): Set<string | number> => {
+    try {
+      const raw = localStorage.getItem('seen_booking_request_ids');
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  };
+
+  // KIỂM TRA SỐ ĐƠN "CHỜ DUYỆT" CHƯA XEM ĐỂ HIỆN BADGE ĐỎ
+  const checkPendingBookingRequests = async () => {
+    if (role !== 'user' || !token || !currentUserId) return;
+    try {
+      const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll?status=Pending', {
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
+      const myRequests = safeData.filter((req: any) => req.lessorId === currentUserId);
+
+      const seenIds = getSeenBookingIds();
+      const unseen = myRequests.filter((r: any) => !seenIds.has(r.id ?? r.Id));
+      setPendingBookingCount(unseen.length);
+    } catch (err) {
+      console.error('Lỗi kiểm tra booking request:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!isLoggedIn || role !== 'user') return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    checkPendingBookingRequests();
+    const interval = setInterval(checkPendingBookingRequests, 15000);
+
+    // Khi trang "Yêu cầu chờ duyệt" báo đã xem xong -> cập nhật badge ngay
+    const handleSeen = () => checkPendingBookingRequests();
+    window.addEventListener('booking-request-seen', handleSeen);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('booking-request-seen', handleSeen);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
 
   const handleLogout = () => {
     const keepKeys = ['app-language', 'app-theme'];
@@ -183,21 +236,66 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                 )}
               </div>
               
-              {/* AVATAR: bấm để đi thẳng đến trang Profile */}
-              <div
-                className="header-avatar"
-                onClick={() => navigate('/user/profile')}
-                title={language === 'en' ? 'Profile' : 'Hồ sơ cá nhân'}
-                style={{ cursor: 'pointer', userSelect: 'none', position: 'relative' }}
-              >
-                {displayInitials}
-                {isVerified && (
-                  <span
-                    className="header-avatar-verified-badge"
-                    title={language === 'en' ? 'Identity verified' : 'Đã xác thực định danh'}
-                  >
-                    <CheckCircle2 size={12} />
-                  </span>
+              {/* KHU VỰC AVATAR USER */}
+              <div className="avatar-dropdown-container" ref={dropdownRef} style={{ position: 'relative' }}>
+                <div className="header-avatar" onClick={() => setShowDropdown(!showDropdown)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                  {displayInitials}
+                </div>
+                
+                {showDropdown && (
+                  <div className="header-dropdown-menu animate-in">
+                    <div className="header-dropdown-info">
+                      <p className="header-dropdown-name" style={{ color: '#F8FAFC' }}>{storedName}</p>
+                      <p className="header-dropdown-role" style={{ color: '#94A3B8' }}>{userRole || (role === 'admin' ? 'Admin' : 'User')}</p>
+                    </div>
+
+                    <button className="header-dropdown-item" onClick={handleDashboardClick}>
+                      <LayoutDashboard size={14} /> <span>{language === 'en' ? 'Dashboard' : 'Bảng điều khiển'}</span>
+                    </button>
+
+                    {role === 'user' && (
+                      <>
+                        <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/spaces'); }}>
+                          <Building2 size={14} /> <span>{language === 'en' ? 'Manage Spaces' : 'Quản lý Mặt bằng'}</span>
+                        </button>
+                        <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/listings'); }}>
+                          <FileText size={14} /> <span>{language === 'en' ? 'Manage Listings' : 'Quản lý Tin đăng'}</span>
+                        </button>
+                        <button
+                          className="header-dropdown-item"
+                          onClick={() => { setShowDropdown(false); navigate('/user/booking-requests'); }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <FileText size={14} /> <span>{language === 'en' ? 'Booking Requests' : 'Yêu cầu chờ duyệt'}</span>
+                          </span>
+                          {pendingBookingCount > 0 && (
+                            <span style={{
+                              backgroundColor: '#ef4444',
+                              color: '#fff',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              borderRadius: '999px',
+                              padding: '1px 7px',
+                              minWidth: '18px',
+                              textAlign: 'center',
+                              lineHeight: '16px'
+                            }}>
+                              {pendingBookingCount}
+                            </span>
+                          )}
+                        </button>
+                      </>
+                    )}
+
+                    <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/profile'); }}>
+                      <IdCard size={14} /> <span>{language === 'en' ? 'Profile' : 'Hồ sơ cá nhân'}</span>
+                    </button>
+
+                    <button className="header-dropdown-item logout" onClick={handleLogout}>
+                      <LogOut size={14} /> <span>{language === 'en' ? 'Log out' : 'Đăng xuất'}</span>
+                    </button>
+                  </div>
                 )}
               </div>
 

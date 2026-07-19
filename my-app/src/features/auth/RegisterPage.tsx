@@ -14,10 +14,10 @@ export const RegisterPage: React.FC = () => {
   // States cho Form đăng ký
   const [email, setEmail] = useState('');
   const [userName, setUserName] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
@@ -67,7 +67,7 @@ export const RegisterPage: React.FC = () => {
 
   // --- API REGISTER ---
   const handleRegister = async () => {
-    if (!email.trim() || !password || !name || !phoneNumber || !userName.trim()) {
+    if (!email.trim() || !userName.trim() || !name.trim() || !phoneNumber.trim() || !password) {
       setError(language === 'en' ? 'Please fill in all fields.' : 'Vui lòng điền đầy đủ thông tin.');
       return;
     }
@@ -92,15 +92,15 @@ export const RegisterPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/Auth/register`, {
+      const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
-        body: JSON.stringify({
-          email,
-          password,
+        body: JSON.stringify({ 
+          email, 
+          password, 
           phoneNumber,
           userName,
-          name,
+          name, 
           turnstileToken
         })
       });
@@ -134,7 +134,7 @@ export const RegisterPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/Auth/verify-otp`, {
+      const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
         body: JSON.stringify({ email, otpCode })
@@ -165,6 +165,7 @@ export const RegisterPage: React.FC = () => {
     createAcc: language === 'en' ? 'Create an account' : 'Tạo tài khoản mới',
     verifyAcc: language === 'en' ? 'Verify Account' : 'Xác thực tài khoản',
     emailPlaceholder: language === 'en' ? 'Enter Email' : 'Nhập địa chỉ Email',
+    userNamePlaceholder: language === 'en' ? 'Username' : 'Tên đăng nhập',
     passPlaceholder: language === 'en' ? 'Enter Password' : 'Nhập Mật khẩu',
     confirmPassPlaceholder: language === 'en' ? 'Confirm Password' : 'Xác nhận Mật khẩu',
     namePlaceholder: language === 'en' ? 'Full Name' : 'Họ và tên',
@@ -224,6 +225,36 @@ export const RegisterPage: React.FC = () => {
                 </div>
               ) : (
                 <>
+                  {/* Email */}
+                  <div className="auth-field-group">
+                    <label className="auth-label">Email <span>*</span></label>
+                    <div className="auth-input-wrapper">
+                      <input 
+                        type="email" 
+                        className="auth-input" 
+                        placeholder={trans.emailPlaceholder} 
+                        value={email} 
+                        onChange={(e) => setEmail(e.target.value)} 
+                        disabled={isLoading} 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Username */}
+                  <div className="auth-field-group">
+                    <label className="auth-label">{trans.userNamePlaceholder} <span>*</span></label>
+                    <div className="auth-input-wrapper">
+                      <input 
+                        type="text" 
+                        className="auth-input" 
+                        placeholder={trans.userNamePlaceholder} 
+                        value={userName} 
+                        onChange={(e) => setUserName(e.target.value)} 
+                        disabled={isLoading} 
+                      />
+                    </div>
+                  </div>
+
                   {/* Full Name */}
                   <div className="auth-field-group">
                     <label className="auth-label">{trans.namePlaceholder} <span>*</span></label>
@@ -249,36 +280,6 @@ export const RegisterPage: React.FC = () => {
                         placeholder={trans.phonePlaceholder} 
                         value={phoneNumber} 
                         onChange={(e) => setPhoneNumber(e.target.value)} 
-                        disabled={isLoading} 
-                      />
-                    </div>
-                  </div>
-
-                  {/* Username */}
-                  <div className="auth-field-group">
-                    <label className="auth-label">{trans.userNamePlaceholder} <span>*</span></label>
-                    <div className="auth-input-wrapper">
-                      <input
-                        type="text"
-                        className="auth-input"
-                        placeholder={trans.userNamePlaceholder}
-                        value={userName}
-                        onChange={(e) => setUserName(e.target.value)}
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Email */}
-                  <div className="auth-field-group">
-                    <label className="auth-label">Email <span>*</span></label>
-                    <div className="auth-input-wrapper">
-                      <input 
-                        type="email" 
-                        className="auth-input" 
-                        placeholder={trans.emailPlaceholder} 
-                        value={email} 
-                        onChange={(e) => setEmail(e.target.value)} 
                         disabled={isLoading} 
                       />
                     </div>
