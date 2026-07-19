@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, DollarSign, Share2, AlertCircle } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
 import './SubleaseSlotForm.css';
 
 interface SubleaseSlotFormProps {
@@ -12,6 +13,7 @@ interface SubleaseSlotFormProps {
 
 export const SubleaseSlotForm: React.FC<SubleaseSlotFormProps> = ({ onClose, onSubmit, selectedDate, defaultSpaceId }) => {
   const { t, language } = useThemeLanguage();
+  const { isVerified } = useIdentityVerification();
   const formattedDate = selectedDate ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
 
   const primaryBookingsMock = [
@@ -92,6 +94,7 @@ export const SubleaseSlotForm: React.FC<SubleaseSlotFormProps> = ({ onClose, onS
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="sublease-form-body">
+          {!isVerified && <VerificationWarningBanner />}
           
           <div className="form-section">
             <h3 className="form-section-title">{t('subleaseForm.primaryContractTitle')}</h3>

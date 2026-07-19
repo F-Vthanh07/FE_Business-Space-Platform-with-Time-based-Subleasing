@@ -5,6 +5,7 @@ export const ROUTES = {
   USER: '/user',
   LOGIN: '/login',
   REGISTER: '/register',
+  ONBOARDING: '/onboarding/profile',
   ADMIN: '/admin',
   ACCESS_DENIED: '/access-denied',
 } as const;

@@ -1,22 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, Globe, LogOut, LayoutDashboard, User, Building2, FileText, IdCard } from 'lucide-react';
+import { Bell, Globe, LogOut, User, CheckCircle2 } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
-import { ROUTES } from '../routes/routes';
+import { useIdentityVerification } from '../features/identity-verification';
 import './Header.css';
 import { Shuffle } from '../components/Shuffle';
 
 interface HeaderProps {
   userInitials?: string;
   userName?: string;
-  userRole?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole }) => {
+export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { language, setLanguage } = useThemeLanguage();
+  const { isVerified } = useIdentityVerification();
 
   const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | null => {
     if (pathname === '/') return 'home';
@@ -26,16 +26,14 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
   };
   const activeTab = getActiveTab(location.pathname);
 
-  const [showDropdown, setShowDropdown] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
-  
+
   // STATE CHO TOAST THÔNG BÁO NỔI
   const [toastNotif, setToastNotif] = useState<{ show: boolean, title: string, message: string } | null>(null);
 
   const token = localStorage.getItem('portal_token');
-  const role = localStorage.getItem('portal_role');
-  
+
   // LẤY TÊN TỪ LOCAL STORAGE RA ĐỂ HIỂN THỊ
   const storedName = localStorage.getItem('current_user_name') || userName || 'Khách';
   const displayInitials = userInitials || storedName.substring(0, 2).toUpperCase();
@@ -46,12 +44,10 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
     else navigate('/login');
   };
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setShowDropdown(false);
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) setShowNotif(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -88,16 +84,8 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
     keepKeys.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
     localStorage.clear();
     Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
-    setShowDropdown(false);
     navigate('/');
     window.location.reload();
-  };
-
-  const handleDashboardClick = () => {
-    setShowDropdown(false);
-    if (role === 'user') navigate(ROUTES.USER);
-    else if (role === 'admin') navigate(ROUTES.ADMIN);
-    else navigate(ROUTES.LOGIN);
   };
 
   const handleNotifClick = (notif: any) => {
@@ -195,44 +183,32 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName, userRole
                 )}
               </div>
               
-              {/* KHU VỰC AVATAR USER */}
-              <div className="avatar-dropdown-container" ref={dropdownRef} style={{ position: 'relative' }}>
-                <div className="header-avatar" onClick={() => setShowDropdown(!showDropdown)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                  {displayInitials}
-                </div>
-                
-                {showDropdown && (
-                  <div className="header-dropdown-menu animate-in">
-                    <div className="header-dropdown-info">
-                      <p className="header-dropdown-name" style={{ color: '#F8FAFC' }}>{storedName}</p>
-                      <p className="header-dropdown-role" style={{ color: '#94A3B8' }}>{userRole || (role === 'admin' ? 'Admin' : 'User')}</p>
-                    </div>
-
-                    <button className="header-dropdown-item" onClick={handleDashboardClick}>
-                      <LayoutDashboard size={14} /> <span>{language === 'en' ? 'Dashboard' : 'Bảng điều khiển'}</span>
-                    </button>
-
-                    {role === 'user' && (
-                      <>
-                        <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/spaces'); }}>
-                          <Building2 size={14} /> <span>{language === 'en' ? 'Manage Spaces' : 'Quản lý Mặt bằng'}</span>
-                        </button>
-                        <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/listings'); }}>
-                          <FileText size={14} /> <span>{language === 'en' ? 'Manage Listings' : 'Quản lý Tin đăng'}</span>
-                        </button>
-                      </>
-                    )}
-
-                    <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/profile'); }}>
-                      <IdCard size={14} /> <span>{language === 'en' ? 'Profile' : 'Hồ sơ cá nhân'}</span>
-                    </button>
-
-                    <button className="header-dropdown-item logout" onClick={handleLogout}>
-                      <LogOut size={14} /> <span>{language === 'en' ? 'Log out' : 'Đăng xuất'}</span>
-                    </button>
-                  </div>
+              {/* AVATAR: bấm để đi thẳng đến trang Profile */}
+              <div
+                className="header-avatar"
+                onClick={() => navigate('/user/profile')}
+                title={language === 'en' ? 'Profile' : 'Hồ sơ cá nhân'}
+                style={{ cursor: 'pointer', userSelect: 'none', position: 'relative' }}
+              >
+                {displayInitials}
+                {isVerified && (
+                  <span
+                    className="header-avatar-verified-badge"
+                    title={language === 'en' ? 'Identity verified' : 'Đã xác thực định danh'}
+                  >
+                    <CheckCircle2 size={12} />
+                  </span>
                 )}
               </div>
+
+              {/* LOGOUT */}
+              <button
+                className="header-icon-btn"
+                title={language === 'en' ? 'Log out' : 'Đăng xuất'}
+                onClick={handleLogout}
+              >
+                <LogOut size={15} />
+              </button>
             </>
           ) : (
             <button className="btn-primary" onClick={() => navigate('/login')} style={{ padding: '8px 20px', fontSize: '12px', marginLeft: '8px' }}>
