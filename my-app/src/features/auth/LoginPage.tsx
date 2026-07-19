@@ -4,6 +4,7 @@ import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { gsap } from 'gsap';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { ROUTES, type PortalRole } from '../../routes/routes';
+import { invalidateIdentityVerification } from '../identity-verification';
 import './AuthPage.css';
 
 // HÀM GIẢI MÃ JWT TOKEN ĐỂ LẤY THÔNG TIN
@@ -106,6 +107,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       if (userId) {
         localStorage.setItem('current_user_id', userId);
       }
+
+      // Lấy ngay thông tin profile (bao gồm isVerified) sau khi đăng nhập thành công
+      invalidateIdentityVerification();
 
       onLoginSuccess(finalRole);
       navigate(finalRole === 'admin' ? ROUTES.ADMIN : ROUTES.USER);
