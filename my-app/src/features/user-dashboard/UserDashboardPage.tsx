@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { Header } from '../../components/Header';
 import { UserSidebar } from './components/UserSidebar';
+import { ProfileSidebar } from './components/ProfileSidebar';
 import { OwnerOverview } from './components/OwnerOverview';
 import { OwnerListings } from './components/OwnerListings';
 import { OwnerTenants } from './components/OwnerTenants';
@@ -13,6 +14,8 @@ import { SubleaseListings } from './components/SubleaseListings';
 import { SubleaseSlotForm } from './components/SubleaseSlotForm';
 import { RenterSubTenants } from './components/RenterSubTenants';
 import { ProfileOverviewPage } from './components/ProfileOverviewPage';
+import { ChangePasswordPage } from './components/ChangePasswordPage';
+import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { OwnerBookingRequests } from './components/OwnerBookingRequests';
 import { WalletOverview, WalletDeposit, WalletHistory } from '../wallet';
 import { VerificationWarningBanner, useIdentityVerification } from '../identity-verification';
@@ -51,6 +54,14 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
   // Extract activePage from the router pathname, e.g. /user/spaces -> spaces
   const pathParts = location.pathname.split('/');
   const activePage = (pathParts[2] || 'overview') as UserPage;
+
+  // Profile, Wallet, Change Password and Forgot Password share a dedicated
+  // account-settings sidebar instead of the main space-management one.
+  const isProfileSection =
+    activePage === 'profile' ||
+    activePage === 'change-password' ||
+    activePage === 'forgot-password' ||
+    activePage.startsWith('wallet');
 
   useEffect(() => {
     const tl = gsap.timeline({ defaults: { ease: 'power4.out', duration: 0.8 } });
@@ -136,6 +147,10 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
         return <WalletDeposit onNavigate={(page) => navigate(`/user/${page}`)} />;
       case 'wallet-history':
         return <WalletHistory onNavigate={(page) => navigate(`/user/${page}`)} />;
+      case 'change-password':
+        return <ChangePasswordPage />;
+      case 'forgot-password':
+        return <ForgotPasswordPage />;
       default:
         return (
           <div className="coming-soon">
@@ -158,13 +173,21 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
         <VerificationWarningBanner onVerifyClick={() => navigate('/user/profile')} />
       )}
       <div className="app-body">
-        <UserSidebar
-          activePage={activePage}
-          onNavigate={(page) => navigate(`/user/${page}`)}
-          onNewSpaceClick={() => setIsNewSpaceFormOpen(true)}
-          onNewSlotClick={() => setIsNewSlotFormOpen(true)}
-          onLogout={onLogout}
-        />
+        {isProfileSection ? (
+          <ProfileSidebar
+            activePage={activePage}
+            onNavigate={(page) => navigate(page === 'overview' ? '/user' : `/user/${page}`)}
+            onLogout={onLogout}
+          />
+        ) : (
+          <UserSidebar
+            activePage={activePage}
+            onNavigate={(page) => navigate(`/user/${page}`)}
+            onNewSpaceClick={() => setIsNewSpaceFormOpen(true)}
+            onNewSlotClick={() => setIsNewSlotFormOpen(true)}
+            onLogout={onLogout}
+          />
+        )}
         <main className="main-content">
           {renderContent()}
         </main>
