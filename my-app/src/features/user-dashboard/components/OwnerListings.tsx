@@ -10,7 +10,6 @@ import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { ListingForm } from './ListingForm';
 import './OwnerListings.css';
 import { createPortal } from 'react-dom';
-import { API_BASE_URL } from '../../../config/api';
 
 const statusConfig: Record<string, { className: string, icon: React.ReactNode }> = {
   published: { className: 'badge--positive', icon: <CheckCircle2 size={11} /> },

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { gsap } from 'gsap';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { API_BASE_URL } from '../../config/api';
 import { ROUTES } from '../../routes/routes';
 import './AuthPage.css';
 
@@ -169,7 +168,6 @@ export const RegisterPage: React.FC = () => {
     passPlaceholder: language === 'en' ? 'Enter Password' : 'Nhập Mật khẩu',
     confirmPassPlaceholder: language === 'en' ? 'Confirm Password' : 'Xác nhận Mật khẩu',
     namePlaceholder: language === 'en' ? 'Full Name' : 'Họ và tên',
-    userNamePlaceholder: language === 'en' ? 'Username' : 'Tên đăng nhập',
     phonePlaceholder: language === 'en' ? 'Phone Number' : 'Số điện thoại',
     otpPlaceholder: language === 'en' ? 'Enter 6-digit OTP' : 'Nhập mã OTP 6 số',
     signUp: language === 'en' ? (isLoading ? 'Creating...' : 'Sign Up') : (isLoading ? 'Đang tạo...' : 'Đăng ký'),

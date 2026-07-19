@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, FileText, Calendar, User } from 'lucide-react';
-import { API_BASE_URL } from '../../../config/api';
 
 export const OwnerBookingRequests: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);

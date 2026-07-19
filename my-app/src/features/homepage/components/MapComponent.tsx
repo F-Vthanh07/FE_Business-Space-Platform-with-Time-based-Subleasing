@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Map, { Marker, Popup } from 'react-map-gl/maplibre';
 import { useNavigate } from 'react-router-dom';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { API_BASE_URL } from '../../../config/api';
 
 export const MapComponent: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

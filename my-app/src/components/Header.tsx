@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, Globe, LogOut, User, CheckCircle2 } from 'lucide-react';
+import { Bell, Building2, FileText, Globe, IdCard, LayoutDashboard, LogOut, User } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
-import { useIdentityVerification } from '../features/identity-verification';
 import './Header.css';
 import { Shuffle } from '../components/Shuffle';
 
@@ -16,7 +16,8 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { language, setLanguage } = useThemeLanguage();
-  const { isVerified } = useIdentityVerification();
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | null => {
     if (pathname === '/') return 'home';
@@ -152,6 +153,14 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     window.dispatchEvent(event);
   };
 
+  function setShowDropdown(_arg0: boolean) {
+    throw new Error('Function not implemented.');
+  }
+
+  function handleDashboardClick(_event: React.MouseEvent<HTMLButtonElement>): void {
+    throw new Error('Function not implemented.');
+  }
+
   return (
     <>
       <header className="dashboard-header">
@@ -238,15 +247,15 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
               
               {/* KHU VỰC AVATAR USER */}
               <div className="avatar-dropdown-container" ref={dropdownRef} style={{ position: 'relative' }}>
-                <div className="header-avatar" onClick={() => setShowDropdown(!showDropdown)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                <div className="header-avatar" onClick={() => setShowDropdown(!setShowDropdown)} style={{ cursor: 'pointer', userSelect: 'none' }}>
                   {displayInitials}
                 </div>
                 
-                {showDropdown && (
+                {setShowDropdown && (
                   <div className="header-dropdown-menu animate-in">
                     <div className="header-dropdown-info">
                       <p className="header-dropdown-name" style={{ color: '#F8FAFC' }}>{storedName}</p>
-                      <p className="header-dropdown-role" style={{ color: '#94A3B8' }}>{userRole || (role === 'admin' ? 'Admin' : 'User')}</p>
+                      <p className="header-dropdown-role" style={{ color: '#94A3B8' }}>{(role === 'admin' ? 'Admin' : 'User')}</p>
                     </div>
 
                     <button className="header-dropdown-item" onClick={handleDashboardClick}>

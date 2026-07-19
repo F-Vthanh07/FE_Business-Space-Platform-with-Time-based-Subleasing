@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { Eye, MapPin, MessageCircle, Bookmark, TrendingUp, ShieldCheck, Home, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Header } from '../../components/Header'; // Chỉnh lại đường dẫn cho đúng nha
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../../config/api';
 
 export const ListingFeed: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

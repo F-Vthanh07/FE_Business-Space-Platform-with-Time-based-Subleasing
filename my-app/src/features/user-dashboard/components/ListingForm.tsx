@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, DollarSign, FileText, Camera, Plus, Trash2 } from 'lucide-react';
-import { API_BASE_URL } from '../../../config/api';
 import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
 import './ListingForm.css';
 

@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, ChevronLeft, ChevronRight, MessageCircle, Globe } from 'lucide-react'; 
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../../../config/api';
 
 interface HomeListingsProps {
   onCardClick: (id: string) => void;

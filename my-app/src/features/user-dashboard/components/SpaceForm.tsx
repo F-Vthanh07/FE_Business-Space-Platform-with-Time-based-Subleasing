@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Building2, MapPin, Minimize2, Clock, Check, ShieldAlert, Briefcase } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import { API_BASE_URL } from '../../../config/api';
 import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
 import './SpaceForm.css';
 
