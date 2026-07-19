@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, Building2, FileText, Globe, IdCard, LayoutDashboard, LogOut, User } from 'lucide-react';
+import { Bell, FileText, Globe, LogOut, User, CheckCircle2 } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
+import { useIdentityVerification } from '../features/identity-verification';
 import './Header.css';
 import { Shuffle } from '../components/Shuffle';
 
@@ -16,8 +16,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { language, setLanguage } = useThemeLanguage();
-
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { isVerified } = useIdentityVerification();
 
   const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | null => {
     if (pathname === '/') return 'home';
@@ -153,14 +152,6 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     window.dispatchEvent(event);
   };
 
-  function setShowDropdown(_arg0: boolean) {
-    throw new Error('Function not implemented.');
-  }
-
-  function handleDashboardClick(_event: React.MouseEvent<HTMLButtonElement>): void {
-    throw new Error('Function not implemented.');
-  }
-
   return (
     <>
       <header className="dashboard-header">
@@ -245,66 +236,54 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                 )}
               </div>
               
-              {/* KHU VỰC AVATAR USER */}
-              <div className="avatar-dropdown-container" ref={dropdownRef} style={{ position: 'relative' }}>
-                <div className="header-avatar" onClick={() => setShowDropdown(!setShowDropdown)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                  {displayInitials}
-                </div>
-                
-                {setShowDropdown && (
-                  <div className="header-dropdown-menu animate-in">
-                    <div className="header-dropdown-info">
-                      <p className="header-dropdown-name" style={{ color: '#F8FAFC' }}>{storedName}</p>
-                      <p className="header-dropdown-role" style={{ color: '#94A3B8' }}>{(role === 'admin' ? 'Admin' : 'User')}</p>
-                    </div>
+              {/* BOOKING REQUESTS: chỉ hiện cho role user, có badge số đơn chưa xem */}
+              {role === 'user' && (
+                <button
+                  className="header-icon-btn"
+                  title={language === 'en' ? 'Booking Requests' : 'Yêu cầu chờ duyệt'}
+                  onClick={() => navigate('/user/booking-requests')}
+                  style={{ position: 'relative' }}
+                >
+                  <FileText size={15} />
+                  {pendingBookingCount > 0 && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '2px',
+                        right: '2px',
+                        backgroundColor: '#ef4444',
+                        color: '#fff',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        borderRadius: '999px',
+                        padding: '0 4px',
+                        minWidth: '15px',
+                        textAlign: 'center',
+                        lineHeight: '15px',
+                        border: '1px solid #0D1117',
+                      }}
+                    >
+                      {pendingBookingCount}
+                    </span>
+                  )}
+                </button>
+              )}
 
-                    <button className="header-dropdown-item" onClick={handleDashboardClick}>
-                      <LayoutDashboard size={14} /> <span>{language === 'en' ? 'Dashboard' : 'Bảng điều khiển'}</span>
-                    </button>
-
-                    {role === 'user' && (
-                      <>
-                        <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/spaces'); }}>
-                          <Building2 size={14} /> <span>{language === 'en' ? 'Manage Spaces' : 'Quản lý Mặt bằng'}</span>
-                        </button>
-                        <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/listings'); }}>
-                          <FileText size={14} /> <span>{language === 'en' ? 'Manage Listings' : 'Quản lý Tin đăng'}</span>
-                        </button>
-                        <button
-                          className="header-dropdown-item"
-                          onClick={() => { setShowDropdown(false); navigate('/user/booking-requests'); }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                        >
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <FileText size={14} /> <span>{language === 'en' ? 'Booking Requests' : 'Yêu cầu chờ duyệt'}</span>
-                          </span>
-                          {pendingBookingCount > 0 && (
-                            <span style={{
-                              backgroundColor: '#ef4444',
-                              color: '#fff',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              borderRadius: '999px',
-                              padding: '1px 7px',
-                              minWidth: '18px',
-                              textAlign: 'center',
-                              lineHeight: '16px'
-                            }}>
-                              {pendingBookingCount}
-                            </span>
-                          )}
-                        </button>
-                      </>
-                    )}
-
-                    <button className="header-dropdown-item" onClick={() => { setShowDropdown(false); navigate('/user/profile'); }}>
-                      <IdCard size={14} /> <span>{language === 'en' ? 'Profile' : 'Hồ sơ cá nhân'}</span>
-                    </button>
-
-                    <button className="header-dropdown-item logout" onClick={handleLogout}>
-                      <LogOut size={14} /> <span>{language === 'en' ? 'Log out' : 'Đăng xuất'}</span>
-                    </button>
-                  </div>
+              {/* AVATAR: bấm để đi thẳng đến trang Profile */}
+              <div
+                className="header-avatar"
+                onClick={() => navigate('/user/profile')}
+                title={language === 'en' ? 'Profile' : 'Hồ sơ cá nhân'}
+                style={{ cursor: 'pointer', userSelect: 'none', position: 'relative' }}
+              >
+                {displayInitials}
+                {isVerified && (
+                  <span
+                    className="header-avatar-verified-badge"
+                    title={language === 'en' ? 'Identity verified' : 'Đã xác thực định danh'}
+                  >
+                    <CheckCircle2 size={12} />
+                  </span>
                 )}
               </div>
 

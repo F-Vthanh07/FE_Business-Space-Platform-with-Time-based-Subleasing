@@ -88,3 +88,29 @@
   justify-content: flex-end;
   gap: var(--space-3);
 }
+
+.pass-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding-left: 2px;
+}
+
+.pass-check-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  transition: color 0.2s;
+}
+
+.pass-check-item.met {
+  color: var(--color-positive);
+}
+
+.pass-check-icon {
+  font-size: 14px;
+  line-height: 1;
+}

@@ -12,7 +12,9 @@ export type UserPage =
   | 'wallet'
   | 'wallet-deposit'
   | 'wallet-history'
-  | 'booking-requests';
+  | 'booking-requests'
+  | 'change-password'
+  | 'forgot-password';
 
 export interface SubSlot {
   id: string;
