@@ -1,7 +1,8 @@
-import type { SpaceApprovalItem, AdminListingItem, BusinessCategory, UserAccount } from '../types';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { SpaceApprovalItem, AdminListingItem, BusinessCategory } from '../types';
 
 export const fetchUsers = async (token: string): Promise<any[]> => {
-  const response = await fetch('https://localhost:7069/api/User', {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/User', {
     headers: {
       'Authorization': `Bearer ${token}`,
       'accept': '*/*'
@@ -15,7 +16,7 @@ export const fetchUsers = async (token: string): Promise<any[]> => {
 };
 
 export const changeUserStatus = async (userId: string, status: string, token: string): Promise<void> => {
-  const response = await fetch(`https://localhost:7069/api/User/status/${userId}?status=${status}`, {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/User/status/${userId}?status=${status}`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -28,7 +29,7 @@ export const changeUserStatus = async (userId: string, status: string, token: st
 };
 
 export const fetchPendingSpaces = async (token: string): Promise<SpaceApprovalItem[]> => {
-  const response = await fetch('https://localhost:7069/api/Admin/Spaces/pending', {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Admin/Spaces/pending', {
     headers: {
       'Authorization': `Bearer ${token}`,
       'accept': '*/*'
@@ -42,7 +43,7 @@ export const fetchPendingSpaces = async (token: string): Promise<SpaceApprovalIt
 };
 
 export const fetchListings = async (token: string): Promise<AdminListingItem[]> => {
-  const response = await fetch('https://localhost:7069/api/Listing/GetAll', {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', {
     headers: {
       'Authorization': `Bearer ${token}`,
       'accept': '*/*'
@@ -56,7 +57,7 @@ export const fetchListings = async (token: string): Promise<AdminListingItem[]> 
 };
 
 export const approveSpace = async (spaceId: string, token: string): Promise<void> => {
-  const response = await fetch(`https://localhost:7069/api/Admin/Spaces/${spaceId}/approve`, {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Admin/Spaces/${spaceId}/approve`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -69,7 +70,7 @@ export const approveSpace = async (spaceId: string, token: string): Promise<void
 };
 
 export const rejectSpace = async (spaceId: string, token: string): Promise<void> => {
-  const response = await fetch(`https://localhost:7069/api/Admin/Spaces/${spaceId}/reject`, {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Admin/Spaces/${spaceId}/reject`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -82,7 +83,7 @@ export const rejectSpace = async (spaceId: string, token: string): Promise<void>
 };
 
 export const approveListing = async (listingId: number, token: string): Promise<void> => {
-  const response = await fetch(`https://localhost:7069/api/Listing/Status/${listingId}`, {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/Status/${listingId}`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -100,7 +101,7 @@ export const approveListing = async (listingId: number, token: string): Promise<
 };
 
 export const rejectListing = async (listingId: number, cancelReason: string, token: string): Promise<void> => {
-  const response = await fetch(`https://localhost:7069/api/Listing/Status/${listingId}`, {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/Status/${listingId}`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -118,7 +119,7 @@ export const rejectListing = async (listingId: number, cancelReason: string, tok
 };
 
 export const fetchBusinessCategories = async (token: string): Promise<BusinessCategory[]> => {
-  const response = await fetch('https://localhost:7069/api/BussinessCategory/GetAll', {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/GetAll', {
     headers: {
       'Authorization': `Bearer ${token}`,
       'accept': '*/*'
@@ -132,7 +133,7 @@ export const fetchBusinessCategories = async (token: string): Promise<BusinessCa
 };
 
 export const createSingleCategory = async (name: string, isActive: boolean, token: string): Promise<void> => {
-  const response = await fetch('https://localhost:7069/api/BussinessCategory/Create', {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/Create', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -147,7 +148,7 @@ export const createSingleCategory = async (name: string, isActive: boolean, toke
 };
 
 export const createCategoryList = async (categories: Array<{ name: string; isActive: boolean }>, token: string): Promise<void> => {
-  const response = await fetch('https://localhost:7069/api/BussinessCategory/CreateList', {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/CreateList', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -162,7 +163,7 @@ export const createCategoryList = async (categories: Array<{ name: string; isAct
 };
 
 export const updateCategory = async (id: number, name: string, isActive: boolean, token: string): Promise<void> => {
-  const response = await fetch(`https://localhost:7069/api/BussinessCategory/Update${id}`, {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/Update${id}`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -177,7 +178,7 @@ export const updateCategory = async (id: number, name: string, isActive: boolean
 };
 
 export const deleteCategory = async (id: number, token: string): Promise<void> => {
-  const response = await fetch(`https://localhost:7069/api/BussinessCategory/Delete${id}`, {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/Delete${id}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`,

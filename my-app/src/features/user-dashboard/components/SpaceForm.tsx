@@ -60,7 +60,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch('https://localhost:7069/api/BussinessCategory/GetAll', {
+        const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/GetAll', {
           headers: { 'accept': '*/*' } 
         });
         if (res.ok) {
@@ -165,8 +165,8 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     try {
       const isEditing = !!initialData;
       const url = isEditing 
-        ? `https://localhost:7069/api/Space/Update${initialData.id}` 
-        : 'https://localhost:7069/api/Space/Create';
+        ? `https://flexi-space-capstone-project.onrender.com/api/Space/Update${initialData.id}` 
+        : 'https://flexi-space-capstone-project.onrender.com/api/Space/Create';
 
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',

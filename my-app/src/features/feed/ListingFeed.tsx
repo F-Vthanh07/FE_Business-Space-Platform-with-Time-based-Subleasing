@@ -17,7 +17,7 @@ export const ListingFeed: React.FC = () => {
   useEffect(() => {
     const fetchFeed = async () => {
       try {
-        const response = await fetch('https://localhost:7069/api/Listing/GetAll', { headers: { 'accept': '*/*' } });
+        const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', { headers: { 'accept': '*/*' } });
         if (response.ok) {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);

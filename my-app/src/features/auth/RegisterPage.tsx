@@ -11,18 +11,11 @@ export const RegisterPage: React.FC = () => {
 
   // States cho Form đăng ký
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [userName, setUserName] = useState('');
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  
-  // Date of Birth state split
-  const [dobDay, setDobDay] = useState('');
-  const [dobMonth, setDobMonth] = useState('');
-  const [dobYear, setDobYear] = useState('');
-  
-  // Gender state
-  const [gender, setGender] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
@@ -44,12 +37,6 @@ export const RegisterPage: React.FC = () => {
   const cardRef = useRef<HTMLDivElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-
-  // Lists for DOB dropdowns
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 1920 + 1 }, (_, i) => currentYear - i);
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   // Real-time password requirement checkers
   const passMet6Char = password.length >= 6;
@@ -78,7 +65,7 @@ export const RegisterPage: React.FC = () => {
 
   // --- API REGISTER ---
   const handleRegister = async () => {
-    if (!email.trim() || !password || !name || !phoneNumber || !dobDay || !dobMonth || !dobYear || !gender) {
+    if (!email.trim() || !userName.trim() || !name.trim() || !phoneNumber.trim() || !password) {
       setError(language === 'en' ? 'Please fill in all fields.' : 'Vui lòng điền đầy đủ thông tin.');
       return;
     }
@@ -95,20 +82,6 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
-    // Check age limit (>= 16)
-    const birthDate = new Date(parseInt(dobYear), parseInt(dobMonth) - 1, parseInt(dobDay));
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-
-    if (age < 16) {
-      setError(language === 'en' ? 'You must be at least 16 years old.' : 'Bạn phải từ 16 tuổi trở lên.');
-      return;
-    }
-
     // Turnstile check
     if (!turnstileToken) {
       setError(language === 'en' ? 'Please verify you are human.' : 'Vui lòng xác thực bạn không phải là robot.');
@@ -117,16 +90,14 @@ export const RegisterPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const dobISO = birthDate.toISOString();
-
-      const response = await fetch('https://localhost:7069/api/Auth/register', {
+      const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
         body: JSON.stringify({ 
           email, 
           password, 
-          dob: dobISO, 
-          phoneNumber, 
+          phoneNumber,
+          userName,
           name, 
           turnstileToken
         })
@@ -161,7 +132,7 @@ export const RegisterPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch('https://localhost:7069/api/Auth/verify-otp', {
+      const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
         body: JSON.stringify({ email, otpCode })
@@ -192,6 +163,7 @@ export const RegisterPage: React.FC = () => {
     createAcc: language === 'en' ? 'Create an account' : 'Tạo tài khoản mới',
     verifyAcc: language === 'en' ? 'Verify Account' : 'Xác thực tài khoản',
     emailPlaceholder: language === 'en' ? 'Enter Email' : 'Nhập địa chỉ Email',
+    userNamePlaceholder: language === 'en' ? 'Username' : 'Tên đăng nhập',
     passPlaceholder: language === 'en' ? 'Enter Password' : 'Nhập Mật khẩu',
     confirmPassPlaceholder: language === 'en' ? 'Confirm Password' : 'Xác nhận Mật khẩu',
     namePlaceholder: language === 'en' ? 'Full Name' : 'Họ và tên',
@@ -201,16 +173,6 @@ export const RegisterPage: React.FC = () => {
     verifyBtn: language === 'en' ? (isLoading ? 'Verifying...' : 'Verify OTP') : (isLoading ? 'Đang xác thực...' : 'Xác nhận OTP'),
     haveAccount: language === 'en' ? 'Already have an account ?' : 'Đã có tài khoản ?',
     signInIt: language === 'en' ? 'Sign In!' : 'Đăng nhập ngay!',
-    dobLabel: language === 'en' ? 'Date of Birth' : 'Ngày sinh',
-    genderLabel: language === 'en' ? 'Gender' : 'Giới tính',
-    ageHint: language === 'en' ? 'You must be at least 16 years old' : 'Bạn phải từ 16 tuổi trở lên',
-    male: language === 'en' ? 'Male' : 'Nam',
-    female: language === 'en' ? 'Female' : 'Nữ',
-    other: language === 'en' ? 'Other' : 'Khác',
-    selectGender: language === 'en' ? 'Select gender' : 'Chọn giới tính',
-    day: language === 'en' ? 'Day' : 'Ngày',
-    month: language === 'en' ? 'Month' : 'Tháng',
-    year: language === 'en' ? 'Year' : 'Năm',
   };
 
   return (
@@ -260,6 +222,36 @@ export const RegisterPage: React.FC = () => {
                 </div>
               ) : (
                 <>
+                  {/* Email */}
+                  <div className="auth-field-group">
+                    <label className="auth-label">Email <span>*</span></label>
+                    <div className="auth-input-wrapper">
+                      <input 
+                        type="email" 
+                        className="auth-input" 
+                        placeholder={trans.emailPlaceholder} 
+                        value={email} 
+                        onChange={(e) => setEmail(e.target.value)} 
+                        disabled={isLoading} 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Username */}
+                  <div className="auth-field-group">
+                    <label className="auth-label">{trans.userNamePlaceholder} <span>*</span></label>
+                    <div className="auth-input-wrapper">
+                      <input 
+                        type="text" 
+                        className="auth-input" 
+                        placeholder={trans.userNamePlaceholder} 
+                        value={userName} 
+                        onChange={(e) => setUserName(e.target.value)} 
+                        disabled={isLoading} 
+                      />
+                    </div>
+                  </div>
+
                   {/* Full Name */}
                   <div className="auth-field-group">
                     <label className="auth-label">{trans.namePlaceholder} <span>*</span></label>
@@ -285,80 +277,6 @@ export const RegisterPage: React.FC = () => {
                         placeholder={trans.phonePlaceholder} 
                         value={phoneNumber} 
                         onChange={(e) => setPhoneNumber(e.target.value)} 
-                        disabled={isLoading} 
-                      />
-                    </div>
-                  </div>
-
-                  {/* Date of Birth split select */}
-                  <div className="auth-field-group">
-                    <label className="auth-label">{trans.dobLabel} <span>*</span></label>
-                    <div className="dob-selects">
-                      <select 
-                        className="dob-select" 
-                        value={dobDay} 
-                        onChange={(e) => setDobDay(e.target.value)}
-                        disabled={isLoading}
-                      >
-                        <option value="">{trans.day}</option>
-                        {days.map(d => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-
-                      <select 
-                        className="dob-select" 
-                        value={dobMonth} 
-                        onChange={(e) => setDobMonth(e.target.value)}
-                        disabled={isLoading}
-                      >
-                        <option value="">{trans.month}</option>
-                        {months.map(m => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </select>
-
-                      <select 
-                        className="dob-select" 
-                        value={dobYear} 
-                        onChange={(e) => setDobYear(e.target.value)}
-                        disabled={isLoading}
-                      >
-                        <option value="">{trans.year}</option>
-                        {years.map(y => (
-                          <option key={y} value={y}>{y}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="dob-hint">{trans.ageHint}</div>
-                  </div>
-
-                  {/* Gender Select */}
-                  <div className="auth-field-group">
-                    <label className="auth-label">{trans.genderLabel} <span>*</span></label>
-                    <select 
-                      className="gender-select" 
-                      value={gender} 
-                      onChange={(e) => setGender(e.target.value)}
-                      disabled={isLoading}
-                    >
-                      <option value="">{trans.selectGender}</option>
-                      <option value="male">{trans.male}</option>
-                      <option value="female">{trans.female}</option>
-                      <option value="other">{trans.other}</option>
-                    </select>
-                  </div>
-
-                  {/* Email */}
-                  <div className="auth-field-group">
-                    <label className="auth-label">Email <span>*</span></label>
-                    <div className="auth-input-wrapper">
-                      <input 
-                        type="email" 
-                        className="auth-input" 
-                        placeholder={trans.emailPlaceholder} 
-                        value={email} 
-                        onChange={(e) => setEmail(e.target.value)} 
                         disabled={isLoading} 
                       />
                     </div>

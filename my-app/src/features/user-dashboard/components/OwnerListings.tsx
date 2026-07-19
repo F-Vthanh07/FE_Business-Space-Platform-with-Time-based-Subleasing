@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
@@ -18,7 +19,6 @@ const statusConfig: Record<string, { className: string, icon: React.ReactNode }>
 };
 
 export const OwnerListings: React.FC = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [listings, setListings] = useState<any[]>([]); // Data lấy từ API
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -26,7 +26,6 @@ export const OwnerListings: React.FC = () => {
 
   // States quản lý Form
   const [isFormOpen, setIsFormOpen] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editingListing, setEditingListing] = useState<any | null>(null);
 
   const [viewingListing, setViewingListing] = useState<any | null>(null); 
@@ -45,8 +44,7 @@ export const OwnerListings: React.FC = () => {
     }
   };
 
-  // --- API GET ALL LISTINGS ---
-// --- API LẤY BÀI ĐĂNG CỦA RIÊNG MÌNH ---
+  // --- API LẤY BÀI ĐĂNG CỦA RIÊNG MÌNH ---
   const fetchListings = async () => {
     setIsLoading(true);
     try {
@@ -54,20 +52,20 @@ export const OwnerListings: React.FC = () => {
       const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
 
       // BƯỚC 1: Lấy danh sách Mặt bằng (Space) của chính ông này
-      const spaceRes = await fetch(`https://localhost:7069/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`, {
+      const spaceRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
       
+      let mySpaces: any[] = [];
       let mySpaceIds: any[] = [];
       if (spaceRes.ok) {
         const spaceData = await spaceRes.json();
-        const safeSpaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
-        // Gom toàn bộ ID mặt bằng của ông chủ này lại thành 1 mảng [1, 2, 5...]
-        mySpaceIds = safeSpaces.map((s: any) => s.id || s.Id);
+        mySpaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+        mySpaceIds = mySpaces.map((s: any) => s.id || s.Id);
       }
 
       // BƯỚC 2: Lấy tất cả bài đăng
-      const res = await fetch('https://localhost:7069/api/Listing/GetAll', {
+      const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', {
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
       
@@ -75,11 +73,20 @@ export const OwnerListings: React.FC = () => {
         const data = await res.json();
         const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
         
-        // BƯỚC 3: LỌC - Chỉ giữ lại những Bài đăng có spaceId trùng với Mặt bằng của mình
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // BƯỚC 3: LỌC & GHÉP DATA MẶT BẰNG
         const myListings = safeData.filter((l: any) => {
           const currentSpaceId = l.spaceId || l.SpaceId;
           return mySpaceIds.includes(currentSpaceId) || l.ownerId === ownerId || l.createdBy === ownerId;
+        }).map((l: any) => {
+          // BƯỚC 4: Tìm mặt bằng gốc của bài đăng này
+          const currentSpaceId = l.spaceId || l.SpaceId;
+          const parentSpace = mySpaces.find(s => (s.id || s.Id) === currentSpaceId);
+          
+          return {
+            ...l,
+            // Móc địa chỉ từ Mặt bằng sang Bài đăng nếu bài đăng không có sẵn
+            address: l.location || l.address || parentSpace?.address || parentSpace?.location || ''
+          };
         });
 
         setListings(myListings); 
@@ -96,13 +103,10 @@ export const OwnerListings: React.FC = () => {
     fetchListings();
   }, []);
 
-  // ÁO GIÁP 2: Chống null khi tìm kiếm
+  // Tìm kiếm theo địa chỉ (đã được bốc từ Space sang)
   const filtered = listings.filter((l) => {
-    const safeName = l?.name || '';
-    const safeLocation = l?.location || l?.address || ''; // BE có thể dùng location hoặc address
-    
-    const matchSearch = safeName.toLowerCase().includes(search.toLowerCase()) || 
-                        safeLocation.toLowerCase().includes(search.toLowerCase());
+    const safeLocation = l?.location || l?.address || ''; 
+    const matchSearch = safeLocation.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || l?.status === filterStatus;
     return matchSearch && matchStatus;
   });
@@ -127,22 +131,18 @@ export const OwnerListings: React.FC = () => {
     setIsFormOpen(true);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleOpenEdit = (listing: any) => {
-    // ÁO GIÁP 3: Vá lại data trước khi ném cho thằng Form để nó không bị sập
     const safeListingForEdit = {
       ...listing,
-      slots: listing?.slots || [] // Ép slots thành mảng rỗng nếu BE không có
+      slots: listing?.slots || []
     };
     setEditingListing(safeListingForEdit);
     setIsFormOpen(true);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDelete = async (listingItem: any) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa bài đăng này?')) {
       try {
-        // CỨU CÁNH VỤ XÓA SAI: Check xem BE trả về chữ "id" hay "Id"
         const targetId = listingItem.id || listingItem.Id; 
 
         if (!targetId) {
@@ -151,7 +151,7 @@ export const OwnerListings: React.FC = () => {
         }
 
         const token = localStorage.getItem('portal_token');
-        const res = await fetch(`https://localhost:7069/api/Listing/Delete/${targetId}`, {
+        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/Delete/${targetId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
         });
@@ -170,7 +170,7 @@ export const OwnerListings: React.FC = () => {
 
   const handleFormSuccess = () => {
     setIsFormOpen(false);
-    fetchListings(); // Load lại data từ DB sau khi thêm/sửa thành công
+    fetchListings(); 
   };
 
   return (
@@ -208,7 +208,7 @@ export const OwnerListings: React.FC = () => {
           <Search size={15} style={{ color: 'var(--color-text-secondary)' }} />
           <input
             type="text"
-            placeholder={t('listings.searchListingPlaceholder') || 'Tìm kiếm tên, địa điểm...'}
+            placeholder={t('listings.searchListingPlaceholder') || 'Tìm kiếm địa điểm...'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="search-input"
@@ -231,7 +231,6 @@ export const OwnerListings: React.FC = () => {
       <div className="listings-grid">
         {isLoading && listings.length === 0 && <p className="text-secondary" style={{ padding: '20px' }}>Đang tải dữ liệu...</p>}
         {filtered.map((listing, index) => {
-          // Lấy ID ra, nếu không có ID thì lấy index làm key tạm
           const currentId = listing.id || listing.Id;
 
           return (
@@ -254,10 +253,6 @@ export const OwnerListings: React.FC = () => {
               </div>
 
               <div className="listing-visual" style={{ overflow: 'hidden' }}>
-                {/* ÁO GIÁP HIỂN THỊ ẢNH: 
-                  Kiểm tra xem BE có trả về mảng listingPictures không.
-                  Dự phòng cả 2 trường hợp: BE trả về chuỗi URL trực tiếp HOẶC trả về Object có chứa imageUrl
-                */}
                 {listing.listingPictures && listing.listingPictures.length > 0 ? (
                   <img 
                     src={typeof listing.listingPictures[0] === 'string' 
@@ -266,7 +261,6 @@ export const OwnerListings: React.FC = () => {
                     alt="cover" 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                     onError={(e) => {
-                      // Nếu link ảnh bị lỗi (404), tự động fallback về icon tòa nhà
                       (e.target as HTMLImageElement).style.display = 'none';
                       (e.target as HTMLImageElement).parentElement?.classList.add('fallback-icon');
                     }}
@@ -282,7 +276,6 @@ export const OwnerListings: React.FC = () => {
               </div>
 
               <div className="listing-card-body">
-                <h3 className="listing-name">{listing.name || 'Bài đăng chưa có tên'}</h3>
                 <p className="listing-location">
                   <MapPin size={12} />
                   {listing.location || listing.address || 'Chưa cập nhật địa chỉ'}
@@ -321,16 +314,14 @@ export const OwnerListings: React.FC = () => {
                   style={{ flex: 1, justifyContent: 'center' }} 
                   onClick={() => {
                     setViewingListing(listing);
-                    setCurrentImageIndex(0); // Reset lướt ảnh về tấm đầu tiên
+                    setCurrentImageIndex(0); 
                   }}
                 >
                   <Eye size={14} /> {language === 'en' ? 'View' : 'Xem'}
                 </button>
-                {/* Nút sửa */}
                 <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => handleOpenEdit(listing)}>
                   <Edit3 size={14} /> {t('spaces.edit') || 'Sửa'}
                 </button>
-                {/* Nút xóa truyền nguyên cục listing vào để phân tích */}
                 <button className="btn-icon" style={{ color: 'var(--color-negative)' }} title={t('spaces.delete') || 'Xóa'} onClick={() => handleDelete(listing)}>
                   <Trash2 size={14} />
                 </button>
@@ -355,19 +346,17 @@ export const OwnerListings: React.FC = () => {
         <div className="listing-form-backdrop" onClick={() => setViewingListing(null)}>
           <div 
             className="listing-form-modal" 
-            onClick={(e) => e.stopPropagation()} // Chặn click xuyên thủng
+            onClick={(e) => e.stopPropagation()} 
             style={{ maxWidth: '700px', width: '95%', padding: 0, overflow: 'hidden' }}
           >
-            {/* Header Pop-up */}
-            <div className="listing-form-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>{viewingListing.name || 'Chi tiết bài đăng'}</h2>
+            <div className="listing-form-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>Chi tiết bài đăng</h2>
               <button type="button" className="btn-icon" onClick={() => setViewingListing(null)}>
                 <X size={20} />
               </button>
             </div>
 
             <div style={{ maxHeight: '80vh', overflowY: 'auto' }}>
-              {/* KHU VỰC LƯỚT ẢNH (SLIDER) */}
               {viewingListing.listingPictures && viewingListing.listingPictures.length > 0 ? (
                 <div style={{ position: 'relative', width: '100%', height: '400px', backgroundColor: '#111' }}>
                   <img 
@@ -375,10 +364,9 @@ export const OwnerListings: React.FC = () => {
                       ? viewingListing.listingPictures[currentImageIndex] 
                       : (viewingListing.listingPictures[currentImageIndex].imageUrl || viewingListing.listingPictures[currentImageIndex].url)} 
                     alt="gallery" 
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }} // contain để ảnh không bị cắt xén
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
                   />
                   
-                  {/* Nút lướt Trái/Phải (Chỉ hiện khi có nhiều hơn 1 ảnh) */}
                   {viewingListing.listingPictures.length > 1 && (
                     <>
                       <button 
@@ -393,7 +381,6 @@ export const OwnerListings: React.FC = () => {
                       >
                         <ChevronRight size={20} color="#000" />
                       </button>
-                      {/* Cục hiển thị 1/5, 2/5... */}
                       <div style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 10px', borderRadius: '12px', fontSize: '12px' }}>
                         {currentImageIndex + 1} / {viewingListing.listingPictures.length}
                       </div>
@@ -406,7 +393,6 @@ export const OwnerListings: React.FC = () => {
                 </div>
               )}
 
-              {/* KHU VỰC THÔNG TIN TEXT */}
               <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>

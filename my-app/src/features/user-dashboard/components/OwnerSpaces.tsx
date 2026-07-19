@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { gsap } from 'gsap';
-import { Plus, Search, Building2, MapPin, Minimize2, Edit3, Trash2, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock } from 'lucide-react';
 import { SpaceForm } from './SpaceForm';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import './OwnerSpaces.css';
@@ -37,7 +37,7 @@ export const OwnerSpaces: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch('https://localhost:7069/api/BussinessCategory/GetAll', {
+        const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/GetAll', {
           headers: { 'accept': '*/*' }
         });
         if (res.ok) {
@@ -58,7 +58,7 @@ export const OwnerSpaces: React.FC = () => {
       const token = localStorage.getItem('portal_token');
       const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
 
-      const url = `https://localhost:7069/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
+      const url = `https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -141,7 +141,7 @@ export const OwnerSpaces: React.FC = () => {
     if (window.confirm(t('spaces.confirmDeleteSpace') || 'Bạn có chắc chắn muốn xóa mặt bằng này?')) {
       try {
         const token = localStorage.getItem('portal_token');
-        const response = await fetch(`https://localhost:7069/api/Space/Delete${targetId}`, {
+        const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/Delete${targetId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -225,19 +225,14 @@ export const OwnerSpaces: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="space-card-visual">
-                  <Building2 size={36} className="visual-building-icon" />
-                  <div className="space-area-tag">
-                    <Minimize2 size={11} />
-                    <span>{space?.area || 'N/A'} m²</span>
-                  </div>
-                </div>
-
                 <div className="space-card-info">
                   <h3 className="space-name">{space?.name || 'Mặt bằng chưa có tên'}</h3>
                   <p className="space-address text-secondary">
                     <MapPin size={12} />
                     {space?.address || 'Chưa cập nhật địa chỉ'}
+                  </p>
+                  <p className="space-area text-secondary">
+                    {space?.area || 'N/A'} m²
                   </p>
 
                   <div className="space-meta-section">

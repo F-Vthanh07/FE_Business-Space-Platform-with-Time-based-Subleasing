@@ -67,7 +67,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
     setIsLoading(true);
     try {
-      const response = await fetch('https://localhost:7069/api/Auth/login', {
+      const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
         body: JSON.stringify({ email, password, turnstileToken })

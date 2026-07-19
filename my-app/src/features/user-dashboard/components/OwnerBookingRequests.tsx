@@ -9,19 +9,35 @@ export const OwnerBookingRequests: React.FC = () => {
   const currentUserId = localStorage.getItem('current_user_id');
   const token = localStorage.getItem('portal_token');
 
+  // ĐÁNH DẤU CÁC ĐƠN ĐÃ FETCH LÀ "ĐÃ XEM" ĐỂ HEADER TẮT BADGE ĐỎ
+  const markRequestsAsSeen = (ids: (string | number)[]) => {
+    try {
+      const raw = localStorage.getItem('seen_booking_request_ids');
+      const seen = new Set<string | number>(raw ? JSON.parse(raw) : []);
+      ids.forEach((id) => seen.add(id));
+      localStorage.setItem('seen_booking_request_ids', JSON.stringify(Array.from(seen)));
+      window.dispatchEvent(new CustomEvent('booking-request-seen'));
+    } catch (e) {
+      console.error('Lỗi lưu trạng thái đã xem:', e);
+    }
+  };
+
   // 1. LẤY DANH SÁCH YÊU CẦU THUÊ TỪ API
   const fetchRequests = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('https://localhost:7069/api/PrimaryBookingRequest/GetAll?status=Pending', {
+      const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll?status=Pending', {
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
       if (res.ok) {
         const data = await res.json();
         const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-        
+
         const myRequests = safeData.filter((req: any) => req.lessorId === currentUserId);
         setRequests(myRequests);
+
+        // Đánh dấu tất cả các đơn vừa load là "đã xem" -> Header sẽ tắt badge đỏ
+        markRequestsAsSeen(myRequests.map((r: any) => r.id || r.Id));
       }
     } catch (error) {
       console.error("Lỗi tải danh sách yêu cầu:", error);
@@ -42,7 +58,7 @@ export const OwnerBookingRequests: React.FC = () => {
 
     try {
       // SỬA FIX LỖI JSON BỊ 400 BAD REQUEST CHỖ NÀY RỒI NHA
-      const res = await fetch(`https://localhost:7069/api/PrimaryBookingRequest/Status/${requestId}`, {
+      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/Status/${requestId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +74,7 @@ export const OwnerBookingRequests: React.FC = () => {
 
       if (newStatus === 'Approved' && lesseeId) {
         try {
-          await fetch(`https://localhost:7069/api/Conversation/Create?lessorId=${currentUserId}&lesseeId=${lesseeId}`, {
+          await fetch(`https://flexi-space-capstone-project.onrender.com/api/Conversation/Create?lessorId=${currentUserId}&lesseeId=${lesseeId}`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
