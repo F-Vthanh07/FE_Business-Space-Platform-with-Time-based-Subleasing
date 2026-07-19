@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Minus, Send, Image as ImageIcon, ArrowLeft, BellRing, FileSignature, FileText, Briefcase, Wallet, CalendarDays, Edit3 } from 'lucide-react';
 import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr';
 import { ContractViewModal } from './ContractViewModal';
+import { API_BASE_URL } from '../config/api';
 
 export const FloatingChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -63,7 +64,7 @@ export const FloatingChat: React.FC = () => {
     if (view === 'CONTRACT' && isLessor && currentUserId) {
       const fetchMySpaces = async () => {
         try {
-          const res = await fetch(`https://localhost:7069/api/Space/GetAll?OwnerId=${currentUserId}`, {
+          const res = await fetch(`${API_BASE_URL}/api/Space/GetAll?OwnerId=${currentUserId}`, {
             headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
           });
           if (res.ok) {
@@ -85,7 +86,7 @@ export const FloatingChat: React.FC = () => {
           const lessorId = activeChat.lessorId || activeChat.LessorId;
           const responses = await Promise.all(
             ['Approved'].map(status =>
-              fetch(`https://localhost:7069/api/PrimaryBookingRequest/GetAll?status=${status}`, {
+              fetch(`${API_BASE_URL}/api/PrimaryBookingRequest/GetAll?status=${status}`, {
                 headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
               }).then(res => (res.ok ? res.json() : [])).catch(() => [])
             )
@@ -114,12 +115,12 @@ export const FloatingChat: React.FC = () => {
     let globalConnection: HubConnection;
     const initGlobalChat = async () => {
       try {
-        const res = await fetch(`https://localhost:7069/api/Conversation/User/${currentUserId}`, { headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }});
+        const res = await fetch(`${API_BASE_URL}/api/Conversation/User/${currentUserId}`, { headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }});
         let myRooms: any[] = [];
         if (res.ok) { myRooms = await res.json(); setConversations(myRooms); }
 
         globalConnection = new HubConnectionBuilder()
-          .withUrl("https://localhost:7069/chatHub", { accessTokenFactory: () => token || "" })
+          .withUrl(`${API_BASE_URL}/chatHub`, { accessTokenFactory: () => token || "" })
           .configureLogging(LogLevel.Information)
           .withAutomaticReconnect()
           .build();
@@ -182,7 +183,7 @@ export const FloatingChat: React.FC = () => {
     if (connection) connection.invoke("JoinConversation", roomId).catch(err => console.log(err));
 
     try {
-      const res = await fetch(`https://localhost:7069/api/Message/GetMessageHistory?conversationId=${roomId}&limit=50`, { headers: { 'Authorization': `Bearer ${token}` }});
+      const res = await fetch(`${API_BASE_URL}/api/Message/GetMessageHistory?conversationId=${roomId}&limit=50`, { headers: { 'Authorization': `Bearer ${token}` }});
       if (res.ok) {
         const historyData = await res.json();
         const mappedHistory = historyData.map((msg: any) => ({
@@ -227,7 +228,7 @@ export const FloatingChat: React.FC = () => {
         lesseeId: activeChat?.lesseeId || activeChat?.LesseeId
       };
 
-      const createRes = await fetch('https://localhost:7069/api/Contract/Create', {
+      const createRes = await fetch(`${API_BASE_URL}/api/Contract/Create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(createPayload)
@@ -238,7 +239,7 @@ export const FloatingChat: React.FC = () => {
       const newContractId = createdContract.id || createdContract.Id; 
 
       if (newContractId) {
-        const shareRes = await fetch(`https://localhost:7069/api/Contract/${newContractId}/share`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }});
+        const shareRes = await fetch(`${API_BASE_URL}/api/Contract/${newContractId}/share`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }});
         if (!shareRes.ok) throw new Error('Lỗi share hợp đồng');
 
         await handleSendMessage(e, `📄 Tôi vừa tạo và gửi một Hợp đồng (Mã: #${newContractId}). Vui lòng kiểm tra và xác nhận nhé!`);
@@ -252,7 +253,7 @@ export const FloatingChat: React.FC = () => {
     setView('CONTRACT_DETAIL');
     setContractDetail(null); 
     try {
-      const res = await fetch(`https://localhost:7069/api/Contract/GetById/${contractId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/Contract/GetById/${contractId}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
       if (res.ok) {

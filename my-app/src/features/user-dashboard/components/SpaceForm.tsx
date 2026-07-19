@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Building2, MapPin, Minimize2, Clock, Check, ShieldAlert, Briefcase } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import { API_BASE_URL } from '../../../config/api';
 import './SpaceForm.css';
 
 interface SpaceFormProps {
@@ -60,7 +61,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch('https://localhost:7069/api/BussinessCategory/GetAll', {
+        const res = await fetch(`${API_BASE_URL}/api/BussinessCategory/GetAll`, {
           headers: { 'accept': '*/*' } 
         });
         if (res.ok) {
@@ -165,8 +166,8 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     try {
       const isEditing = !!initialData;
       const url = isEditing 
-        ? `https://localhost:7069/api/Space/Update${initialData.id}` 
-        : 'https://localhost:7069/api/Space/Create';
+        ? `${API_BASE_URL}/api/Space/Update${initialData.id}`
+        : `${API_BASE_URL}/api/Space/Create`;
 
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',

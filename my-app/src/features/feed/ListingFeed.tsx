@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Eye, MapPin, MessageCircle, Bookmark, TrendingUp, ShieldCheck, Home, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Header } from '../../components/Header'; // Chỉnh lại đường dẫn cho đúng nha
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../config/api';
 
 export const ListingFeed: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,7 +18,7 @@ export const ListingFeed: React.FC = () => {
   useEffect(() => {
     const fetchFeed = async () => {
       try {
-        const response = await fetch('https://localhost:7069/api/Listing/GetAll', { headers: { 'accept': '*/*' } });
+        const response = await fetch(`${API_BASE_URL}/api/Listing/GetAll`, { headers: { 'accept': '*/*' } });
         if (response.ok) {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);

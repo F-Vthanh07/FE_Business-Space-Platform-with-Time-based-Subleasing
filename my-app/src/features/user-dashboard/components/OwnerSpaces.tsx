@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { Plus, Search, Building2, MapPin, Minimize2, Edit3, Trash2, CheckCircle2, Clock } from 'lucide-react';
 import { SpaceForm } from './SpaceForm';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import { API_BASE_URL } from '../../../config/api';
 import './OwnerSpaces.css';
 
 interface Space {
@@ -37,7 +38,7 @@ export const OwnerSpaces: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch('https://localhost:7069/api/BussinessCategory/GetAll', {
+        const res = await fetch(`${API_BASE_URL}/api/BussinessCategory/GetAll`, {
           headers: { 'accept': '*/*' }
         });
         if (res.ok) {
@@ -58,7 +59,7 @@ export const OwnerSpaces: React.FC = () => {
       const token = localStorage.getItem('portal_token');
       const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
 
-      const url = `https://localhost:7069/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
+      const url = `${API_BASE_URL}/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -141,7 +142,7 @@ export const OwnerSpaces: React.FC = () => {
     if (window.confirm(t('spaces.confirmDeleteSpace') || 'Bạn có chắc chắn muốn xóa mặt bằng này?')) {
       try {
         const token = localStorage.getItem('portal_token');
-        const response = await fetch(`https://localhost:7069/api/Space/Delete${targetId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/Space/Delete${targetId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,

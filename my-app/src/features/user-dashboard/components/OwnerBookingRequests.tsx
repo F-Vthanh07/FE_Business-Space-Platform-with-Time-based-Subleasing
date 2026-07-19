@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, FileText, Calendar, User } from 'lucide-react';
+import { API_BASE_URL } from '../../../config/api';
 
 export const OwnerBookingRequests: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
@@ -13,7 +14,7 @@ export const OwnerBookingRequests: React.FC = () => {
   const fetchRequests = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('https://localhost:7069/api/PrimaryBookingRequest/GetAll?status=Pending', {
+      const res = await fetch(`${API_BASE_URL}/api/PrimaryBookingRequest/GetAll?status=Pending`, {
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
       if (res.ok) {
@@ -42,7 +43,7 @@ export const OwnerBookingRequests: React.FC = () => {
 
     try {
       // SỬA FIX LỖI JSON BỊ 400 BAD REQUEST CHỖ NÀY RỒI NHA
-      const res = await fetch(`https://localhost:7069/api/PrimaryBookingRequest/Status/${requestId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/PrimaryBookingRequest/Status/${requestId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +59,7 @@ export const OwnerBookingRequests: React.FC = () => {
 
       if (newStatus === 'Approved' && lesseeId) {
         try {
-          await fetch(`https://localhost:7069/api/Conversation/Create?lessorId=${currentUserId}&lesseeId=${lesseeId}`, {
+          await fetch(`${API_BASE_URL}/api/Conversation/Create?lessorId=${currentUserId}&lesseeId=${lesseeId}`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
