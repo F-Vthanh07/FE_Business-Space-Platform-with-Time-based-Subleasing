@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Building2, MapPin, Minimize2, Clock, Check, ShieldAlert, Briefcase } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { API_BASE_URL } from '../../../config/api';
+import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
 import './SpaceForm.css';
 
 interface SpaceFormProps {
@@ -34,6 +35,7 @@ const getDayLabel = (id: number, lang: 'en' | 'vi') => {
 
 export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initialData }) => {
   const { t, language } = useThemeLanguage();
+  const { isVerified } = useIdentityVerification();
   
   // --- STATE DỮ LIỆU CƠ BẢN ---
   const [name, setName] = useState(initialData?.name || '');
@@ -212,6 +214,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="space-form-body">
+          {!isVerified && <VerificationWarningBanner />}
           
           <div className="form-section">
             <h3 className="form-section-title">{t('spaceForm.formSectionBasic')}</h3>

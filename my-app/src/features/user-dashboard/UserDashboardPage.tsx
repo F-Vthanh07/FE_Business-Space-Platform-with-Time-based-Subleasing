@@ -15,6 +15,7 @@ import { RenterSubTenants } from './components/RenterSubTenants';
 import { ProfileOverviewPage } from './components/ProfileOverviewPage';
 import { OwnerBookingRequests } from './components/OwnerBookingRequests';
 import { WalletOverview, WalletDeposit, WalletHistory } from '../wallet';
+import { VerificationWarningBanner, useIdentityVerification } from '../identity-verification';
 import type { UserPage, SubSlot } from './types';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './UserDashboardPage.css';
@@ -44,6 +45,7 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
   const [isNewSpaceFormOpen, setIsNewSpaceFormOpen] = useState(false);
   const [isNewSlotFormOpen, setIsNewSlotFormOpen] = useState(false);
   const [slots, setSlots] = useState<SubSlot[]>(initialMockSlots);
+  const { isVerified } = useIdentityVerification();
   const { t } = useThemeLanguage();
 
   // Extract activePage from the router pathname, e.g. /user/spaces -> spaces
@@ -147,13 +149,14 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
 
   return (
     <div className="app-shell">
-      {/* 
+      {/*
         ĐÃ XÓA userName VÀ userInitials FIX CỨNG Ở ĐÂY.
         Giờ Header sẽ tự móc tên từ LocalStorage lên hiển thị.
       */}
-      <Header
-        userRole={t('app.userTitle')}
-      />
+      <Header />
+      {!isVerified && activePage !== 'profile' && (
+        <VerificationWarningBanner onVerifyClick={() => navigate('/user/profile')} />
+      )}
       <div className="app-body">
         <UserSidebar
           activePage={activePage}

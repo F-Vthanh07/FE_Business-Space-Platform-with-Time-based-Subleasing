@@ -4,6 +4,7 @@ import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { gsap } from 'gsap';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { API_BASE_URL } from '../../config/api';
+import { ROUTES } from '../../routes/routes';
 import './AuthPage.css';
 
 export const RegisterPage: React.FC = () => {
@@ -12,18 +13,11 @@ export const RegisterPage: React.FC = () => {
 
   // States cho Form đăng ký
   const [email, setEmail] = useState('');
+  const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  
-  // Date of Birth state split
-  const [dobDay, setDobDay] = useState('');
-  const [dobMonth, setDobMonth] = useState('');
-  const [dobYear, setDobYear] = useState('');
-  
-  // Gender state
-  const [gender, setGender] = useState('');
 
   // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
@@ -45,12 +39,6 @@ export const RegisterPage: React.FC = () => {
   const cardRef = useRef<HTMLDivElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-
-  // Lists for DOB dropdowns
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 1920 + 1 }, (_, i) => currentYear - i);
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   // Real-time password requirement checkers
   const passMet6Char = password.length >= 6;
@@ -79,7 +67,7 @@ export const RegisterPage: React.FC = () => {
 
   // --- API REGISTER ---
   const handleRegister = async () => {
-    if (!email.trim() || !password || !name || !phoneNumber || !dobDay || !dobMonth || !dobYear || !gender) {
+    if (!email.trim() || !password || !name || !phoneNumber || !userName.trim()) {
       setError(language === 'en' ? 'Please fill in all fields.' : 'Vui lòng điền đầy đủ thông tin.');
       return;
     }
@@ -96,20 +84,6 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
-    // Check age limit (>= 16)
-    const birthDate = new Date(parseInt(dobYear), parseInt(dobMonth) - 1, parseInt(dobDay));
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-
-    if (age < 16) {
-      setError(language === 'en' ? 'You must be at least 16 years old.' : 'Bạn phải từ 16 tuổi trở lên.');
-      return;
-    }
-
     // Turnstile check
     if (!turnstileToken) {
       setError(language === 'en' ? 'Please verify you are human.' : 'Vui lòng xác thực bạn không phải là robot.');
@@ -118,17 +92,15 @@ export const RegisterPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const dobISO = birthDate.toISOString();
-
       const response = await fetch(`${API_BASE_URL}/api/Auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
-        body: JSON.stringify({ 
-          email, 
-          password, 
-          dob: dobISO, 
-          phoneNumber, 
-          name, 
+        body: JSON.stringify({
+          email,
+          password,
+          phoneNumber,
+          userName,
+          name,
           turnstileToken
         })
       });
@@ -174,10 +146,10 @@ export const RegisterPage: React.FC = () => {
         throw new Error(data.message || (language === 'en' ? 'Invalid OTP.' : 'Xác thực OTP thất bại.'));
       }
 
-      setSuccessMsg(language === 'en' ? 'Account verified! You can now log in.' : 'Tài khoản đã xác thực! Bạn có thể đăng nhập.');
-      
+      setSuccessMsg(language === 'en' ? 'Account verified! Let\'s complete your profile.' : 'Tài khoản đã xác thực! Hãy hoàn tất hồ sơ của bạn.');
+
       setTimeout(() => {
-        navigate('/login');
+        navigate(ROUTES.ONBOARDING, { state: { name, phoneNumber, email } });
       }, 1500);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -196,22 +168,13 @@ export const RegisterPage: React.FC = () => {
     passPlaceholder: language === 'en' ? 'Enter Password' : 'Nhập Mật khẩu',
     confirmPassPlaceholder: language === 'en' ? 'Confirm Password' : 'Xác nhận Mật khẩu',
     namePlaceholder: language === 'en' ? 'Full Name' : 'Họ và tên',
+    userNamePlaceholder: language === 'en' ? 'Username' : 'Tên đăng nhập',
     phonePlaceholder: language === 'en' ? 'Phone Number' : 'Số điện thoại',
     otpPlaceholder: language === 'en' ? 'Enter 6-digit OTP' : 'Nhập mã OTP 6 số',
     signUp: language === 'en' ? (isLoading ? 'Creating...' : 'Sign Up') : (isLoading ? 'Đang tạo...' : 'Đăng ký'),
     verifyBtn: language === 'en' ? (isLoading ? 'Verifying...' : 'Verify OTP') : (isLoading ? 'Đang xác thực...' : 'Xác nhận OTP'),
     haveAccount: language === 'en' ? 'Already have an account ?' : 'Đã có tài khoản ?',
     signInIt: language === 'en' ? 'Sign In!' : 'Đăng nhập ngay!',
-    dobLabel: language === 'en' ? 'Date of Birth' : 'Ngày sinh',
-    genderLabel: language === 'en' ? 'Gender' : 'Giới tính',
-    ageHint: language === 'en' ? 'You must be at least 16 years old' : 'Bạn phải từ 16 tuổi trở lên',
-    male: language === 'en' ? 'Male' : 'Nam',
-    female: language === 'en' ? 'Female' : 'Nữ',
-    other: language === 'en' ? 'Other' : 'Khác',
-    selectGender: language === 'en' ? 'Select gender' : 'Chọn giới tính',
-    day: language === 'en' ? 'Day' : 'Ngày',
-    month: language === 'en' ? 'Month' : 'Tháng',
-    year: language === 'en' ? 'Year' : 'Năm',
   };
 
   return (
@@ -291,63 +254,19 @@ export const RegisterPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Date of Birth split select */}
+                  {/* Username */}
                   <div className="auth-field-group">
-                    <label className="auth-label">{trans.dobLabel} <span>*</span></label>
-                    <div className="dob-selects">
-                      <select 
-                        className="dob-select" 
-                        value={dobDay} 
-                        onChange={(e) => setDobDay(e.target.value)}
+                    <label className="auth-label">{trans.userNamePlaceholder} <span>*</span></label>
+                    <div className="auth-input-wrapper">
+                      <input
+                        type="text"
+                        className="auth-input"
+                        placeholder={trans.userNamePlaceholder}
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
                         disabled={isLoading}
-                      >
-                        <option value="">{trans.day}</option>
-                        {days.map(d => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-
-                      <select 
-                        className="dob-select" 
-                        value={dobMonth} 
-                        onChange={(e) => setDobMonth(e.target.value)}
-                        disabled={isLoading}
-                      >
-                        <option value="">{trans.month}</option>
-                        {months.map(m => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </select>
-
-                      <select 
-                        className="dob-select" 
-                        value={dobYear} 
-                        onChange={(e) => setDobYear(e.target.value)}
-                        disabled={isLoading}
-                      >
-                        <option value="">{trans.year}</option>
-                        {years.map(y => (
-                          <option key={y} value={y}>{y}</option>
-                        ))}
-                      </select>
+                      />
                     </div>
-                    <div className="dob-hint">{trans.ageHint}</div>
-                  </div>
-
-                  {/* Gender Select */}
-                  <div className="auth-field-group">
-                    <label className="auth-label">{trans.genderLabel} <span>*</span></label>
-                    <select 
-                      className="gender-select" 
-                      value={gender} 
-                      onChange={(e) => setGender(e.target.value)}
-                      disabled={isLoading}
-                    >
-                      <option value="">{trans.selectGender}</option>
-                      <option value="male">{trans.male}</option>
-                      <option value="female">{trans.female}</option>
-                      <option value="other">{trans.other}</option>
-                    </select>
                   </div>
 
                   {/* Email */}

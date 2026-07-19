@@ -7,7 +7,6 @@ import {
   CalendarDays,
   BarChart3,
   Settings,
-  IdCard,
   Plus,
   Globe,
   LogOut,
@@ -56,7 +55,6 @@ const walletNavItems: NavItem[] = [
 
 const commonNavItems: NavItem[] = [
   { id: 'analytics', icon: <BarChart3 size={16} /> },
-  { id: 'profile', icon: <IdCard size={16} /> },
   { id: 'settings', icon: <Settings size={16} /> },
 ];
 
