@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Map, { Marker, Popup } from 'react-map-gl/maplibre';
 import { useNavigate } from 'react-router-dom';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { API_BASE_URL } from '../../../config/api';
 
 export const MapComponent: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -13,7 +14,7 @@ export const MapComponent: React.FC = () => {
   useEffect(() => {
     const fetchListings = async () => {
       try {
-        const response = await fetch('https://localhost:7069/api/Listing/GetAll', { headers: { 'accept': '*/*' } });
+        const response = await fetch(`${API_BASE_URL}/api/Listing/GetAll`, { headers: { 'accept': '*/*' } });
         if (response.ok) {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);

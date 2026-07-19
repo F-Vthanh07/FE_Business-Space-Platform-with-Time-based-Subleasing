@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, ChevronLeft, ChevronRight, MessageCircle, Globe } from 'lucide-react'; // Đổi Phone thành MessageCircleimport { useNavigate } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../../config/api';
 
 
 interface HomeListingsProps {
@@ -25,7 +26,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
     const fetchPublicListings = async () => {
       try {
         // ĐỔI TỪ Space/GetAll SANG Listing/GetAll
-        const response = await fetch('https://localhost:7069/api/Listing/GetAll', {
+        const response = await fetch(`${API_BASE_URL}/api/Listing/GetAll`, {
           headers: { 'accept': '*/*' }
         });
         if (response.ok) {

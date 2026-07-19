@@ -4,6 +4,7 @@ import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { gsap } from 'gsap';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { ROUTES, type PortalRole } from '../../routes/routes';
+import { API_BASE_URL } from '../../config/api';
 import './AuthPage.css';
 
 // HÀM GIẢI MÃ JWT TOKEN ĐỂ LẤY THÔNG TIN
@@ -67,7 +68,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
     setIsLoading(true);
     try {
-      const response = await fetch('https://localhost:7069/api/Auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/Auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
         body: JSON.stringify({ email, password, turnstileToken })

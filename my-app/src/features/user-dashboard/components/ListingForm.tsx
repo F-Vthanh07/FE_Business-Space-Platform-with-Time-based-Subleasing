@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, DollarSign, FileText, Camera, Plus, Trash2 } from 'lucide-react';
+import { API_BASE_URL } from '../../../config/api';
 import './ListingForm.css';
 
 interface ListingFormProps {
@@ -47,7 +48,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       try {
         const token = localStorage.getItem('portal_token');
         const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
-        const url = `https://localhost:7069/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
+        const url = `${API_BASE_URL}/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
         
         const res = await fetch(url, {
           headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
@@ -114,8 +115,8 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       const isEditing = !!initialData;
       const targetId = initialData?.id || initialData?.Id;
       const url = isEditing
-        ? `https://localhost:7069/api/Listing/Update/${targetId}`
-        : `https://localhost:7069/api/Listing/Create`;
+        ? `${API_BASE_URL}/api/Listing/Update/${targetId}`
+        : `${API_BASE_URL}/api/Listing/Create`;
 
       const listingPayload = {
         spaceId: Number(spaceId),
@@ -173,7 +174,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
         // Bỏ hết mấy dòng append spaceId hay userProfileId đi nhé!
 
-        const picRes = await fetch('https://localhost:7069/api/Picture', {
+        const picRes = await fetch(`${API_BASE_URL}/api/Picture`, {
           method: 'POST',
           headers: { 
             'Authorization': `Bearer ${token}`,

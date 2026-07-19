@@ -9,6 +9,7 @@ import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { ListingForm } from './ListingForm';
 import './OwnerListings.css';
 import { createPortal } from 'react-dom';
+import { API_BASE_URL } from '../../../config/api';
 
 const statusConfig: Record<string, { className: string, icon: React.ReactNode }> = {
   published: { className: 'badge--positive', icon: <CheckCircle2 size={11} /> },
@@ -54,7 +55,7 @@ export const OwnerListings: React.FC = () => {
       const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
 
       // BƯỚC 1: Lấy danh sách Mặt bằng (Space) của chính ông này
-      const spaceRes = await fetch(`https://localhost:7069/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`, {
+      const spaceRes = await fetch(`${API_BASE_URL}/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
       
@@ -67,7 +68,7 @@ export const OwnerListings: React.FC = () => {
       }
 
       // BƯỚC 2: Lấy tất cả bài đăng
-      const res = await fetch('https://localhost:7069/api/Listing/GetAll', {
+      const res = await fetch(`${API_BASE_URL}/api/Listing/GetAll`, {
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
       
@@ -151,7 +152,7 @@ export const OwnerListings: React.FC = () => {
         }
 
         const token = localStorage.getItem('portal_token');
-        const res = await fetch(`https://localhost:7069/api/Listing/Delete/${targetId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/Listing/Delete/${targetId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
         });

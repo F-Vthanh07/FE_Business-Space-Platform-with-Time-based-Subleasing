@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { gsap } from 'gsap';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { API_BASE_URL } from '../../config/api';
 import './AuthPage.css';
 
 export const RegisterPage: React.FC = () => {
@@ -119,7 +120,7 @@ export const RegisterPage: React.FC = () => {
     try {
       const dobISO = birthDate.toISOString();
 
-      const response = await fetch('https://localhost:7069/api/Auth/register', {
+      const response = await fetch(`${API_BASE_URL}/api/Auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
         body: JSON.stringify({ 
@@ -161,7 +162,7 @@ export const RegisterPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch('https://localhost:7069/api/Auth/verify-otp', {
+      const response = await fetch(`${API_BASE_URL}/api/Auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
         body: JSON.stringify({ email, otpCode })

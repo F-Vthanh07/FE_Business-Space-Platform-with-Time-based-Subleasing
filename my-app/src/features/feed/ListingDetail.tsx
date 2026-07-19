@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Share2, Heart, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3, Send, X, ClipboardSignature } from 'lucide-react';
 import { Header } from '../../components/Header'; // Chỉnh đường dẫn cho đúng nếu cần
+import { API_BASE_URL } from '../../config/api';
 
 export const ListingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,7 +32,7 @@ export const ListingDetail: React.FC = () => {
   useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const response = await fetch('https://localhost:7069/api/Listing/GetAll', { headers: { 'accept': '*/*' } });
+        const response = await fetch(`${API_BASE_URL}/api/Listing/GetAll`, { headers: { 'accept': '*/*' } });
         if (response.ok) {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
@@ -79,7 +80,7 @@ export const ListingDetail: React.FC = () => {
         expectedStartDate: new Date(bookingData.expectedStartDate).toISOString()
       };
 
-      const response = await fetch('https://localhost:7069/api/PrimaryBookingRequest/Create', {
+      const response = await fetch(`${API_BASE_URL}/api/PrimaryBookingRequest/Create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
