@@ -22,6 +22,7 @@ import { VerificationWarningBanner, useIdentityVerification } from '../identity-
 import type { UserPage, SubSlot } from './types';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './UserDashboardPage.css';
+import MyContractsPage from './components/Mycontractspage';
 
 const initialMockSlots: SubSlot[] = [
   { id: 's1', date: '2025-05-26', startTime: '08:00', endTime: '12:00', tenantName: 'Trần Văn B', tenantInitials: 'TB', status: 'booked', price: '500.000₫', spaceId: 'space-leloi' },
@@ -111,6 +112,7 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
       case 'listings': return <OwnerListings />;
       case 'tenants': return <OwnerTenants />;
       case 'booking-requests': return <OwnerBookingRequests />;
+      case 'contracts': return <MyContractsPage />;
       case 'calendar':
         
         return (

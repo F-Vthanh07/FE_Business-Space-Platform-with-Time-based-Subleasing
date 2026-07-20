@@ -1,15 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { X, Printer, Briefcase, Wallet, CalendarDays, Edit3, FileText, Building2 } from 'lucide-react';
-import { CONTRACT_TEMPLATES, getTemplateById, fillContractTemplate, renderMergeValue, type ContractMergeData, splitContractHeaderBody, } from './contractTemplates';
+import { CONTRACT_TEMPLATES, getTemplateById, fillContractTemplate, renderMergeValue, type ContractMergeData, splitContractHeaderBody, } from '../contractTemplates';
 
 interface ContractCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
   activeChat: any;
   token: string | null;
-  // Gọi khi tạo + share hợp đồng thành công, để component cha gửi tin nhắn vào chat
+  // Gọi khi tạo + share hợp đồng thành công (hoặc cập nhật thành công), để component cha gửi tin nhắn vào chat
   onCreated: (chatMessage: string) => Promise<void> | void;
+  // Nếu có giá trị -> modal chạy ở chế độ SỬA hợp đồng đã tồn tại
+  existingContract?: any;
 }
 
 const API_BASE = 'https://flexi-space-capstone-project.onrender.com';
@@ -20,6 +22,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   activeChat,
   token,
   onCreated,
+  existingContract,
 }) => {
   const [mySpaces, setMySpaces] = useState<any[]>([]);
   const [matchedBookingRequests, setMatchedBookingRequests] = useState<any[]>([]);
@@ -31,6 +34,8 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   // thay bằng chuỗi mới -> không đụng tới các phần bạn đã tự sửa tay.
   // Nếu bạn xóa hẳn đoạn đó đi, chuỗi cũ không còn -> hệ thống không tự chèn lại.
   const lastRenderedRef = React.useRef<Record<string, string>>({});
+
+  const isEditMode = !!existingContract?.id;
 
   const [contractData, setContractData] = useState({
     spaceId: '',
@@ -49,9 +54,35 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   const lessorId = activeChat?.lessorId || activeChat?.LessorId;
   const lesseeId = activeChat?.lesseeId || activeChat?.LesseeId;
 
-  // Reset khi mở lại modal cho 1 cuộc chat mới
+  // Reset / Prefill khi mở modal
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    if (existingContract) {
+      // --- CHẾ ĐỘ SỬA: nạp toàn bộ dữ liệu cũ vào form ---
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedTemplateId(''); // không chọn template để tránh auto-diff ghi đè mô tả đã có
+      lastRenderedRef.current = {};
+      setContractData({
+        spaceId: existingContract.spaceId ? String(existingContract.spaceId) : '',
+        primaryBookingRequestId: existingContract.primaryBookingRequestId || 0,
+        durationUnit: existingContract.durationUnit || 'Days',
+        duration: existingContract.duration || 1,
+        startDate: existingContract.startDate
+          ? new Date(existingContract.startDate).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0],
+        acreage: existingContract.acreage || 0,
+        price: existingContract.price || 0,
+        depositAmount: existingContract.depositAmount || 0,
+        description: existingContract.description || '',
+        businessPurpose: existingContract.businessPurpose || '',
+        contractSchedules:
+          existingContract.contractSchedules && existingContract.contractSchedules.length > 0
+            ? existingContract.contractSchedules
+            : [{ dayOfWeek: 'Monday', startTime: '08:00', endTime: '22:00' }],
+      });
+    } else {
+      // --- CHẾ ĐỘ TẠO MỚI: reset trắng như cũ ---
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedTemplateId('');
       lastRenderedRef.current = {};
@@ -68,7 +99,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         businessPurpose: '',
       }));
     }
-  }, [isOpen, activeChat?.id, activeChat?.conversationId]);
+  }, [isOpen, existingContract, activeChat?.id, activeChat?.conversationId]);
 
   // Lấy danh sách mặt bằng của chủ nhà
   useEffect(() => {
@@ -108,11 +139,31 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         const allRequests = responses.flatMap((data: any) =>
           Array.isArray(data) ? data : data?.data || data?.items || []
         );
-        const matched = allRequests.filter(
+        let matched = allRequests.filter(
           (r: any) => String(r.lessorId) === String(lessorId) && String(r.lesseeId) === String(lesseeId)
         );
+
+        // Nếu đang SỬA hợp đồng và request cũ (VD đã đổi status) không còn nằm
+        // trong danh sách Approved -> vẫn add thủ công vào để <select> không mất giá trị
+        if (
+          existingContract?.primaryBookingRequestId &&
+          !matched.some((r) => String(r.id) === String(existingContract.primaryBookingRequestId))
+        ) {
+          matched = [
+            {
+              id: existingContract.primaryBookingRequestId,
+              offeredPrice: existingContract.price,
+              spaceId: existingContract.spaceId,
+              duration: existingContract.duration,
+            },
+            ...matched,
+          ];
+        }
+
         setMatchedBookingRequests(matched);
-        if (matched.length === 1) {
+
+        // Chỉ auto-fill theo request khi đang TẠO MỚI (không phải sửa)
+        if (!existingContract && matched.length === 1) {
           const only = matched[0];
           setContractData((prev) => ({
             ...prev,
@@ -129,7 +180,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
       }
     };
     fetchMatchedRequests();
-  }, [isOpen, token, activeChat, lessorId, lesseeId]);
+  }, [isOpen, token, activeChat, lessorId, lesseeId, existingContract]);
 
   // Ngày kết thúc = ngày bắt đầu + thời lượng (tính theo đơn vị Ngày/Tháng/Năm)
   const computeEndDate = (startDate: string, duration: number, unit: string): string => {
@@ -274,47 +325,65 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
     setIsCreatingContract(true);
     const roomId = activeChat?.conversationId || activeChat?.id || activeChat?.Id;
 
+    const payload = {
+      conversationId: roomId,
+      spaceId: Number(contractData.spaceId) || 0,
+      primaryBookingRequestId: Number(contractData.primaryBookingRequestId) || 0,
+      durationUnit: contractData.durationUnit,
+      duration: Number(contractData.duration),
+      startDate: new Date(contractData.startDate).toISOString(),
+      acreage: Number(contractData.acreage),
+      price: Number(contractData.price),
+      depositAmount: Number(contractData.depositAmount),
+      description: contractData.description,
+      businessPurpose: contractData.businessPurpose,
+      contractSchedules: contractData.contractSchedules,
+    };
+
     try {
-      const createPayload = {
-        conversationId: roomId,
-        spaceId: Number(contractData.spaceId) || 0,
-        primaryBookingRequestId: Number(contractData.primaryBookingRequestId) || 0,
-        durationUnit: contractData.durationUnit,
-        duration: Number(contractData.duration),
-        startDate: new Date(contractData.startDate).toISOString(),
-        acreage: Number(contractData.acreage),
-        price: Number(contractData.price),
-        depositAmount: Number(contractData.depositAmount),
-        description: contractData.description,
-        businessPurpose: contractData.businessPurpose,
-        contractSchedules: contractData.contractSchedules,
-        lessorId,
-        lesseeId,
-      };
-
-      const createRes = await fetch(`${API_BASE}/api/Contract/Create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(createPayload),
-      });
-      if (!createRes.ok) {
-        const errBody = await createRes.text().catch(() => '');
-        console.error('Create contract failed:', createRes.status, errBody);
-        throw new Error('Lỗi tạo hợp đồng: ' + (errBody || createRes.status));
-      }
-      const createdContract = await createRes.json();
-      const newContractId = createdContract.id || createdContract.Id;
-
-      if (newContractId) {
-        const shareRes = await fetch(`${API_BASE}/api/Contract/${newContractId}/share`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+      if (isEditMode) {
+        // ---- CHẾ ĐỘ SỬA: PUT /api/Contract/Update/{id} ----
+        const updateRes = await fetch(`${API_BASE}/api/Contract/Update/${existingContract.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload),
         });
-        if (!shareRes.ok) throw new Error('Lỗi share hợp đồng');
+        if (!updateRes.ok) {
+          const errBody = await updateRes.text().catch(() => '');
+          console.error('Update contract failed:', updateRes.status, errBody);
+          throw new Error('Lỗi cập nhật hợp đồng: ' + (errBody || updateRes.status));
+        }
 
-        await onCreated(`📄 Tôi vừa tạo và gửi một Hợp đồng (Mã: #${newContractId}). Vui lòng kiểm tra và xác nhận nhé!`);
-        alert('Tạo hợp đồng thành công!');
+        await onCreated(`✏️ Tôi vừa cập nhật Hợp đồng (Mã: #${existingContract.id}). Vui lòng kiểm tra lại nhé!`);
+        alert('Cập nhật hợp đồng thành công!');
         onClose();
+      } else {
+        // ---- CHẾ ĐỘ TẠO MỚI: POST /api/Contract/Create + share ----
+        const createPayload = { ...payload, lessorId, lesseeId };
+        const createRes = await fetch(`${API_BASE}/api/Contract/Create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(createPayload),
+        });
+        if (!createRes.ok) {
+          const errBody = await createRes.text().catch(() => '');
+          console.error('Create contract failed:', createRes.status, errBody);
+          throw new Error('Lỗi tạo hợp đồng: ' + (errBody || createRes.status));
+        }
+        const createdContract = await createRes.json();
+        const newContractId = createdContract.id || createdContract.Id;
+
+        if (newContractId) {
+          const shareRes = await fetch(`${API_BASE}/api/Contract/${newContractId}/share`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+          });
+          if (!shareRes.ok) throw new Error('Lỗi share hợp đồng');
+
+          await onCreated(`📄 Tôi vừa tạo và gửi một Hợp đồng (Mã: #${newContractId}). Vui lòng kiểm tra và xác nhận nhé!`);
+          alert('Tạo hợp đồng thành công!');
+          onClose();
+        }
       }
     } catch (error: any) {
       alert(error.message);
@@ -388,7 +457,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
           }}
         >
           <span style={{ fontWeight: 700, fontSize: '17px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileText size={18} /> Tạo Hợp Đồng Thuê
+            <FileText size={18} /> {isEditMode ? `Chỉnh Sửa Hợp Đồng #${existingContract.id}` : 'Tạo Hợp Đồng Thuê'}
           </span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
             <X size={22} />
@@ -423,7 +492,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                   </option>
                   {matchedBookingRequests.map((req) => (
                     <option key={req.id} value={req.id}>
-                      #{req.id} - {Number(req.offeredPrice).toLocaleString('vi-VN')}₫
+                      #{req.id} - {Number(req.offeredPrice || 0).toLocaleString('vi-VN')}₫
                     </option>
                   ))}
                 </select>
@@ -659,7 +728,9 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                 opacity: isCreatingContract || !contractData.primaryBookingRequestId ? 0.6 : 1,
               }}
             >
-              {isCreatingContract ? 'Đang tạo & Gửi...' : 'Phát Hành Hợp Đồng (Online)'}
+              {isCreatingContract
+                ? (isEditMode ? 'Đang cập nhật...' : 'Đang tạo & Gửi...')
+                : (isEditMode ? 'Cập Nhật Hợp Đồng' : 'Phát Hành Hợp Đồng (Online)')}
             </button>
           </form>
 
@@ -675,7 +746,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
               Hợp đồng Thuê Mặt Bằng
             </h2>
             <p style={{ textAlign: 'center', fontSize: '12px', color: '#64748B', marginBottom: '24px' }}>
-              {selectedTemplate ? selectedTemplate.label : 'Chưa chọn mẫu'}
+              {selectedTemplate ? selectedTemplate.label : (isEditMode ? 'Đang chỉnh sửa nội dung hiện có' : 'Chưa chọn mẫu')}
             </p>
 
             <div

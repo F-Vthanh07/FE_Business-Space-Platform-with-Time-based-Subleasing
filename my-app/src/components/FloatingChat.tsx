@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Minus, Send, Image as ImageIcon, ArrowLeft, BellRing, FileSignature, FileText } from 'lucide-react';
 import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr';
-import { ContractViewModal } from './ContractViewModal';
-import { ContractCreateModal } from './ContractCreateModal';
+import { ContractViewModal } from './Contract/ContractViewModal';
+import { ContractCreateModal } from './Contract/ContractCreateModal';
 
 export const FloatingChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,13 +28,32 @@ export const FloatingChat: React.FC = () => {
 
   // Modal tạo hợp đồng (tách riêng khỏi khung chat, full screen, 2 cột form/preview)
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
+  
+  // STATE MỚI: Dùng để lưu trữ data của hợp đồng cần sửa
+  const [editingContract, setEditingContract] = useState<any>(null);
 
+  // Tên hiển thị của "người kia" trong khung chat (dùng cho tiêu đề chat, avatar...).
+  // Field thật từ BE là lessorUserName/lesseeUserName (xem GET /api/Conversation/User/{id}),
+  // vẫn giữ thêm vài field dự phòng (lessorName/LessorName...) phòng khi BE đổi tên field.
   const getOtherPersonName = (room: any) => {
     if (!room) return 'Khách';
-    const nameFromRoom = room.lesseeName || room.LesseeName || room.lessorName || room.LessorName;
+    const nameFromRoom =
+      room.lesseeUserName || room.LesseeUserName ||
+      room.lessorUserName || room.LessorUserName ||
+      room.lesseeName || room.LesseeName ||
+      room.lessorName || room.LessorName;
     if (nameFromRoom) return nameFromRoom;
     const rLessorId = room.lessorId || room.LessorId;
     return String(rLessorId) === String(currentUserId) ? "Khách thuê" : "Chủ nhà";
+  };
+
+  // Lấy riêng tên của TỪNG bên (không phải "người kia") để truyền vào ContractViewModal,
+  // vì modal đó cần biết rõ ai là Bên cho thuê / Bên thuê, không phải chỉ "người đang chat cùng mình".
+  const getContractPartyNames = (room: any) => {
+    if (!room) return { lessorName: '', lesseeName: '' };
+    const lessorName = room.lessorUserName || room.LessorUserName || room.lessorName || room.LessorName || '';
+    const lesseeName = room.lesseeUserName || room.LesseeUserName || room.lesseeName || room.LesseeName || '';
+    return { lessorName, lesseeName };
   };
 
   const scrollToBottom = () => {
@@ -156,7 +175,44 @@ export const FloatingChat: React.FC = () => {
     }
   };
 
+  // --- HÀM XỬ LÝ KHI BẤM NÚT "CHỈNH SỬA" ---
+  const handleEditContract = (contractData: any) => {
+    setEditingContract(contractData); // Nạp data cũ
+    setIsContractModalOpen(true);     // Mở form Create (giờ sẽ đóng vai trò là form Edit)
+    setView('CHAT');                  // Đóng pop-up View đi
+  };
+
+  // --- HÀM XỬ LÝ KHI BẤM NÚT "THU HỒI" ---
+  const handleDeleteContract = async (contractId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn thu hồi và hủy bỏ hợp đồng này?')) return;
+    
+    try {
+      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Contract/Delete/${contractId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+
+      if (res.ok) {
+        alert('Đã thu hồi hợp đồng thành công!');
+        // Tự động nhắn 1 tin báo cho khách biết
+        handleSendMessage(undefined, `❌ Tôi đã thu hồi Hợp đồng (Mã: #${contractId}). Xin lỗi vì sự bất tiện này.`);
+        setView('CHAT');
+      } else {
+        throw new Error('Thu hồi thất bại. Có thể hợp đồng đã được ký hoặc không tồn tại.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Lỗi kết nối đến máy chủ.');
+    }
+  };
+
   const renderMessageContent = (text: string) => {
+    // Tin nhắn thu hồi hợp đồng thì KHÔNG cho xem lại (đã bị hủy)
+    const isRevokedMessage = text.includes('❌') && text.includes('thu hồi');
+    if (isRevokedMessage) {
+      return <>{text}</>;
+    }
+
     const contractRegex = /Hợp đồng \(Mã: #(\d+)\)/i;
     const match = text.match(contractRegex);
 
@@ -178,7 +234,6 @@ export const FloatingChat: React.FC = () => {
     }
     return <>{text}</>;
   };
-
 
   return (
     <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontFamily: 'system-ui, sans-serif' }}>
@@ -285,6 +340,15 @@ export const FloatingChat: React.FC = () => {
             <ContractViewModal
               contract={contractDetail}
               onClose={() => setView('CHAT')}
+              
+              /* TRUYỀN 3 PROPS NÀY VÀO ĐỂ CONTRACT VIEW HIỂN THỊ NÚT SỬA/XÓA */
+              isLessor={isLessor}
+              onEdit={() => handleEditContract(contractDetail)}
+              onDelete={() => handleDeleteContract(contractDetail.id)}
+
+              /* TÊN THẬT CỦA 2 BÊN - LẤY TỪ activeChat (chính là hội thoại đã tạo ra hợp đồng này) */
+              lessorName={getContractPartyNames(activeChat).lessorName}
+              lesseeName={getContractPartyNames(activeChat).lesseeName}
             />
           )}
 
@@ -304,13 +368,19 @@ export const FloatingChat: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL TẠO HỢP ĐỒNG - tách riêng khỏi khung chat, full screen, 2 cột form/preview */}
+      {/* MODAL TẠO & SỬA HỢP ĐỒNG */}
       <ContractCreateModal
         isOpen={isContractModalOpen}
-        onClose={() => setIsContractModalOpen(false)}
+        onClose={() => {
+          setIsContractModalOpen(false);
+          setEditingContract(null); // Reset cục data để lần sau mở form trống
+        }}
         activeChat={activeChat}
         token={token}
         onCreated={(msg) => handleSendMessage(undefined, msg)}
+        
+        /* TRUYỀN CỤC DATA CŨ VÀO ĐỂ FORM TỰ BIẾT ĐÂY LÀ CHẾ ĐỘ CHỈNH SỬA */
+        existingContract={editingContract} 
       />
     </div>
   );
