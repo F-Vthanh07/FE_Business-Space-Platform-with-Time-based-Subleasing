@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
-import { X, Printer, FileText, Wallet, CalendarDays, Building2, Briefcase } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Printer, FileText, Wallet, CalendarDays, Building2, Briefcase, CheckCircle } from 'lucide-react';
 import { splitContractHeaderBody } from './contractTemplates';
 
 interface ContractViewModalProps {
@@ -22,10 +22,70 @@ const formatDurationUnit = (unit?: string) => {
 };
 
 export const ContractViewModal: React.FC<ContractViewModalProps> = ({ contract, onClose }) => {
+  // State quản lý luồng ký Hợp đồng
+  const [signStep, setSignStep] = useState<'idle' | 'otp_sent' | 'success'>('idle');
+  const [otpCode, setOtpCode] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+
   if (!contract) return null;
 
   const spaceName = contract.spaceName || contract.space?.name || '...';
   const { header: contractHeader, body: contractBody } = splitContractHeaderBody(contract.description || '');
+
+  // --- HÀM GỬI OTP ---
+  const handleSendOtp = async () => {
+    setIsProcessing(true);
+    try {
+      const token = localStorage.getItem('portal_token');
+      const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Contract/${contract.id}/send-otp`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+
+      if (!response.ok) {
+        throw new Error('Lỗi khi gửi OTP. Vui lòng thử lại!');
+      }
+
+      setSignStep('otp_sent');
+      alert('Mã OTP đã được gửi đến Email của bạn. Vui lòng kiểm tra!');
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- HÀM XÁC THỰC OTP ---
+  const handleValidateOtp = async () => {
+    if (!otpCode.trim()) {
+      alert('Vui lòng nhập mã OTP!');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const token = localStorage.getItem('portal_token');
+      // Lưu ý: Swagger yêu cầu truyền inputOtp qua Query Parameter
+      const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Contract/${contract.id}/validate-otp?inputOtp=${encodeURIComponent(otpCode)}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+
+      if (!response.ok) {
+        throw new Error('Mã OTP không hợp lệ hoặc đã hết hạn!');
+      }
+
+      setSignStep('success');
+      alert('Ký hợp đồng thành công!');
+      // TODO: Có thể trigger thêm một hàm callback ra ngoài để báo Parent component refresh lại danh sách
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div
@@ -49,6 +109,12 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({ contract, 
           .cv-card-header { font-size: 13px; font-weight: 700; color: #1E293B; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
           .cv-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; font-size: 13px; color: #334155; }
           .cv-row p { margin: 0; }
+          .cv-btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
+          .cv-btn-primary { background-color: #10B981; color: white; }
+          .cv-btn-primary:disabled { background-color: #A7F3D0; cursor: not-allowed; }
+          .cv-btn-secondary { background-color: #E2E8F0; color: #475569; }
+          .cv-input { padding: 12px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 16px; text-align: center; letter-spacing: 2px; outline: none; transition: border-color 0.2s; }
+          .cv-input:focus { border-color: #10B981; }
           @media print {
             .cv-no-print { display: none !important; }
           }
@@ -187,10 +253,69 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({ contract, 
             </div>
           </div>
 
-          {/* Chữ ký */}
-          <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', textAlign: 'center', fontSize: '13px', color: '#334155' }}>
-            <div>Bên cho thuê<br /><br /><br />(Ký tên)</div>
-            <div>Bên thuê<br /><br /><br />(Ký tên)</div>
+          {/* Chữ ký Placeholder */}
+          <div style={{ marginTop: '30px', marginBottom: '40px', display: 'flex', justifyContent: 'space-between', textAlign: 'center', fontSize: '13px', color: '#334155' }}>
+            <div style={{ width: '45%' }}>Bên cho thuê<br /><br /><br />(Ký tên)</div>
+            <div style={{ width: '45%' }}>Bên thuê<br /><br /><br />(Ký tên)</div>
+          </div>
+
+          {/* KHU VỰC THAO TÁC KÝ HỢP ĐỒNG ONLINE (e-Signature) */}
+          <div className="cv-no-print" style={{ borderTop: '2px dashed #E2E8F0', paddingTop: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+            
+            {signStep === 'idle' && (
+              <>
+                <p style={{ margin: 0, fontSize: '14px', color: '#64748B' }}>Xác nhận và Ký điện tử Hợp đồng này thông qua OTP</p>
+                <button 
+                  className="cv-btn cv-btn-primary" 
+                  onClick={handleSendOtp}
+                  disabled={isProcessing}
+                  style={{ width: '280px' }}
+                >
+                  <CheckCircle size={18} />
+                  {isProcessing ? 'Đang gửi mã...' : 'Đồng Ý Ký (Nhận mã OTP)'}
+                </button>
+              </>
+            )}
+
+            {signStep === 'otp_sent' && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', width: '100%' }}>
+                <p style={{ margin: 0, fontSize: '14px', color: '#64748B' }}>Nhập mã OTP gồm 6 số đã được gửi đến Email của bạn</p>
+                <input 
+                  type="text" 
+                  maxLength={6}
+                  placeholder="------"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  className="cv-input"
+                  style={{ width: '200px' }}
+                />
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button 
+                    className="cv-btn cv-btn-secondary" 
+                    onClick={() => setSignStep('idle')}
+                    disabled={isProcessing}
+                  >
+                    Hủy
+                  </button>
+                  <button 
+                    className="cv-btn cv-btn-primary" 
+                    onClick={handleValidateOtp}
+                    disabled={isProcessing || otpCode.length < 6}
+                  >
+                    {isProcessing ? 'Đang kiểm tra...' : 'Xác Nhận Ký'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {signStep === 'success' && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#10B981' }}>
+                <CheckCircle size={40} />
+                <h3 style={{ margin: 0, fontSize: '18px' }}>Chữ ký điện tử thành công!</h3>
+                <p style={{ margin: 0, fontSize: '14px', color: '#64748B' }}>Hợp đồng sẽ chính thức có hiệu lực khi cả 2 bên hoàn tất việc ký kết.</p>
+              </div>
+            )}
+
           </div>
         </div>
       </div>
