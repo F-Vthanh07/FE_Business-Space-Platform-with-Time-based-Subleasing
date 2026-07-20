@@ -131,6 +131,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
       clearInterval(interval);
       window.removeEventListener('booking-request-seen', handleSeen);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const renderNavGroup = (items: NavItem[]) =>
