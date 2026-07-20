@@ -1,11 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
-import { X, Printer, FileText, Wallet, CalendarDays, Building2, Briefcase, CheckCircle } from 'lucide-react';
-import { splitContractHeaderBody } from './contractTemplates';
+import React, { useState, useEffect } from 'react';
+import { X, Printer, FileText, Wallet, CalendarDays, Building2, Briefcase, CheckCircle, Edit3, Trash2 } from 'lucide-react';
+import { splitContractHeaderBody } from '../contractTemplates';
 
 interface ContractViewModalProps {
   contract: any;
   onClose: () => void;
+  isLessor?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  // Tên thật của 2 bên (lấy từ danh sách hội thoại - vì contract không tự trả tên).
+  // Không bắt buộc: nếu không truyền, modal vẫn chạy bình thường và chỉ hiện nhãn vai trò chung chung.
+  lessorName?: string;
+  lesseeName?: string;
 }
 
 const formatCurrency = (value?: number) =>
@@ -21,11 +28,65 @@ const formatDurationUnit = (unit?: string) => {
   return unit || '...';
 };
 
-export const ContractViewModal: React.FC<ContractViewModalProps> = ({ contract, onClose }) => {
+// Coi 1 giá trị là "đã ký" nếu nó là true, hoặc 1 chuỗi/ngày không rỗng (vd timestamp ký),
+// vì BE có thể trả về dạng boolean (isSignedByLessor) hoặc dạng timestamp (lessorSignedAt).
+const isTruthySigned = (v: any) => v === true || (typeof v === 'string' && v.trim().length > 0);
+
+// Dò trạng thái đã ký của từng bên từ nhiều khả năng đặt tên field khác nhau của BE.
+// NOTE: Nếu tên field thật của BE khác với các tên bên dưới, hãy mở tab Network ->
+// gọi GetById 1 hợp đồng đã ký -> xem Response JSON có field nào đánh dấu đã ký rồi sửa lại đây.
+const getSignFlags = (contract: any) => {
+  const lessorSigned = isTruthySigned(
+    contract?.isSignedByLessor ??
+      contract?.IsSignedByLessor ??
+      contract?.lessorSignedAt ??
+      contract?.LessorSignedAt ??
+      contract?.lessorSignDate ??
+      contract?.LessorSignDate
+  );
+  const lesseeSigned = isTruthySigned(
+    contract?.isSignedByLessee ??
+      contract?.IsSignedByLessee ??
+      contract?.lesseeSignedAt ??
+      contract?.LesseeSignedAt ??
+      contract?.lesseeSignDate ??
+      contract?.LesseeSignDate
+  );
+  return { lessorSigned, lesseeSigned };
+};
+
+export const ContractViewModal: React.FC<ContractViewModalProps> = ({
+  contract,
+  onClose,
+  isLessor,
+  onEdit,
+  onDelete,
+  lessorName,
+  lesseeName,
+}) => {
   // State quản lý luồng ký Hợp đồng
   const [signStep, setSignStep] = useState<'idle' | 'otp_sent' | 'success'>('idle');
   const [otpCode, setOtpCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const status = contract?.status || contract?.Status;
+  const { lessorSigned, lesseeSigned } = getSignFlags(contract);
+  const signedByMe = isLessor ? lessorSigned : lesseeSigned;
+  const signedByOther = isLessor ? lesseeSigned : lessorSigned;
+  // Hợp đồng coi như có hiệu lực đầy đủ khi status = Active, hoặc khi cả 2 bên đều đã ký
+  // (fallback cho trường hợp field status chưa kịp cập nhật).
+  const isFullyActive = status === 'Active' || (lessorSigned && lesseeSigned);
+
+  // Mỗi khi đổi sang xem 1 hợp đồng khác (hoặc dữ liệu hợp đồng được load xong),
+  // tự xác định lại xem mình (isLessor) đã ký hợp đồng này chưa để hiện đúng UI ngay
+  // từ đầu, không đợi bấm nút mới biết.
+  useEffect(() => {
+    if (!contract) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOtpCode('');
+    setSignStep(signedByMe || status === 'Active' ? 'success' : 'idle');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contract?.id, isLessor]);
 
   if (!contract) return null;
 
@@ -43,7 +104,25 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({ contract, 
       });
 
       if (!response.ok) {
-        throw new Error('Lỗi khi gửi OTP. Vui lòng thử lại!');
+        const raw = await response.text().catch(() => '');
+        let serverMsg = raw;
+        try {
+          // BE có thể trả string JSON kiểu "Bạn đã ký hợp đồng này rồi." (có ngoặc kép bao ngoài)
+          const parsed = JSON.parse(raw);
+          if (typeof parsed === 'string') serverMsg = parsed;
+          else if (parsed?.message) serverMsg = parsed.message;
+        } catch {
+          // raw không phải JSON, giữ nguyên chuỗi thô
+        }
+
+        // Đây không thực sự là lỗi - BE đang báo tài khoản này ký rồi, nên chỉ cần
+        // cập nhật lại UI cho đúng thực tế, không cần alert cảnh báo người dùng.
+        if (typeof serverMsg === 'string' && serverMsg.includes('đã ký')) {
+          setSignStep('success');
+          return;
+        }
+
+        throw new Error(serverMsg || 'Lỗi khi gửi OTP. Vui lòng thử lại!');
       }
 
       setSignStep('otp_sent');
@@ -87,6 +166,9 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({ contract, 
     }
   };
 
+  // Chỉ cho Sửa/Thu hồi khi chưa ký thành công
+  const canModify = isLessor && signStep === 'idle';
+
   return (
     <div
       style={{
@@ -115,6 +197,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({ contract, 
           .cv-btn-secondary { background-color: #E2E8F0; color: #475569; }
           .cv-input { padding: 12px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 16px; text-align: center; letter-spacing: 2px; outline: none; transition: border-color 0.2s; }
           .cv-input:focus { border-color: #10B981; }
+          .cv-action-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
           @media print {
             .cv-no-print { display: none !important; }
           }
@@ -170,9 +253,33 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({ contract, 
           <h2 style={{ textAlign: 'center', textTransform: 'uppercase', marginBottom: '4px', fontSize: '18px', color: '#1E293B' }}>
             Hợp Đồng Thuê Mặt Bằng
           </h2>
-          <p style={{ textAlign: 'center', fontSize: '12px', color: '#64748B', marginBottom: '24px' }}>
+          <p style={{ textAlign: 'center', fontSize: '12px', color: '#64748B', marginBottom: '16px' }}>
             Lập ngày {formatDate(contract.createdAt || new Date().toISOString())}
           </p>
+
+          {/* Nút Sửa / Thu hồi - chỉ chủ nhà mới thấy, và chỉ khi hợp đồng chưa ký xong */}
+          {canModify && (onEdit || onDelete) && (
+            <div className="cv-no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '20px' }}>
+              {onEdit && (
+                <button
+                  onClick={onEdit}
+                  className="cv-action-btn"
+                  style={{ border: '1px solid #CBD5E1', backgroundColor: '#fff', color: '#334155' }}
+                >
+                  <Edit3 size={14} /> Chỉnh sửa
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={onDelete}
+                  className="cv-action-btn"
+                  style={{ border: 'none', backgroundColor: '#FEF2F2', color: '#B91C1C' }}
+                >
+                  <Trash2 size={14} /> Thu hồi
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Liên kết */}
           <div className="cv-card">
@@ -184,6 +291,19 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({ contract, 
               <p><strong>Mã yêu cầu đặt thuê:</strong> #{contract.primaryBookingRequestId || '...'}</p>
             </div>
           </div>
+
+          {/* Các bên tham gia - chỉ hiện khi có tên thật (truyền từ ngoài vào) */}
+          {(lessorName || lesseeName) && (
+            <div className="cv-card">
+              <div className="cv-card-header">
+                <FileText size={14} color="#64748B" /> Các bên tham gia
+              </div>
+              <div className="cv-row">
+                <p><strong>Bên cho thuê:</strong> {lessorName || '...'}</p>
+                <p><strong>Bên thuê:</strong> {lesseeName || '...'}</p>
+              </div>
+            </div>
+          )}
 
           {/* Tài chính */}
           <div className="cv-card">
@@ -255,8 +375,26 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({ contract, 
 
           {/* Chữ ký Placeholder */}
           <div style={{ marginTop: '30px', marginBottom: '40px', display: 'flex', justifyContent: 'space-between', textAlign: 'center', fontSize: '13px', color: '#334155' }}>
-            <div style={{ width: '45%' }}>Bên cho thuê<br /><br /><br />(Ký tên)</div>
-            <div style={{ width: '45%' }}>Bên thuê<br /><br /><br />(Ký tên)</div>
+            <div style={{ width: '45%' }}>
+              Bên cho thuê{lessorName ? ` (${lessorName})` : ''}<br />
+              {lessorSigned ? (
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '10px' }}>
+                  <CheckCircle size={14} /> Đã ký
+                </span>
+              ) : (
+                <span style={{ color: '#94A3B8', fontSize: '12px', marginTop: '10px', display: 'inline-block' }}>(Ký tên)</span>
+              )}
+            </div>
+            <div style={{ width: '45%' }}>
+              Bên thuê{lesseeName ? ` (${lesseeName})` : ''}<br />
+              {lesseeSigned ? (
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '10px' }}>
+                  <CheckCircle size={14} /> Đã ký
+                </span>
+              ) : (
+                <span style={{ color: '#94A3B8', fontSize: '12px', marginTop: '10px', display: 'inline-block' }}>(Ký tên)</span>
+              )}
+            </div>
           </div>
 
           {/* KHU VỰC THAO TÁC KÝ HỢP ĐỒNG ONLINE (e-Signature) */}
@@ -311,8 +449,16 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({ contract, 
             {signStep === 'success' && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#10B981' }}>
                 <CheckCircle size={40} />
-                <h3 style={{ margin: 0, fontSize: '18px' }}>Chữ ký điện tử thành công!</h3>
-                <p style={{ margin: 0, fontSize: '14px', color: '#64748B' }}>Hợp đồng sẽ chính thức có hiệu lực khi cả 2 bên hoàn tất việc ký kết.</p>
+                <h3 style={{ margin: 0, fontSize: '18px' }}>
+                  {isFullyActive ? 'Hợp đồng đã có hiệu lực!' : 'Bạn đã ký hợp đồng này!'}
+                </h3>
+                <p style={{ margin: 0, fontSize: '14px', color: '#64748B', textAlign: 'center' }}>
+                  {isFullyActive
+                    ? 'Cả 2 bên đã hoàn tất ký kết, hợp đồng chính thức có hiệu lực.'
+                    : signedByOther
+                      ? 'Cả 2 bên đã ký, hợp đồng chính thức có hiệu lực.'
+                      : 'Hợp đồng sẽ chính thức có hiệu lực khi Bên còn lại hoàn tất việc ký kết.'}
+                </p>
               </div>
             )}
 

@@ -14,7 +14,8 @@ export type UserPage =
   | 'wallet-history'
   | 'booking-requests'
   | 'change-password'
-  | 'forgot-password';
+  | 'forgot-password'
+  | 'contracts';
 
 export interface SubSlot {
   id: string;

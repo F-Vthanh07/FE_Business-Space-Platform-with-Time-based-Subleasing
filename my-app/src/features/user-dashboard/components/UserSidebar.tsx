@@ -40,7 +40,8 @@ const dashboardNavItems: NavItem[] = [
 const spaceNavItems: NavItem[] = [
   { id: 'spaces', icon: <Building2 size={16} /> },
   { id: 'listings', icon: <FileText size={16} /> },
-  { id: 'booking-requests', icon: <Inbox size={16} /> }, // <-- THÊM NÚT DUYỆT ĐƠN VÀO ĐÂY
+  { id: 'booking-requests', icon: <Inbox size={16} /> },
+  { id: 'contracts', icon: <FileText size={16} /> },
   { id: 'tenants', icon: <Users size={16} /> },
 ];
 
@@ -65,10 +66,8 @@ const getPageLabels = (id: string, lang: string) => {
     case 'overview': return { title: isEn ? 'Dashboard' : 'Bảng điều khiển', sub: isEn ? 'System overview' : 'Tổng quan hệ thống' };
     case 'spaces': return { title: isEn ? 'My Spaces' : 'Quản lý Mặt bằng', sub: isEn ? 'Physical locations' : 'Tài sản vật lý' };
     case 'listings': return { title: isEn ? 'My Listings' : 'Quản lý Tin đăng', sub: isEn ? 'Public market ads' : 'Bài đăng cho thuê' };
-    
-    // <-- THÊM LABEL CHO NÚT DUYỆT ĐƠN
     case 'booking-requests': return { title: isEn ? 'Booking Requests' : 'Yêu cầu chờ duyệt', sub: isEn ? 'Manage applications' : 'Duyệt đơn khách thuê' };
-    
+    case 'contracts': return { title: isEn ? 'My Contracts' : 'Hợp đồng của bạn', sub: isEn ? 'View & sign' : 'Xem & ký hợp đồng' };    
     case 'tenants': return { title: isEn ? 'Tenants' : 'Khách thuê', sub: isEn ? 'Manage contracts' : 'Quản lý hợp đồng' };
     case 'calendar': return { title: isEn ? 'Calendar' : 'Lịch cho thuê lại', sub: isEn ? 'Sublease slots' : 'Khung giờ cho thuê lại' };
     case 'sublease-listings': return { title: isEn ? 'Sublease Market' : 'Chợ cho thuê lại', sub: isEn ? 'Your sublease ads' : 'Tin cho thuê lại' };
