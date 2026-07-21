@@ -13,6 +13,7 @@ export type UserPage =
   | 'wallet-deposit'
   | 'wallet-history'
   | 'booking-requests'
+  | 'my-booking-requests'
   | 'change-password'
   | 'forgot-password'
   | 'contracts';

@@ -160,19 +160,25 @@ export const FloatingChat: React.FC = () => {
   };
 
   const openContractDetail = async (contractId: string) => {
-    setView('CONTRACT_DETAIL');
-    setContractDetail(null);
-    try {
-      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Contract/GetById/${contractId}`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setContractDetail(data);
-      }
-    } catch (err) {
-      console.error("Lỗi lấy chi tiết Hợp đồng:", err);
+  setView('CONTRACT_DETAIL');
+  setContractDetail(null);
+  try {
+    const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Contract/GetById/${contractId}`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setContractDetail(data);
+    } else {
+      // Hợp đồng không còn tồn tại (đã bị thu hồi/xóa) hoặc lỗi từ BE
+      alert('Hợp đồng này không còn tồn tại hoặc đã bị thu hồi.');
+      setView('CHAT');
     }
+  } catch (err) {
+    console.error("Lỗi lấy chi tiết Hợp đồng:", err);
+    alert('Không thể tải chi tiết hợp đồng. Vui lòng thử lại.');
+    setView('CHAT');
+  }
   };
 
   // --- HÀM XỬ LÝ KHI BẤM NÚT "CHỈNH SỬA" ---
@@ -206,8 +212,19 @@ export const FloatingChat: React.FC = () => {
     }
   };
 
+  // Quét toàn bộ chatHistory để tìm các hợp đồng đã bị thu hồi
+  const getRevokedContractIds = () => {
+    const revokedIds = new Set<string>();
+    chatHistory.forEach((msg) => {
+      if (msg.text?.includes('❌') && msg.text?.includes('thu hồi')) {
+        const m = msg.text.match(/Mã:\s*#(\d+)/i);
+        if (m && m[1]) revokedIds.add(m[1]);
+      }
+    });
+    return revokedIds;
+  };
+
   const renderMessageContent = (text: string) => {
-    // Tin nhắn thu hồi hợp đồng thì KHÔNG cho xem lại (đã bị hủy)
     const isRevokedMessage = text.includes('❌') && text.includes('thu hồi');
     if (isRevokedMessage) {
       return <>{text}</>;
@@ -218,16 +235,25 @@ export const FloatingChat: React.FC = () => {
 
     if (match && match[1]) {
       const cId = match[1];
+      const revokedIds = getRevokedContractIds();
+      const isThisContractRevoked = revokedIds.has(cId);
+
       return (
         <div>
           <span>{text}</span>
           <div style={{ marginTop: '8px' }}>
-            <button
-              onClick={() => openContractDetail(cId)}
-              style={{ padding: '6px 12px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <FileText size={14} /> Xem Hợp Đồng
-            </button>
+            {isThisContractRevoked ? (
+              <span style={{ fontSize: '12px', color: '#EF4444', fontStyle: 'italic' }}>
+                Hợp đồng này đã bị thu hồi
+              </span>
+            ) : (
+              <button
+                onClick={() => openContractDetail(cId)}
+                style={{ padding: '6px 12px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <FileText size={14} /> Xem Hợp Đồng
+              </button>
+            )}
           </div>
         </div>
       );

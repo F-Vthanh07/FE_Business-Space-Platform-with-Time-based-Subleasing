@@ -37,6 +37,10 @@ const dashboardNavItems: NavItem[] = [
   { id: 'overview', icon: <LayoutDashboard size={16} /> },
 ];
 
+const renterRequestNavItems: NavItem[] = [
+  { id: 'my-booking-requests', icon: <Inbox size={16} /> },
+];
+
 const spaceNavItems: NavItem[] = [
   { id: 'spaces', icon: <Building2 size={16} /> },
   { id: 'listings', icon: <FileText size={16} /> },
@@ -67,6 +71,7 @@ const getPageLabels = (id: string, lang: string) => {
     case 'spaces': return { title: isEn ? 'My Spaces' : 'Quản lý Mặt bằng', sub: isEn ? 'Physical locations' : 'Tài sản vật lý' };
     case 'listings': return { title: isEn ? 'My Listings' : 'Quản lý Tin đăng', sub: isEn ? 'Public market ads' : 'Bài đăng cho thuê' };
     case 'booking-requests': return { title: isEn ? 'Booking Requests' : 'Yêu cầu chờ duyệt', sub: isEn ? 'Manage applications' : 'Duyệt đơn khách thuê' };
+    case 'my-booking-requests': return { title: isEn ? 'My Requests' : 'Đơn thuê đã gửi', sub: isEn ? 'Track your requests' : 'Theo dõi yêu cầu thuê' };
     case 'contracts': return { title: isEn ? 'My Contracts' : 'Hợp đồng của bạn', sub: isEn ? 'View & sign' : 'Xem & ký hợp đồng' };    
     case 'tenants': return { title: isEn ? 'Tenants' : 'Khách thuê', sub: isEn ? 'Manage contracts' : 'Quản lý hợp đồng' };
     case 'calendar': return { title: isEn ? 'Calendar' : 'Lịch cho thuê lại', sub: isEn ? 'Sublease slots' : 'Khung giờ cho thuê lại' };
@@ -193,6 +198,11 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
           {language === 'en' ? 'MY SPACES' : 'MẶT BẰNG CỦA TÔI'}
         </span>
         {renderNavGroup(spaceNavItems)}
+
+        <span className="user-sidebar-group-label">
+          {language === 'en' ? 'MY REQUESTS' : 'ĐƠN THUÊ CỦA TÔI'}
+        </span>
+        {renderNavGroup(renterRequestNavItems)}
 
         <span className="user-sidebar-group-label">
           {language === 'en' ? 'SUBLEASING' : 'CHO THUÊ LẠI'}
