@@ -18,16 +18,50 @@ export const MapComponent: React.FC = () => {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
           
-          // GIẢ LẬP TỌA ĐỘ: Rải ngẫu nhiên các bài đăng quanh trung tâm TP.HCM
-          // Nếu sau này BE có trả về lat/lng thì xóa đoạn Math.random() này đi
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const listingsWithCoords = safeData.map((item: any) => ({
-            ...item,
-            lat: 10.7769 + (Math.random() - 0.5) * 0.08,
-            lng: 106.7000 + (Math.random() - 0.5) * 0.08,
-          }));
+          const processedListings = [];
+
+          // Dùng vòng lặp for...of để có thể dùng await (chờ gọi API từng cái một)
+          for (const item of safeData) {
+            let currentLat = item.spaceLatitude;
+            let currentLng = item.spaceLongitude;
+
+            // Nếu BE trả về 0 (chưa có tọa độ) và có địa chỉ cụ thể
+            if ((!currentLat || currentLat === 0) && item.spaceAddress) {
+              try {
+                // Gọi API Geocoding của Nominatim
+                const geoRes = await fetch(
+                  `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(item.spaceAddress)}&format=json&limit=1`,
+                  { headers: { 'User-Agent': 'FlexiSpaceApp/1.0' } } // Bắt buộc phải có User-Agent
+                );
+                
+                const geoData = await geoRes.json();
+                
+                if (geoData && geoData.length > 0) {
+                  // Nominatim trả về lat/lon dạng string, ép kiểu về float
+                  currentLat = parseFloat(geoData[0].lat);
+                  currentLng = parseFloat(geoData[0].lon);
+                  console.log(`Đã tìm thấy tọa độ cho ${item.spaceAddress}:`, currentLat, currentLng);
+                } else {
+                  console.warn(`Không tìm thấy tọa độ cho: ${item.spaceAddress}`);
+                }
+
+                // Chờ 500ms trước khi gọi request tiếp theo để không bị block IP
+                await new Promise(resolve => setTimeout(resolve, 500));
+              } catch (err) {
+                console.error("Lỗi Geocoding:", err);
+              }
+            }
+
+            // Push vào mảng list chuẩn bị render
+            processedListings.push({
+              ...item,
+              // Gán vào lat/lng để MapGL xài. Nếu vẫn ko tìm ra thì cho fallback về trung tâm Q1
+              lat: currentLat || 10.7769, 
+              lng: currentLng || 106.7000,
+            });
+          }
           
-          setListings(listingsWithCoords);
+          setListings(processedListings);
         }
       } catch (error) {
         console.error("Lỗi lấy dữ liệu bản đồ:", error);
