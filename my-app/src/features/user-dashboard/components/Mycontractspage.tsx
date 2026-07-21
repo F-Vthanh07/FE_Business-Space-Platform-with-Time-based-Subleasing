@@ -30,6 +30,7 @@ const FILTERS: { id: StatusFilter; label: string }[] = [
   { id: 'CANCELLED', label: 'Đã huỷ' },
 ];
 
+// ===== BADGE STYLE — ĐỔI SANG TÔNG MÀU TRONG SUỐT PHÙ HỢP NỀN TỐI =====
 const badgeBase: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
@@ -39,34 +40,35 @@ const badgeBase: React.CSSProperties = {
   padding: '3px 9px',
   borderRadius: 999,
   whiteSpace: 'nowrap',
+  border: '1px solid transparent',
 };
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   if (status === 'Active')
     return (
-      <span style={{ ...badgeBase, background: '#ECFDF5', color: '#059669' }}>
+      <span style={{ ...badgeBase, background: 'rgba(22,163,74,0.15)', color: '#4ADE80', borderColor: 'rgba(74,222,128,0.3)' }}>
         <CheckCircle2 size={12} /> Đã ký
       </span>
     );
   if (status === 'Draft')
     return (
-      <span style={{ ...badgeBase, background: '#FFFBEB', color: '#B45309' }}>
+      <span style={{ ...badgeBase, background: 'rgba(245,158,11,0.15)', color: '#FBBF24', borderColor: 'rgba(251,191,36,0.3)' }}>
         <Clock3 size={12} /> Chưa ký
       </span>
     );
   if (status === 'Expired')
     return (
-      <span style={{ ...badgeBase, background: '#F1F5F9', color: '#64748B' }}>
+      <span style={{ ...badgeBase, background: 'rgba(107,114,128,0.15)', color: '#9CA3AF', borderColor: 'rgba(156,163,175,0.3)' }}>
         <Clock3 size={12} /> Hết hạn
       </span>
     );
   if (status === 'Cancelled')
     return (
-      <span style={{ ...badgeBase, background: '#FEF2F2', color: '#B91C1C' }}>
+      <span style={{ ...badgeBase, background: 'rgba(239,68,68,0.15)', color: '#F87171', borderColor: 'rgba(248,113,113,0.3)' }}>
         <XCircle size={12} /> Đã huỷ
       </span>
     );
-  return <span style={{ ...badgeBase, background: '#F1F5F9', color: '#64748B' }}>{status || '...'}</span>;
+  return <span style={{ ...badgeBase, background: 'rgba(107,114,128,0.15)', color: '#9CA3AF' }}>{status || '...'}</span>;
 };
 
 export const MyContractsPage: React.FC = () => {
@@ -244,27 +246,80 @@ export const MyContractsPage: React.FC = () => {
   const formatDurationUnit = (u?: string) => (u === 'Days' ? 'ngày' : u === 'Months' ? 'tháng' : u === 'Years' ? 'năm' : u || '');
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif' }}>
+    <div className="animate-in">
+      {/* CSS RIÊNG CHO TRANG NÀY — ĐỔI TOÀN BỘ SANG TÔNG MÀU TỐI, KHỚP THEME GLASS CỦA APP */}
       <style>
         {`
-          .mc-tab { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid #E2E8F0; background: #fff; color: #475569; transition: all .15s ease; white-space: nowrap; }
-          .mc-tab:hover { border-color: #94A3B8; }
-          .mc-tab.active { background: #1E293B; border-color: #1E293B; color: #fff; }
-          .mc-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; transition: box-shadow .15s ease, border-color .15s ease; }
-          .mc-card:hover { box-shadow: 0 4px 16px rgba(15,23,42,0.06); border-color: #CBD5E1; }
-          .mc-view-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; border: none; background: #1E293B; color: #fff; }
-          .mc-view-btn:hover { background: #0F172A; }
-          .mc-refresh-btn { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; border: 1px solid #E2E8F0; background: #fff; color: #475569; }
+          .mc-tab {
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.03);
+            color: rgba(255,255,255,0.65);
+            transition: all .15s ease;
+            white-space: nowrap;
+          }
+          .mc-tab:hover { border-color: rgba(255,255,255,0.25); color: #fff; }
+          .mc-tab.active { background: #3B82F6; border-color: #3B82F6; color: #fff; }
+
+          .mc-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            transition: box-shadow .15s ease, border-color .15s ease, background .15s ease;
+          }
+          .mc-card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            border-color: rgba(255,255,255,0.16);
+            background: rgba(255,255,255,0.05);
+          }
+
+          .mc-view-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            background: #3B82F6;
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(59,130,246,0.3);
+          }
+          .mc-view-btn:hover { background: #2563EB; }
+
+          .mc-refresh-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.03);
+            color: rgba(255,255,255,0.75);
+          }
+          .mc-refresh-btn:hover:not(:disabled) { border-color: rgba(255,255,255,0.25); color: #fff; }
+          .mc-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         `}
       </style>
 
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1E293B', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h1 className="page-title" style={{ fontSize: '24px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileText size={22} /> Hợp Đồng Của Bạn
           </h1>
-          <p style={{ fontSize: '13px', color: '#64748B', marginTop: '4px' }}>
+          <p className="page-subtitle text-secondary" style={{ marginTop: '4px' }}>
             Tất cả hợp đồng bạn tham gia, dù là bên cho thuê hay bên thuê.
           </p>
         </div>
@@ -295,56 +350,65 @@ export const MyContractsPage: React.FC = () => {
       </div>
 
       {/* DANH SÁCH */}
-      {isLoading ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#94A3B8', fontSize: '14px' }}>
-          Đang tải danh sách hợp đồng...
-        </div>
-      ) : filteredContracts.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#94A3B8', fontSize: '14px' }}>
-          Không có hợp đồng nào ở mục này.
-        </div>
-      ) : (
-        filteredContracts.map((contract) => {
-          const id = contract.id ?? contract.Id;
-          const status = getStatus(contract);
-          const { lessorName, lesseeName } = getPartyNames(contract);
-          const amILessor = isLessorOf(contract);
+      <div className="glass-card" style={{ padding: '20px', borderRadius: '12px' }}>
+        {isLoading ? (
+          <div style={{ textAlign: 'center', padding: '60px 0', opacity: 0.6, fontSize: '14px' }}>
+            Đang tải danh sách hợp đồng...
+          </div>
+        ) : filteredContracts.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', opacity: 0.5 }}>
+            <FileText size={48} style={{ margin: '0 auto 16px auto' }} />
+            <p>Không có hợp đồng nào ở mục này.</p>
+          </div>
+        ) : (
+          filteredContracts.map((contract) => {
+            const id = contract.id ?? contract.Id;
+            const status = getStatus(contract);
+            const { lessorName, lesseeName } = getPartyNames(contract);
+            const amILessor = isLessorOf(contract);
 
-          return (
-            <div key={id} className="mc-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '240px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '14.5px', color: '#1E293B' }}>Hợp đồng #{id}</span>
-                    <StatusBadge status={status} />
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: amILessor ? '#7C3AED' : '#0891B2', background: amILessor ? '#F5F3FF' : '#ECFEFF', padding: '2px 8px', borderRadius: 999 }}>
-                      {amILessor ? 'Bạn là Bên cho thuê' : 'Bạn là Bên thuê'}
-                    </span>
+            return (
+              <div key={id} className="mc-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '240px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: '14.5px', color: '#fff' }}>Hợp đồng #{id}</span>
+                      <StatusBadge status={status} />
+                      <span style={{
+                        fontSize: '11px', fontWeight: 700,
+                        color: amILessor ? '#C4B5FD' : '#67E8F9',
+                        background: amILessor ? 'rgba(124,58,237,0.15)' : 'rgba(8,145,178,0.15)',
+                        border: `1px solid ${amILessor ? 'rgba(196,181,253,0.3)' : 'rgba(103,232,249,0.3)'}`,
+                        padding: '2px 8px', borderRadius: 999
+                      }}>
+                        {amILessor ? 'Bạn là Bên cho thuê' : 'Bạn là Bên thuê'}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '13px', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                      <Building2 size={13} style={{ opacity: 0.6 }} /> {spaceNameOf(contract)}
+                    </div>
+
+                    <div style={{ fontSize: '13px', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                      <Users size={13} style={{ opacity: 0.6 }} />
+                      <span><strong style={{ color: '#fff' }}>{lessorName}</strong> &harr; <strong style={{ color: '#fff' }}>{lesseeName}</strong></span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '20px', fontSize: '12.5px', opacity: 0.75, flexWrap: 'wrap' }}>
+                      <span>Giá thuê: <strong style={{ color: '#4ADE80' }}>{formatCurrency(contract.price)}</strong></span>
+                      <span>Thời hạn: <strong style={{ color: '#fff' }}>{contract.duration} {formatDurationUnit(contract.durationUnit)}</strong></span>
+                    </div>
                   </div>
 
-                  <div style={{ fontSize: '13px', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                    <Building2 size={13} color="#94A3B8" /> {spaceNameOf(contract)}
-                  </div>
-
-                  <div style={{ fontSize: '13px', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                    <Users size={13} color="#94A3B8" />
-                    <span><strong>{lessorName}</strong> &harr; <strong>{lesseeName}</strong></span>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '20px', fontSize: '12.5px', color: '#64748B', flexWrap: 'wrap' }}>
-                    <span>Giá thuê: <strong style={{ color: '#1E293B' }}>{formatCurrency(contract.price)}</strong></span>
-                    <span>Thời hạn: <strong style={{ color: '#1E293B' }}>{contract.duration} {formatDurationUnit(contract.durationUnit)}</strong></span>
-                  </div>
+                  <button className="mc-view-btn" onClick={() => setViewingContract(contract)}>
+                    <Eye size={14} /> Xem chi tiết{status === 'Draft' ? ' & Ký' : ''}
+                  </button>
                 </div>
-
-                <button className="mc-view-btn" onClick={() => setViewingContract(contract)}>
-                  <Eye size={14} /> Xem chi tiết{status === 'Draft' ? ' & Ký' : ''}
-                </button>
               </div>
-            </div>
-          );
-        })
-      )}
+            );
+          })
+        )}
+      </div>
 
       {/* MODAL XEM CHI TIẾT / KÝ HỢP ĐỒNG (dùng lại component đã có) */}
       {viewingContract && (
