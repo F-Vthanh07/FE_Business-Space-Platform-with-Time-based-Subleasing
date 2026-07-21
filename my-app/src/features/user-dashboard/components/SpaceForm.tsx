@@ -119,6 +119,30 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
       return;
     }
 
+    setIsLoading(true);
+
+    // 1. GỌI API GEOCODING TỪ ĐỊA CHỈ NGƯỜI DÙNG NHẬP
+    let lat = 0;
+    let lng = 0;
+    try {
+      const fullAddress = `${address}, ${city}`; // VD: 20 Nguyễn Xiển, Hồ Chí Minh
+      const geoRes = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(fullAddress)}&format=json&limit=1`,
+        { headers: { 'User-Agent': 'FlexiSpaceApp/1.0' } }
+      );
+      const geoData = await geoRes.json();
+      
+      if (geoData && geoData.length > 0) {
+        lat = parseFloat(geoData[0].lat);
+        lng = parseFloat(geoData[0].lon);
+      } else {
+        console.warn("Không tìm thấy tọa độ cho địa chỉ này, lưu mặc định là 0,0");
+      }
+    } catch (err) {
+      console.warn("Lỗi khi gọi API Geocoding:", err);
+    }
+
+    // 2. CHUẨN BỊ PAYLOAD GỬI LÊN BACKEND
     const token = localStorage.getItem('portal_token');
     const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
 
@@ -129,11 +153,14 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
       area: Number(area),
       isActive: true,
       ownerId: ownerId,
+      latitude: lat,  // BE ĐÃ CÓ TRƯỜNG NÀY (theo ảnh Swagger)
+      longitude: lng, // BE ĐÃ CÓ TRƯỜNG NÀY (theo ảnh Swagger)
       amenities: selectedAmenities.map(am => ({
         name: am,
         quantity: 1,
         isActive: true
       })),
+      // ... giữ nguyên đoạn xử lý operatingHours và categories của bạn
       operatingHours: operatingHours.filter(h => h.enabled).map(h => ({
         dayOfWeek: h.dayOfWeek === 0 ? 0 : h.dayOfWeek - 1,
         openTime: h.openTime.length === 5 ? `${h.openTime}:00` : h.openTime,
@@ -144,7 +171,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
         : []
     };
 
-    setIsLoading(true);
+    // 3. GỌI API TẠO / CẬP NHẬT SPACE
     try {
       const isEditing = !!initialData;
       const url = isEditing
