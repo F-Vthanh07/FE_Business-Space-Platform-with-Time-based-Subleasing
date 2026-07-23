@@ -244,74 +244,69 @@ const translations: Translations = {
   },
 
   // Owner Overview Dashboard
-  'overview.portfolioArchitecture': {
-    en: 'PORTFOLIO ARCHITECTURE',
-    vi: 'CẤU TRÚC DANH MỤC',
+  'overview.welcomeTag': { en: 'DASHBOARD', vi: 'BẢNG ĐIỀU KHIỂN' },
+  'overview.welcome': { en: 'Welcome back,', vi: 'Chào mừng trở lại,' },
+  'overview.welcomeDesc': {
+    en: 'Here is a quick overview of your EtherSpace account and recent activity.',
+    vi: 'Đây là tổng quan nhanh về tài khoản EtherSpace và hoạt động gần đây của bạn.',
   },
-  'overview.tactileAtmosphere': {
-    en: 'The Tactile Atmosphere.',
-    vi: 'Không Gian Trực Quan.',
+  'overview.verified': { en: 'Verified', vi: 'Đã xác minh' },
+  'overview.unverified': { en: 'Not verified', vi: 'Chưa xác minh' },
+  'overview.walletBalance': { en: 'WALLET BALANCE', vi: 'SỐ DƯ VÍ' },
+  'overview.mySpaces': { en: 'MY SPACES', vi: 'MẶT BẰNG' },
+  'overview.myContracts': { en: 'CONTRACTS', vi: 'HỢP ĐỒNG' },
+  'overview.myListings': { en: 'LISTINGS', vi: 'TIN ĐĂNG' },
+  'overview.spacesUnit': { en: 'spaces', vi: 'mặt bằng' },
+  'overview.contractsUnit': { en: 'contracts', vi: 'hợp đồng' },
+  'overview.listingsUnit': { en: 'listings', vi: 'tin đăng' },
+  'overview.pendingRequests': { en: 'Pending Booking Requests', vi: 'Yêu cầu đặt chỗ chờ duyệt' },
+  'overview.noPendingRequests': { en: 'No pending requests', vi: 'Không có yêu cầu nào đang chờ' },
+  'overview.noPendingDesc': {
+    en: 'All booking requests have been processed. New requests will appear here.',
+    vi: 'Tất cả yêu cầu đã được xử lý. Yêu cầu mới sẽ xuất hiện tại đây.',
   },
-  'overview.tactileDesc': {
-    en: 'High-fidelity asset management rendered in editorial layers. Observe the market fluctuations within a physical digital substrate.',
-    vi: 'Hệ thống quản lý tài sản trực quan với các lớp biên tập cao cấp. Theo dõi những biến động thị trường trên nền tảng kỹ thuật số.',
+  'overview.viewAll': { en: 'View all', vi: 'Xem tất cả' },
+  'overview.from': { en: 'from', vi: 'từ' },
+  'overview.requestsFor': { en: 'Request for', vi: 'Yêu cầu thuê' },
+  'overview.quickActions': { en: 'Quick Actions', vi: 'Truy cập nhanh' },
+  'overview.actionDeposit': { en: 'Deposit Funds', vi: 'Nạp tiền' },
+  'overview.actionNewSpace': { en: 'Add New Space', vi: 'Thêm mặt bằng' },
+  'overview.actionNewListing': { en: 'Create Listing', vi: 'Tạo tin đăng' },
+  'overview.actionHistory': { en: 'Transaction History', vi: 'Lịch sử giao dịch' },
+  'overview.actionContracts': { en: 'My Contracts', vi: 'Hợp đồng của tôi' },
+  'overview.actionBookings': { en: 'Booking Requests', vi: 'Yêu cầu đặt chỗ' },
+  'overview.tipsTitle': { en: 'Tips & Insights', vi: 'Mẹo & Thông tin' },
+  'overview.tip1': {
+    en: 'Complete your identity verification to unlock all EtherSpace features and build trust with renters.',
+    vi: 'Hoàn tất xác minh danh tính để mở khóa toàn bộ tính năng EtherSpace và tạo uy tín với người thuê.',
   },
-  'overview.totalLiquidity': {
-    en: 'MONTHLY ESTIMATE',
-    vi: 'ƯỚC TÍNH DOANH THU',
+  'overview.tip2': {
+    en: 'Weekend time slots (9:00 - 12:00) tend to have the highest occupancy rate. Consider optimizing your pricing.',
+    vi: 'Khung giờ cuối tuần (9:00 - 12:00) thường có tỷ lệ lấp đầy cao nhất. Hãy cân nhắc tối ưu giá thuê.',
   },
-  'overview.activeStakes': {
-    en: 'ACTIVE SPACES',
-    vi: 'MẶT BẰNG HOẠT ĐỘNG',
-  },
-  'overview.processing': {
-    en: 'Processing',
-    vi: 'Đang xử lý',
-  },
-  'overview.marketSentiment': {
-    en: 'Market Sentiment',
-    vi: 'Xu Hướng Thị Trường',
-  },
-  'overview.liveFlow': {
-    en: 'LIVE FLOW',
-    vi: 'DÒNG DỮ LIỆU TRỰC TIẾP',
-  },
-  'overview.vault': {
-    en: 'CONTRACT',
-    vi: 'HỢP ĐỒNG',
-  },
-  'overview.secured': {
-    en: 'Linked / Signed',
-    vi: 'Liên kết / Đã ký',
-  },
-  'overview.gasFee': {
-    en: 'SERVICE FEE',
-    vi: 'PHÍ DỊCH VỤ',
-  },
-  'overview.manageTeam': {
-    en: 'MANAGE STAFF',
-    vi: 'QUẢN LÝ NHÂN VIÊN',
-  },
-  'overview.alphaInsights': {
-    en: 'Optimization Insights',
-    vi: 'Phân Tích Xu Hướng',
-  },
-  'overview.alphaInsightsDesc': {
-    en: 'Weekend slots from 9:00 - 12:00 have the highest occupancy rate (95%). Consider optimizing rental prices for these hours.',
-    vi: 'Các khung giờ từ 9:00 - 12:00 ngày cuối tuần đang có tỷ lệ lấp đầy cao nhất (95%). Hãy tối ưu hóa giá thuê cho các khung giờ này.',
-  },
-  'overview.readReport': {
-    en: 'VIEW DETAILS',
-    vi: 'XEM CHI TIẾT',
-  },
-  'overview.upgradeToElite': {
-    en: 'Upgrade Membership',
-    vi: 'Nâng cấp Hội Viên',
-  },
-  'overview.unlockAdvancedNodes': {
-    en: 'UNLOCK EXCLUSIVE FEATURES',
-    vi: 'MỞ KHÓA TÍNH NĂNG ĐẶC QUYỀN',
-  },
+  'overview.accountInfo': { en: 'Account Info', vi: 'Thông tin tài khoản' },
+  'overview.role': { en: 'Role', vi: 'Vai trò' },
+  'overview.status': { en: 'Status', vi: 'Trạng thái' },
+  'overview.loading': { en: 'Loading...', vi: 'Đang tải...' },
+
+  // Legacy keys (kept for backward compatibility)
+  'overview.portfolioArchitecture': { en: 'PORTFOLIO ARCHITECTURE', vi: 'CẤU TRÚC DANH MỤC' },
+  'overview.tactileAtmosphere': { en: 'The Tactile Atmosphere.', vi: 'Không Gian Trực Quan.' },
+  'overview.tactileDesc': { en: 'High-fidelity asset management rendered in editorial layers.', vi: 'Hệ thống quản lý tài sản trực quan.' },
+  'overview.totalLiquidity': { en: 'MONTHLY ESTIMATE', vi: 'ƯỚC TÍNH DOANH THU' },
+  'overview.activeStakes': { en: 'ACTIVE SPACES', vi: 'MẶT BẰNG HOẠT ĐỘNG' },
+  'overview.processing': { en: 'Processing', vi: 'Đang xử lý' },
+  'overview.marketSentiment': { en: 'Market Sentiment', vi: 'Xu Hướng Thị Trường' },
+  'overview.liveFlow': { en: 'LIVE FLOW', vi: 'DÒNG DỮ LIỆU TRỰC TIẾP' },
+  'overview.vault': { en: 'CONTRACT', vi: 'HỢP ĐỒNG' },
+  'overview.secured': { en: 'Linked / Signed', vi: 'Liên kết / Đã ký' },
+  'overview.gasFee': { en: 'SERVICE FEE', vi: 'PHÍ DỊCH VỤ' },
+  'overview.manageTeam': { en: 'MANAGE STAFF', vi: 'QUẢN LÝ NHÂN VIÊN' },
+  'overview.alphaInsights': { en: 'Optimization Insights', vi: 'Phân Tích Xu Hướng' },
+  'overview.alphaInsightsDesc': { en: 'Weekend slots from 9:00 - 12:00 have the highest occupancy rate.', vi: 'Khung giờ 9:00 - 12:00 cuối tuần có tỷ lệ lấp đầy cao nhất.' },
+  'overview.readReport': { en: 'VIEW DETAILS', vi: 'XEM CHI TIẾT' },
+  'overview.upgradeToElite': { en: 'Upgrade Membership', vi: 'Nâng cấp Hội Viên' },
+  'overview.unlockAdvancedNodes': { en: 'UNLOCK EXCLUSIVE FEATURES', vi: 'MỞ KHÓA TÍNH NĂNG ĐẶC QUYỀN' },
 
   // Renter Overview Dashboard
   'overview.subleaseArchitecture': {
@@ -1092,7 +1087,7 @@ const translations: Translations = {
   'wallet.deposit.total': { en: 'Total charge', vi: 'Tổng thanh toán' },
   'wallet.deposit.submit': { en: 'Proceed to Payment', vi: 'Tiến hành thanh toán' },
   'wallet.deposit.processing': { en: 'Processing...', vi: 'Đang xử lý...' },
-  'wallet.deposit.minAmount': { en: 'Minimum deposit is 50,000 VND', vi: 'Số tiền nạp tối thiểu là 50.000₫' },
+  'wallet.deposit.minAmount': { en: 'Minimum deposit must be greater than 2,000 VND', vi: 'Số tiền nạp phải lớn hơn 2.000₫' },
   'wallet.deposit.secureNote': { en: 'Payments are processed securely. EtherSpace never stores your card details.', vi: 'Giao dịch được xử lý bảo mật. EtherSpace không lưu trữ thông tin thẻ của bạn.' },
 
   'wallet.history.title': { en: 'Transaction History', vi: 'Lịch sử giao dịch' },

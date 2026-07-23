@@ -31,8 +31,27 @@ export const ProfileOverviewPage: React.FC = () => {
   const displayName = profile?.fullName || storedName || placeholder;
   const initials = displayName !== placeholder ? displayName.substring(0, 2).toUpperCase() : '?';
 
+  let userEmail = localStorage.getItem('portal_email') || '';
+  let userPhone = localStorage.getItem('portal_phone') || '';
+
+  try {
+    const profileRaw = localStorage.getItem('userprofile');
+    if (profileRaw) {
+      const parsed = JSON.parse(profileRaw);
+      if (!userEmail && parsed.email) userEmail = parsed.email;
+      if (!userPhone && parsed.phoneNumber) userPhone = parsed.phoneNumber;
+    }
+  } catch {
+    // ignore
+  }
+
+  if (!userEmail) userEmail = placeholder;
+  if (!userPhone) userPhone = placeholder;
+
   const infoRows: Array<[string, string]> = [
-    [isEn ? 'Full Name' : 'Họ và tên', profile?.fullName || placeholder],
+    [isEn ? 'Full Name' : 'Họ và tên', profile?.fullName || storedName || placeholder],
+    [isEn ? 'Email' : 'Email', userEmail],
+    [isEn ? 'Phone Number' : 'Số điện thoại', userPhone],
     [isEn ? 'Gender' : 'Giới tính', profile?.gender || placeholder],
     [isEn ? 'Date of Birth' : 'Ngày sinh', formatDate(profile?.dob, isEn ? 'en-US' : 'vi-VN', placeholder)],
     [isEn ? 'Citizen ID Number' : 'Số CCCD', profile?.citizenIDNumber || placeholder],
@@ -91,6 +110,34 @@ export const ProfileOverviewPage: React.FC = () => {
       {!isVerified && <VerificationWarningBanner />}
 
       <CccdVerificationSection />
+
+      {!isVerified && !isLoading && (
+        <div className="glass-card profile-info-card" style={{ marginTop: 20 }}>
+          <div className="profile-info-header">
+            <div className="avatar avatar--lg profile-info-avatar-fallback">{initials}</div>
+            <div>
+              <h3 className="profile-info-name">{displayName}</h3>
+              <span className="badge badge--warning">{isEn ? 'Not Verified' : 'Chưa xác thực'}</span>
+            </div>
+          </div>
+          <table className="cccd-review-table">
+            <tbody>
+              <tr>
+                <td className="text-secondary">{isEn ? 'Full Name' : 'Họ và tên'}</td>
+                <td>{displayName}</td>
+              </tr>
+              <tr>
+                <td className="text-secondary">{isEn ? 'Email' : 'Email'}</td>
+                <td>{userEmail}</td>
+              </tr>
+              <tr>
+                <td className="text-secondary">{isEn ? 'Phone Number' : 'Số điện thoại'}</td>
+                <td>{userPhone}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {isVerified && !isLoading && (
         <div className="glass-card profile-info-card">

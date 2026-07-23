@@ -10,7 +10,7 @@ interface WalletDepositProps {
   onNavigate: (page: 'wallet') => void;
 }
 
-const MIN_AMOUNT = 50000;
+const MIN_AMOUNT = 2000;
 const FEE_RATE = 0; // no fee on deposits for now
 
 export const WalletDeposit: React.FC<WalletDepositProps> = ({ onNavigate }) => {
@@ -23,7 +23,7 @@ export const WalletDeposit: React.FC<WalletDepositProps> = ({ onNavigate }) => {
   const numericAmount = typeof amount === 'number' ? amount : 0;
   const fee = useMemo(() => Math.round(numericAmount * FEE_RATE), [numericAmount]);
   const total = numericAmount + fee;
-  const isValid = numericAmount >= MIN_AMOUNT;
+  const isValid = numericAmount > MIN_AMOUNT;
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/[^0-9]/g, '');
