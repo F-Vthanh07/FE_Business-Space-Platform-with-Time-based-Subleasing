@@ -66,6 +66,16 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
     activePage.startsWith('wallet');
 
   useEffect(() => {
+    const userId = localStorage.getItem('current_user_id');
+    const token = localStorage.getItem('portal_token');
+    if (userId && token) {
+      import('../auth/api/auth.api').then(({ fetchUserProfile }) => {
+        fetchUserProfile(userId, token).catch((err) =>
+          console.error('Lỗi tự động đồng bộ thông tin user:', err)
+        );
+      });
+    }
+
     const tl = gsap.timeline({ defaults: { ease: 'power4.out', duration: 0.8 } });
 
     tl.fromTo(
@@ -108,7 +118,7 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
 
   const renderContent = () => {
     switch (activePage) {
-      case 'overview': return <OwnerOverview />;
+      case 'overview': return <OwnerOverview onNavigate={(page) => navigate(`/user/${page}`)} />;
       case 'spaces': return <OwnerSpaces />;
       case 'listings': return <OwnerListings />;
       case 'tenants': return <OwnerTenants />;

@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { ROUTES, type PortalRole } from '../../routes/routes';
 import { invalidateIdentityVerification } from '../identity-verification';
+import { fetchUserProfile } from './api/auth.api';
 import './AuthPage.css';
 
 // HÀM GIẢI MÃ JWT TOKEN ĐỂ LẤY THÔNG TIN
@@ -95,7 +96,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         // BÓC TÁCH TOKEN Ở ĐÂY
         const decodedToken = parseJwt(data.accessToken);
         if (decodedToken && decodedToken.name) {
-          // Lấy đúng cái key "name" mà BE trả về
           localStorage.setItem('current_user_name', decodedToken.name);
         } else {
           localStorage.setItem('current_user_name', 'Người dùng');
@@ -106,6 +106,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       
       if (userId) {
         localStorage.setItem('current_user_id', userId);
+        if (data.accessToken) {
+          try {
+            await fetchUserProfile(userId, data.accessToken);
+          } catch (profileErr) {
+            console.error('Lỗi lấy userprofile:', profileErr);
+          }
+        }
       }
 
       // Lấy ngay thông tin profile (bao gồm isVerified) sau khi đăng nhập thành công

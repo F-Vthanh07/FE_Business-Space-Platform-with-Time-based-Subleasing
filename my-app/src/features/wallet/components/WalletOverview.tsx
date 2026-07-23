@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Wallet, Plus, ArrowUpRight, Clock3, TrendingUp, TrendingDown, Inbox } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { formatVnd } from '../utils/format';
-import { mockWalletSummary, mockTransactions } from '../utils/mockData';
+import { mockTransactions } from '../utils/mockData';
 import { fetchWalletAccount } from '../api/wallet.api';
 import type { WalletAccount } from '../types';
 import { TransactionRow } from './TransactionRow';
@@ -14,7 +14,7 @@ interface WalletOverviewProps {
 
 export const WalletOverview: React.FC<WalletOverviewProps> = ({ onNavigate }) => {
   const { t, language } = useThemeLanguage();
-  const recent = mockTransactions.slice(0, 5);
+  const recent: typeof mockTransactions = [];
 
   const [account, setAccount] = useState<WalletAccount | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
@@ -28,7 +28,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({ onNavigate }) =>
       .finally(() => setIsLoadingBalance(false));
   }, []);
 
-  const balance = account?.balance ?? mockWalletSummary.balance;
+  const balance = account?.balance ?? 0;
   // const linkedAccount = account?.user?.email || mockWalletSummary.linkedAccount;
   // const walletId = account ? `WAL-${account.id}` : mockWalletSummary.walletId;
 
@@ -55,9 +55,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({ onNavigate }) =>
             {/* <p className="wallet-hero-id">
               {t('wallet.walletId')}: {walletId} • {linkedAccount}
             </p> */}
-            {balanceError && (
-              <p className="text-negative" style={{ fontSize: 12, marginTop: 4 }}>{balanceError}</p>
-            )}
+
           </div>
           <div className="wallet-hero-actions">
             <button className="btn-primary" onClick={() => onNavigate('wallet-deposit')}>
@@ -77,21 +75,21 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({ onNavigate }) =>
               <Clock3 size={11} style={{ verticalAlign: -1, marginRight: 4 }} />
               {t('wallet.pendingBalance')}
             </span>
-            <span className="wallet-stat-value">{formatVnd(mockWalletSummary.pendingBalance, language)}</span>
+            <span className="wallet-stat-value">{formatVnd(0, language)}</span>
           </div>
           <div className="glass-card--inset wallet-stat-tile">
             <span className="label-caps">
               <TrendingUp size={11} style={{ verticalAlign: -1, marginRight: 4 }} />
               {t('wallet.totalDeposited')}
             </span>
-            <span className="wallet-stat-value text-positive">{formatVnd(mockWalletSummary.totalDeposited, language)}</span>
+            <span className="wallet-stat-value text-positive">{formatVnd(0, language)}</span>
           </div>
           <div className="glass-card--inset wallet-stat-tile">
             <span className="label-caps">
               <TrendingDown size={11} style={{ verticalAlign: -1, marginRight: 4 }} />
               {t('wallet.totalSpent')}
             </span>
-            <span className="wallet-stat-value text-negative">{formatVnd(mockWalletSummary.totalSpent, language)}</span>
+            <span className="wallet-stat-value text-negative">{formatVnd(0, language)}</span>
           </div>
         </div>
       </div>
