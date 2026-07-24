@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, FileText, Globe, LogOut, User, CheckCircle2 } from 'lucide-react';
+import { Bell, FileText, Globe, LogOut, User, CheckCircle2, Sun, Moon } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
 import { useIdentityVerification } from '../features/identity-verification';
 import './Header.css';
@@ -15,7 +15,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { language, setLanguage } = useThemeLanguage();
+  const { language, setLanguage, theme, toggleTheme } = useThemeLanguage();
   const { isVerified } = useIdentityVerification();
 
   const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | null => {
@@ -189,6 +189,14 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
             <Globe size={14} /> <span style={{ fontSize: 10, fontWeight: 700 }}>{language.toUpperCase()}</span>
           </button>
 
+          <button
+            className="header-icon-btn"
+            title={language === 'en' ? 'Toggle theme' : 'Đổi giao diện sáng/tối'}
+            onClick={toggleTheme}
+          >
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
+
           {isLoggedIn ? (
             <>
               {/* KHU VỰC CHUÔNG THÔNG BÁO */}
@@ -196,38 +204,36 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                 <button className="header-icon-btn" title="Notifications" onClick={() => setShowNotif(!showNotif)}>
                   <Bell size={15} />
                   {notifications.length > 0 && (
-                    <span className="notif-dot" style={{ position: 'absolute', top: '2px', right: '4px', width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%', border: '1px solid #fff' }} />
+                    <span className="notif-dot" style={{ position: 'absolute', top: '2px', right: '4px', width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%' }} />
                   )}
                 </button>
 
                 {/* BOX XỔ XUỐNG KHI BẤM CHUÔNG */}
                 {showNotif && (
-                  <div className="header-dropdown-menu animate-in" style={{ width: '320px', right: '-40px', padding: 0, overflow: 'hidden' }}>
-                    <div style={{ padding: '12px 16px', fontWeight: 'bold', borderBottom: '1px solid #E0E0E0', backgroundColor: '#FAFAFA', color: '#333' }}>
+                  <div className="header-dropdown-menu notif-dropdown animate-in" style={{ width: '320px', right: '-40px', padding: 0, overflow: 'hidden' }}>
+                    <div className="notif-dropdown-header">
                       {language === 'en' ? 'Notifications' : 'Thông báo mới'}
                     </div>
-                    
+
                     <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                       {notifications.length === 0 ? (
-                        <div style={{ padding: '30px 20px', textAlign: 'center', fontSize: '13px', color: '#999' }}>
+                        <div className="notif-dropdown-empty">
                           Không có thông báo nào
                         </div>
                       ) : (
                         notifications.map((notif, idx) => (
-                          <div 
-                            key={idx} 
-                            onClick={() => handleNotifClick(notif)} 
-                            style={{ padding: '12px 16px', borderBottom: '1px solid #F0F0F0', cursor: 'pointer', transition: 'background 0.2s', display: 'flex', flexDirection: 'column', gap: '4px' }}
-                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F4F6F8'}
-                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          <div
+                            key={idx}
+                            className="notif-dropdown-item"
+                            onClick={() => handleNotifClick(notif)}
                           >
-                            <div style={{ fontSize: '13.5px', color: '#2C2C2C', lineHeight: '1.4' }}>
+                            <div className="notif-dropdown-item-title">
                               <strong>{notif.senderName}</strong> vừa nhắn tin cho bạn:
                             </div>
-                            <div style={{ fontSize: '13px', color: '#555', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div className="notif-dropdown-item-message">
                               "{notif.message}"
                             </div>
-                            <div style={{ fontSize: '11px', color: '#999' }}>{notif.time || 'Vừa xong'}</div>
+                            <div className="notif-dropdown-item-time">{notif.time || 'Vừa xong'}</div>
                           </div>
                         ))
                       )}

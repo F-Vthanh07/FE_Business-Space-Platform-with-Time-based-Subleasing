@@ -195,7 +195,7 @@ export const OwnerListings: React.FC = () => {
       {/* Summary Strip */}
       <div className="listings-summary">
         {[
-          { label: t('listings.totalListings') || 'Tổng số bài', value: listings.length, color: '#fff' },
+          { label: t('listings.totalListings') || 'Tổng số bài', value: listings.length, color: 'var(--color-accent)' },
           { label: 'Đang hoạt động', value: listings.filter(l => l.status === 'Accepted').length, color: 'var(--color-positive)' },
           { label: 'Đã bị khóa', value: listings.filter(l => l.status === 'Ban').length, color: 'var(--color-negative)' },
           { label: 'Chia sẻ mặt bằng', value: listings.filter(l => l.listingType === 'SharedSpace').length, color: 'var(--color-text-secondary)' },
@@ -405,7 +405,7 @@ export const OwnerListings: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div style={{ width: '100%', height: '200px', backgroundColor: 'rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-secondary)' }}>
+                <div className="glass-card--inset" style={{ width: '100%', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-secondary)', borderRadius: 0 }}>
                   <Building2 size={40} style={{ opacity: 0.5, marginRight: 10 }} /> Không có hình ảnh
                 </div>
               )}
@@ -413,7 +413,7 @@ export const OwnerListings: React.FC = () => {
               <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
                   <div>
-                    <h3 style={{ margin: '0 0 8px 0', fontSize: '22px', color: 'var(--color-primary)' }}>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '22px', color: 'var(--color-accent)' }}>
                       {viewingListing.price ? `${viewingListing.price.toLocaleString('vi-VN')} ₫ / giờ` : 'Thỏa thuận'}
                     </h3>
                     <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-secondary)' }}>
@@ -430,17 +430,17 @@ export const OwnerListings: React.FC = () => {
                   </div>
                 </div>
 
-                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '8px' }}>
-                  <h4 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>Mô tả chi tiết</h4>
-                  <p style={{ margin: 0, lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{viewingListing.description || 'Chưa có mô tả'}</p>
+                <div className="glass-card--inset" style={{ padding: '16px', borderRadius: 'var(--radius-lg)' }}>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', color: 'var(--color-text-primary)' }}>Mô tả chi tiết</h4>
+                  <p style={{ margin: 0, lineHeight: '1.6', whiteSpace: 'pre-wrap', color: 'var(--color-text-secondary)' }}>{viewingListing.description || 'Chưa có mô tả'}</p>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-                  <div><strong>Bắt đầu:</strong> {formatDate(viewingListing.allowedStartTime)}</div>
-                  <div><strong>Kết thúc:</strong> {formatDate(viewingListing.allowedEndTime)}</div>
-                  <div><strong>Đăng lúc:</strong> {formatDate(viewingListing.createdAt)}</div>
+                  <div><strong style={{ color: 'var(--color-text-primary)' }}>Bắt đầu:</strong> {formatDate(viewingListing.allowedStartTime)}</div>
+                  <div><strong style={{ color: 'var(--color-text-primary)' }}>Kết thúc:</strong> {formatDate(viewingListing.allowedEndTime)}</div>
+                  <div><strong style={{ color: 'var(--color-text-primary)' }}>Đăng lúc:</strong> {formatDate(viewingListing.createdAt)}</div>
                   {isShareListing(viewingListing) && (
-                    <div><strong>Số người thuê chung tối đa:</strong> {viewingListing.shareSpaceDetailMaxSubRenter ?? 'N/A'}</div>
+                    <div><strong style={{ color: 'var(--color-text-primary)' }}>Số người thuê chung tối đa:</strong> {viewingListing.shareSpaceDetailMaxSubRenter ?? 'N/A'}</div>
                   )}
                 </div>
               </div>

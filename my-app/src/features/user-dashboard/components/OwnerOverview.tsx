@@ -64,8 +64,6 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
 
   // User info from localStorage
   const userName = localStorage.getItem('portal_user_name') || localStorage.getItem('portal_email')?.split('@')[0] || 'User';
-  const userEmail = localStorage.getItem('portal_email') || '';
-  const userRole = localStorage.getItem('portal_role') || 'user';
 
   // Dashboard data states
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
@@ -502,35 +500,6 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
 
         {/* ====================== RIGHT COLUMN ====================== */}
         <div className="grid-right-col">
-          {/* ACCOUNT INFO */}
-          <div className="glass-card account-card">
-            <h3 className="quick-actions-title">{t('overview.accountInfo')}</h3>
-            <div className="account-profile">
-              <div className="account-avatar">{getInitials(userName)}</div>
-              <div>
-                <div className="account-name">{userName}</div>
-                <div className="account-email">{userEmail}</div>
-              </div>
-            </div>
-            <div className="account-details">
-              <div className="glass-card--inset account-detail-row">
-                <span className="account-detail-label">{t('overview.role')}</span>
-                <span className="account-detail-value" style={{ textTransform: 'capitalize' }}>
-                  {userRole === 'user' ? (language === 'en' ? 'User' : 'Người dùng') : userRole}
-                </span>
-              </div>
-              <div className="glass-card--inset account-detail-row">
-                <span className="account-detail-label">{t('overview.status')}</span>
-                <span
-                  className="account-detail-value"
-                  style={{ color: isVerified ? '#00D4A0' : '#f59e0b' }}
-                >
-                  {isVerified ? t('overview.verified') : t('overview.unverified')}
-                </span>
-              </div>
-            </div>
-          </div>
-
           {/* QUICK ACTIONS */}
           <div className="glass-card quick-actions-card">
             <h3 className="quick-actions-title">{t('overview.quickActions')}</h3>
