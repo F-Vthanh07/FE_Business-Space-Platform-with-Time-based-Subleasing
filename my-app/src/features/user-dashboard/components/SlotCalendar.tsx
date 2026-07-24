@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -27,9 +27,15 @@ import { vi, enUS } from 'date-fns/locale';
 import { SubleaseSlotForm } from './SubleaseSlotForm';
 import { SubBookingForm } from './SubBookingForm';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import { API_BASE_URL } from '../../../config/api';
 import './SlotCalendar.css';
 
 import type { SubSlot } from '../types';
+
+interface OwnedSpace {
+  id: number;
+  address: string;
+}
 
 const slotStatusConfig = {
   booked: { color: '#4A72FF', bgColor: 'rgba(74, 114, 255, 0.15)', icon: <CheckCircle2 size={11} /> },
@@ -50,20 +56,53 @@ interface SlotCalendarProps {
 export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot, onCreateSlot }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date(2025, 4, 1)); // May 2025
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date(2025, 4, 26));
-  const [selectedSpaceId, setSelectedSpaceId] = useState('space-leloi');
-  
+  const [selectedSpaceId, setSelectedSpaceId] = useState('');
+
   // Trạng thái điều khiển form modal
   const [isNewSlotOpen, setIsNewSlotOpen] = useState(false);
   const [bookingSlot, setBookingSlot] = useState<SubSlot | null>(null);
 
+  const [ownedSpaces, setOwnedSpaces] = useState<OwnedSpace[]>([]);
+  const [isSpacesLoading, setIsSpacesLoading] = useState(true);
+
   const { t, language } = useThemeLanguage();
   const dateLocale = language === 'en' ? enUS : vi;
 
-  const mockSpaces = [
-    { id: 'space-leloi', name: language === 'en' ? 'Le Loi Dist 1' : 'Mặt bằng Lê Lợi Q1', type: language === 'en' ? 'Retail' : 'Cửa hàng', size: '45 m²' },
-    { id: 'space-phandinhphung', name: language === 'en' ? 'Phan Dinh Phung' : 'Shop Phan Đình Phùng', type: language === 'en' ? 'Cafe' : 'Cà phê', size: '30 m²' },
-    { id: 'space-quangtrung', name: language === 'en' ? 'Quang Trung GV' : 'Quang Trung GV', type: language === 'en' ? 'Kiosk' : 'Ki-ốt', size: '18 m²' },
-  ];
+  // Lấy danh sách mặt bằng của chính người dùng (chỉ cần hiển thị địa chỉ)
+  const fetchOwnedSpaces = useCallback(async () => {
+    setIsSpacesLoading(true);
+    try {
+      const token = localStorage.getItem('portal_token');
+      const ownerId = localStorage.getItem('current_user_id');
+      const url = `${API_BASE_URL}/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId || '')}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accept: '*/*',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const safeData: OwnedSpace[] = Array.isArray(data) ? data : (data?.data || data?.items || []);
+        setOwnedSpaces(safeData);
+        setSelectedSpaceId((prev) => prev || (safeData[0] ? String(safeData[0].id) : ''));
+      } else {
+        setOwnedSpaces([]);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải danh sách mặt bằng:', error);
+      setOwnedSpaces([]);
+    } finally {
+      setIsSpacesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchOwnedSpaces();
+  }, [fetchOwnedSpaces]);
 
   const getStatusLabel = (status: 'booked' | 'available' | 'conflict' | 'pending') => {
     switch (status) {
@@ -103,31 +142,37 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
       {/* Calendar Panel */}
       <div className="glass-card calendar-panel">
         
-        {/* Bộ chọn Mặt bằng (Space Selector Tabs) */}
-        <div className="glass-card--inset space-selector-tabs" style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 8, marginBottom: 20 }}>
-          {mockSpaces.map(sp => (
-            <button
-              key={sp.id}
-              className={`space-selector-tab ${selectedSpaceId === sp.id ? 'space-selector-tab--active' : ''}`}
-              onClick={() => setSelectedSpaceId(sp.id)}
-              style={{
-                flex: 1,
-                background: selectedSpaceId === sp.id ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-                border: 'none',
-                color: selectedSpaceId === sp.id ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                padding: '10px 14px',
-                borderRadius: 6,
-                cursor: 'pointer',
-                fontSize: '11px',
-                fontWeight: 600,
-                transition: 'all 0.2s ease',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontWeight: 700, fontSize: '12px' }}>{sp.name}</div>
-              <div style={{ fontSize: '10px', opacity: 0.7, marginTop: 2 }}>{sp.type} · {sp.size}</div>
-            </button>
-          ))}
+        {/* Bộ chọn Mặt bằng (Space Selector Dropdown) */}
+        <div className="space-selector-dropdown" style={{ marginBottom: 20 }}>
+          <select
+            className="glass-card--inset"
+            value={selectedSpaceId}
+            onChange={(e) => setSelectedSpaceId(e.target.value)}
+            disabled={isSpacesLoading || ownedSpaces.length === 0}
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: 8,
+              border: 'none',
+              background: 'rgba(255, 255, 255, 0.08)',
+              color: 'var(--color-text-primary)',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: ownedSpaces.length === 0 ? 'default' : 'pointer',
+            }}
+          >
+            {isSpacesLoading && (
+              <option value="">{language === 'en' ? 'Loading spaces...' : 'Đang tải mặt bằng...'}</option>
+            )}
+            {!isSpacesLoading && ownedSpaces.length === 0 && (
+              <option value="">{language === 'en' ? 'No spaces found' : 'Bạn chưa có mặt bằng nào'}</option>
+            )}
+            {ownedSpaces.map(sp => (
+              <option key={sp.id} value={String(sp.id)}>
+                {sp.address}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Month Navigation */}
