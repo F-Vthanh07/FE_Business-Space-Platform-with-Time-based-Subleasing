@@ -18,8 +18,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({ onNavigate }) =>
 
   const [account, setAccount] = useState<WalletAccount | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
-  const [balanceError, setBalanceError] = useState('');
-
+  const [, setBalanceError] = useState('');
   useEffect(() => {
     const token = localStorage.getItem('portal_token') || '';
     fetchWalletAccount(token)

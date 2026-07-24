@@ -48,7 +48,10 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
              const parentSpace = spaces.find(s => (s.id || s.Id) === (l.spaceId || l.SpaceId));
              return {
                  ...l,
-                 address: l.location || l.address || parentSpace?.address || parentSpace?.location || ''
+                 address: l.location || l.address || parentSpace?.address || parentSpace?.location || '',
+                 // BỔ SUNG: area không có sẵn trong Listing, phải lấy từ Space cha
+                 area: l.area || parentSpace?.area || null,
+                 city: l.city || parentSpace?.city || ''
              }
           });
 
@@ -70,11 +73,12 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const DUMMY_IMAGES = [
-    "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=400",
-    "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&q=80&w=400"
-  ];
+  // Ảnh mặc định duy nhất, chỉ dùng khi bài đăng KHÔNG có ảnh thật nào
+  const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800";
+
+  const getPicUrl = (pic: any): string => {
+    return typeof pic === 'string' ? pic : (pic?.imageUrl || pic?.url || '');
+  };
 
   return (
     <div className="listings-column">
@@ -117,34 +121,52 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
         currentItems.map((item) => {
           // eslint-disable-next-line react-hooks/purity
           const itemId = item.id?.toString() || item.Id?.toString() || Math.random().toString();
-          
-          const realImages = item.listingPictures || [];
-          
-          const getImageUrl = (index: number, fallbackUrl: string) => {
-            if (!realImages[index]) return fallbackUrl;
-            const pic = realImages[index];
-            return typeof pic === 'string' ? pic : (pic.imageUrl || pic.url || fallbackUrl);
-          };
 
-          const imgMain = getImageUrl(0, DUMMY_IMAGES[0]);
-          const imgThumb1 = getImageUrl(1, DUMMY_IMAGES[1]);
-          const imgThumb2 = getImageUrl(2, DUMMY_IMAGES[2]);
-          
+          // Lọc ra danh sách ảnh thật, bỏ qua ảnh rỗng/lỗi
+          const rawPictures = item.listingPictures || [];
+          const realImages: string[] = rawPictures
+            .map(getPicUrl)
+            .filter((url: string) => !!url);
+
+          // Số ảnh thực tế sẽ quyết định layout hiển thị (KHÔNG ép cứng 3 ô nữa)
+          const imageCount = realImages.length;
+          const displayImages = imageCount > 0 ? realImages : [FALLBACK_IMAGE];
+          const hasRealImages = imageCount > 0;
+
           return (
             <div
               key={itemId}
               className={`listing-card-complex gsap-listing-card ${selectedId === itemId ? 'selected' : ''}`}
               onClick={() => navigate(`/listing/${itemId}`)}
             >
-              <div className="complex-images-block">
+              <div className={`complex-images-block img-count-${Math.min(displayImages.length, 3)}`}>
+                {/* Ảnh chính - luôn hiện */}
                 <div className="img-main">
-                  <img src={imgMain} alt="Main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <div className="img-count-badge">📸 {realImages.length > 0 ? realImages.length : 3}</div>
+                  <img src={displayImages[0]} alt="Main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {hasRealImages && (
+                    <div className="img-count-badge">📸 {imageCount}</div>
+                  )}
                 </div>
-                <div className="img-thumbs">
-                  <img src={imgThumb1} alt="Thumb 1" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <img src={imgThumb2} alt="Thumb 2" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
+
+                {/* Chỉ hiện khối thumbs nếu có từ 2 ảnh trở lên */}
+                {displayImages.length > 1 && (
+                  <div
+                    className="img-thumbs"
+                    style={{
+                      // 1 thumb -> chiếm full chiều cao, 2 thumb -> chia đôi
+                      gridTemplateRows: displayImages.length - 1 === 1 ? '1fr' : '1fr 1fr'
+                    }}
+                  >
+                    {displayImages.slice(1, 3).map((url, idx) => (
+                      <img
+                        key={idx}
+                        src={url}
+                        alt={`Thumb ${idx + 1}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
               
               <div className="complex-info-block">

@@ -74,13 +74,30 @@ export const OwnerBookingRequests: React.FC = () => {
 
       if (newStatus === 'Approved' && lesseeId) {
         try {
-          await fetch(`https://flexi-space-capstone-project.onrender.com/api/Conversation/Create?lessorId=${currentUserId}&lesseeId=${lesseeId}`, {
+          const convRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Conversation/Create?lessorId=${currentUserId}&lesseeId=${lesseeId}`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
               'accept': '*/*'
             }
           });
+
+          if (convRes.ok) {
+            // Đọc luôn data phòng chat vừa tạo (BE trả về object chứa id/lessorId/lesseeId...)
+            const newConversation = await convRes.json().catch(() => null);
+
+            // BẮN SỰ KIỆN RA TOÀN APP: báo cho FloatingChat (đang mount sẵn ở layout ngoài)
+            // biết vừa có phòng chat mới, để nó tự fetch lại danh sách + tự Join phòng qua
+            // SignalR ngay lập tức, KHÔNG cần người dùng load lại trang.
+            // Đây chỉ giải quyết được cho TAB CỦA CHỦ NHÀ (người vừa bấm duyệt) - vì sự kiện
+            // window này chỉ chạy trong đúng trình duyệt đang thao tác. Để bên Khách thuê (lessee)
+            // cũng tự thấy phòng chat xuất hiện ngay mà không cần F5, cần Backend bắn thêm 1
+            // sự kiện SignalR (vd "ReceiveNewConversation") tới đúng userId của lessee.
+            window.dispatchEvent(new CustomEvent('conversation-created', {
+              detail: newConversation || { lessorId: currentUserId, lesseeId }
+            }));
+          }
+
           alert("🎉 Đã duyệt đơn và tạo phòng chat thành công! Khách thuê giờ đã có thể nhắn tin cho bạn.");
         } catch (chatErr) {
           console.error("Lỗi tạo phòng chat:", chatErr);

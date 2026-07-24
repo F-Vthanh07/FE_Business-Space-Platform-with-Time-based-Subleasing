@@ -200,6 +200,12 @@
   border-radius: var(--radius-full);
 }
 
+.btn-danger-icon {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 8px;
+}
+
 .space-card-actions .btn-danger-icon:hover {
   color: var(--color-negative);
   border-color: rgba(255, 77, 109, 0.2);

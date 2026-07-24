@@ -24,6 +24,7 @@ import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './UserDashboardPage.css';
 import MyContractsPage from './components/Mycontractspage';
 import { RenterBookingRequests } from './components/RenterBookingRequests';
+import { SharedSpaceManagement } from './components/SharedSpaceManagement';
 
 const initialMockSlots: SubSlot[] = [
   { id: 's1', date: '2025-05-26', startTime: '08:00', endTime: '12:00', tenantName: 'Trần Văn B', tenantInitials: 'TB', status: 'booked', price: '500.000₫', spaceId: 'space-leloi' },
@@ -120,6 +121,7 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
     switch (activePage) {
       case 'overview': return <OwnerOverview onNavigate={(page) => navigate(`/user/${page}`)} />;
       case 'spaces': return <OwnerSpaces />;
+      case 'shared-spaces': return <SharedSpaceManagement />;
       case 'listings': return <OwnerListings />;
       case 'tenants': return <OwnerTenants />;
       case 'booking-requests': return <OwnerBookingRequests />;

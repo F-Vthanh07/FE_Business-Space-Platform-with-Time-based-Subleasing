@@ -53,6 +53,7 @@ const subleaseNavItems: NavItem[] = [
   { id: 'calendar', icon: <CalendarDays size={16} /> },
   { id: 'sublease-listings', icon: <FileText size={16} /> },
   { id: 'sub-tenants', icon: <Users size={16} /> },
+  { id: 'shared-spaces', icon: <Users size={16} /> },
 ];
 
 const walletNavItems: NavItem[] = [
@@ -77,6 +78,7 @@ const getPageLabels = (id: string, lang: string) => {
     case 'calendar': return { title: isEn ? 'Calendar' : 'Lịch cho thuê lại', sub: isEn ? 'Sublease slots' : 'Khung giờ cho thuê lại' };
     case 'sublease-listings': return { title: isEn ? 'Sublease Market' : 'Chợ cho thuê lại', sub: isEn ? 'Your sublease ads' : 'Tin cho thuê lại' };
     case 'sub-tenants': return { title: isEn ? 'Sub-tenants' : 'Khách thuê phụ', sub: isEn ? 'Secondary renters' : 'Người thuê lại' };
+    case 'shared-spaces': return { title: isEn ? 'Shared Spaces' : 'Mặt bằng chia sẻ', sub: isEn ? 'Spaces shared with others' : 'Chia sẻ lại cho người khác' };
     case 'wallet': return { title: isEn ? 'Wallet' : 'Ví của tôi', sub: isEn ? 'Balance & transactions' : 'Số dư & giao dịch' };
     case 'analytics': return { title: isEn ? 'Analytics' : 'Doanh thu', sub: isEn ? 'Financial reports' : 'Báo cáo tài chính' };
     case 'profile': return { title: isEn ? 'Profile' : 'Hồ sơ cá nhân', sub: isEn ? 'Identity verification' : 'Xác thực định danh' };

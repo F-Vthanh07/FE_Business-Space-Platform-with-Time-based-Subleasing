@@ -31,20 +31,55 @@ export const ListingDetail: React.FC = () => {
   useEffect(() => {
     const fetchDetail = async () => {
       try {
+        // BƯỚC 1: LẤY DANH SÁCH MẶT BẰNG (SPACE) ĐỂ LẤY area/address
+        // Listing/GetAll KHÔNG trả về area, field này chỉ có trong Space/GetAll
+        const spaceResponse = await fetch('https://flexi-space-capstone-project.onrender.com/api/Space/GetAll', {
+          headers: { 'accept': '*/*' }
+        });
+
+        let spaces: any[] = [];
+        if (spaceResponse.ok) {
+          const spaceData = await spaceResponse.json();
+          spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+        }
+
+        // BƯỚC 2: LẤY DANH SÁCH BÀI ĐĂNG
         const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', { headers: { 'accept': '*/*' } });
         if (response.ok) {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
           
           const found = safeData.find((item: any) => (item.id?.toString() === id || item.Id?.toString() === id));
-          setListing(found || null);
+
+          // BƯỚC 3: GHÉP area/address TỪ SPACE CHA VÀO LISTING TÌM ĐƯỢC
+          let foundWithSpaceInfo = found || null;
+          if (found) {
+            const parentSpace = spaces.find(s => (s.id || s.Id) === (found.spaceId || found.SpaceId));
+            foundWithSpaceInfo = {
+              ...found,
+              area: found.area || parentSpace?.area || null,
+              address: found.location || found.address || parentSpace?.address || parentSpace?.location || '',
+              city: found.city || parentSpace?.city || ''
+            };
+          }
+          setListing(foundWithSpaceInfo);
 
           // Cập nhật giá mặc định cho form dựa trên giá bài đăng
-          if (found && found.price) {
-            setBookingData(prev => ({ ...prev, offeredPrice: found.price.toString() }));
+          if (foundWithSpaceInfo && foundWithSpaceInfo.price) {
+            setBookingData(prev => ({ ...prev, offeredPrice: foundWithSpaceInfo.price.toString() }));
           }
 
-          const others = safeData.filter((item: any) => (item.id?.toString() !== id && item.Id?.toString() !== id));
+          // BƯỚC 4: GHÉP area/address CHO CÁC BÀI ĐĂNG TƯƠNG TỰ (SIMILAR LISTINGS)
+          const others = safeData
+            .filter((item: any) => (item.id?.toString() !== id && item.Id?.toString() !== id))
+            .map((item: any) => {
+              const parentSpace = spaces.find(s => (s.id || s.Id) === (item.spaceId || item.SpaceId));
+              return {
+                ...item,
+                area: item.area || parentSpace?.area || null,
+                address: item.location || item.address || parentSpace?.address || parentSpace?.location || ''
+              };
+            });
           setSimilarListings(others.slice(0, 3));
         }
       } catch (error) {
@@ -162,7 +197,7 @@ export const ListingDetail: React.FC = () => {
               {listing.name || listing.description?.substring(0, 80) || 'Mặt bằng kinh doanh vị trí đắc địa, giá tốt nhất khu vực'}
             </h1>
             <p style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#505050', margin: '0 0 20px 0' }}>
-              <MapPin size={16} /> {listing.location || listing.spaceAddress || 'Đang cập nhật địa chỉ'}
+              <MapPin size={16} /> {listing.location || listing.address || listing.spaceAddress || 'Đang cập nhật địa chỉ'}
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E0E0E0', borderBottom: '1px solid #E0E0E0', padding: '16px 0', marginBottom: '30px' }}>
@@ -216,7 +251,7 @@ export const ListingDetail: React.FC = () => {
             <div style={{ width: '100%', height: '350px', backgroundColor: '#e5e3df', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px', border: '1px solid #E0E0E0' }}>
                <iframe 
                  width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight={0} marginWidth={0} 
-                 src={`https://maps.google.com/maps?q=${encodeURIComponent(listing.location || listing.spaceAddress || 'Hồ Chí Minh, Việt Nam')}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                 src={`https://maps.google.com/maps?q=${encodeURIComponent(listing.location || listing.address || listing.spaceAddress || 'Hồ Chí Minh, Việt Nam')}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
                />
             </div>
 
@@ -279,7 +314,7 @@ export const ListingDetail: React.FC = () => {
                             {simItem.price ? `${simItem.price.toLocaleString('vi-VN')} ₫/h` : 'Thỏa thuận'}
                           </div>
                           <div style={{ color: '#777', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <MapPin size={10} /> {simItem.location?.substring(0,25) || simItem.spaceAddress?.substring(0,25) || 'TP.HCM'}
+                            <MapPin size={10} /> {simItem.location?.substring(0,25) || simItem.address?.substring(0,25) || simItem.spaceAddress?.substring(0,25) || 'TP.HCM'}
                           </div>
                         </div>
                       </div>
