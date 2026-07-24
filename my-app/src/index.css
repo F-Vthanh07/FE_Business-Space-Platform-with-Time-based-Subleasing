@@ -294,6 +294,12 @@ input, textarea {
   border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
+.light-theme .glass-card--inset {
+  background: #FFFFFF;
+  box-shadow: none;
+  border: 1px solid #1E293B;
+}
+
 /* ==============================
    LAYOUT
    ============================== */
@@ -690,29 +696,40 @@ input, textarea {
 .light-theme .space-form-modal,
 .light-theme .listing-form-modal,
 .light-theme .sublease-form-modal,
-.light-theme .sub-booking-modal {
+.light-theme .sub-booking-modal,
+.light-theme .modal-shell {
   background: rgba(255, 255, 255, 0.95) !important;
   border: 1px solid var(--color-border) !important;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
 }
 
+.light-theme .modal-title {
+  color: var(--color-text-primary) !important;
+}
+
 .light-theme .form-input,
 .light-theme .form-select-input,
+.light-theme .form-textarea,
 .light-theme .slot-input-select,
 .light-theme .slot-input-time,
 .light-theme .slot-input-text,
-.light-theme .time-input {
-  background: #F1F5F9 !important;
+.light-theme .time-input,
+.light-theme .profile-edit-input,
+.light-theme .profile-edit-textarea {
+  background: #FFFFFF !important;
   color: var(--color-text-primary) !important;
-  border-color: var(--color-border) !important;
+  border: 1px solid #1E293B !important;
 }
 
 .light-theme .form-input:focus,
 .light-theme .form-select-input:focus,
+.light-theme .form-textarea:focus,
 .light-theme .slot-input-select:focus,
 .light-theme .slot-input-time:focus,
 .light-theme .slot-input-text:focus,
-.light-theme .time-input:focus {
+.light-theme .time-input:focus,
+.light-theme .profile-edit-input:focus,
+.light-theme .profile-edit-textarea:focus {
   background: #FFFFFF !important;
   border-color: var(--color-accent) !important;
 }
@@ -721,13 +738,13 @@ input, textarea {
 .light-theme .operating-hours-list,
 .light-theme .slots-editor-list,
 .light-theme .slot-prefilled-info {
-  background: #F8FAFC !important;
-  border-color: var(--color-border) !important;
+  background: #FFFFFF !important;
+  border-color: #1E293B !important;
 }
 
 .light-theme .checkbox-indicator {
   background: #FFFFFF !important;
-  border-color: var(--color-border) !important;
+  border-color: #1E293B !important;
 }
 
 .light-theme .checkbox-item--checked .checkbox-indicator {

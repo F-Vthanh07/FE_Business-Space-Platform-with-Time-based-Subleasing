@@ -129,3 +129,35 @@
   .tenants-grid { grid-template-columns: 1fr; }
   .tenants-summary { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ==============================
+   TENANT DETAIL MODAL — INFO ROWS
+   ============================== */
+.tenant-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+  gap: var(--space-4);
+}
+
+.tenant-detail-row:last-child {
+  border-bottom: none;
+}
+
+.tenant-detail-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.tenant-detail-value {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: right;
+}

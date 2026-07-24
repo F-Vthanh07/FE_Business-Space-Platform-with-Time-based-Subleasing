@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
-import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X } from 'lucide-react';
 import { SpaceForm } from './SpaceForm';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import '../../shared/ModalShell.css';
 import './OwnerSpaces.css';
 
 interface Space {
@@ -29,8 +31,9 @@ export const OwnerSpaces: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
+  const [viewingSpace, setViewingSpace] = useState<Space | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { t } = useThemeLanguage();
+  const { t, language } = useThemeLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // --- 1. LẤY DANH MỤC NGÀNH NGHỀ TỪ API ---
@@ -274,6 +277,9 @@ export const OwnerSpaces: React.FC = () => {
                 </div>
 
                 <div className="space-card-actions">
+                  <button className="btn-ghost" onClick={() => setViewingSpace(space)}>
+                    <Eye size={13} /> {language === 'en' ? 'View' : 'Xem'}
+                  </button>
                   <button className="btn-ghost" onClick={() => handleOpenFormForEdit(space)}>
                     <Edit3 size={13} /> {t('spaces.edit') || 'Sửa'}
                   </button>
@@ -289,6 +295,96 @@ export const OwnerSpaces: React.FC = () => {
 
       {isFormOpen && (
         <SpaceForm onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} initialData={editingSpace} />
+      )}
+
+      {viewingSpace && createPortal(
+        <div className="modal-backdrop" onClick={() => setViewingSpace(null)}>
+          <div className="modal-shell" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-area">
+                <div className="modal-icon-wrap modal-icon-wrap--blue">
+                  <Building2 size={18} />
+                </div>
+                <div>
+                  <h3 className="modal-title">{viewingSpace.name || (language === 'en' ? 'Space detail' : 'Chi tiết mặt bằng')}</h3>
+                  <p className="modal-subtitle text-secondary">
+                    {viewingSpace.isActive !== false ? (language === 'en' ? 'Active' : 'Đang hoạt động') : (language === 'en' ? 'Suspended' : 'Tạm khóa')}
+                  </p>
+                </div>
+              </div>
+              <button className="btn-icon" onClick={() => setViewingSpace(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-section">
+                <div className="form-section-title">{language === 'en' ? 'General information' : 'Thông tin chung'}</div>
+                <div className="space-detail-row">
+                  <span className="space-detail-label">
+                    <MapPin size={12} />
+                    {language === 'en' ? 'Address' : 'Địa chỉ'}
+                  </span>
+                  <span className="space-detail-value">{viewingSpace.address || (language === 'en' ? 'Not updated' : 'Chưa cập nhật')}</span>
+                </div>
+                <div className="space-detail-row">
+                  <span className="space-detail-label">{language === 'en' ? 'Area' : 'Diện tích'}</span>
+                  <span className="space-detail-value">{viewingSpace.area || 'N/A'} m²</span>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <div className="form-section-title">{t('spaces.amenities') || 'Tiện ích'}</div>
+                <div className="meta-badges">
+                  {(viewingSpace.amenities || []).length > 0 ? (
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (viewingSpace.amenities || []).map((a: any, idx: number) => (
+                      <span key={idx} className="badge badge--neutral badge-sm">
+                        {a.name || t('amenity.' + a) || 'Tiện ích'}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted text-xs">{t('spaces.noAmenities') || 'Chưa cập nhật'}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-section">
+                <div className="form-section-title">{t('spaces.allowedModels') || 'Ngành nghề phù hợp'}</div>
+                <div className="meta-badges">
+                  {(viewingSpace.spaceAllowedCategories || []).length > 0 ? (
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (viewingSpace.spaceAllowedCategories || []).map((c: any, idx: number) => {
+                      const catId = c.bussinessCategoryId;
+                      const catObj = apiCategories.find(cat => cat.id === catId);
+                      const catName = catObj ? catObj.name : `Ngành nghề ID: ${catId}`;
+                      return (
+                        <span key={idx} className="badge badge--accent badge-sm">
+                          {catName}
+                        </span>
+                      );
+                    })
+                  ) : (
+                    <span className="text-muted text-xs">{t('spaces.notConfigured') || 'Không ràng buộc'}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-actions-footer">
+              <button className="btn-ghost cancel-btn" onClick={() => setViewingSpace(null)}>
+                {language === 'en' ? 'Close' : 'Đóng'}
+              </button>
+              <button
+                className="btn-primary submit-btn"
+                onClick={() => { const s = viewingSpace; setViewingSpace(null); handleOpenFormForEdit(s); }}
+              >
+                <Edit3 size={14} /> {t('spaces.edit') || 'Sửa'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
