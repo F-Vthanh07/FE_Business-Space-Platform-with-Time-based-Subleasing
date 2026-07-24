@@ -22,7 +22,7 @@ import { VerificationWarningBanner, useIdentityVerification } from '../identity-
 import type { UserPage, SubSlot } from './types';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './UserDashboardPage.css';
-import MyContractsPage from './components/Mycontractspage';
+import MyContractsPage from './components/MyContractsPage';
 import { RenterBookingRequests } from './components/RenterBookingRequests';
 import { SharedSpaceManagement } from './components/SharedSpaceManagement';
 

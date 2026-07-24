@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 import { ContractCreateModal } from '../../../components/Contract/ContractCreateModal';
 import { ContractViewModal } from '../../../components/Contract/ContractViewModal';
-
-const API_BASE = 'https://flexi-space-capstone-project.onrender.com';
+import { fetchConversationsByUser } from '../api/conversation.api';
+import { fetchMyContractsAsEitherParty, deleteContract } from '../api/contract.api';
 
 type StatusFilter = 'ALL' | 'UNSIGNED' | 'SIGNED' | 'EXPIRED' | 'CANCELLED';
 
@@ -90,16 +90,10 @@ export const MyContractsPage: React.FC = () => {
   // thì có sẵn lessorUserName/lesseeUserName. Nên lấy tên từ đó, match theo cặp lessorId+lesseeId.
   const [nameMap, setNameMap] = useState<Record<string, { lessorUserName: string; lesseeUserName: string }>>({});
 
-  const normalizeList = (data: any) => (Array.isArray(data) ? data : data?.data || data?.items || []);
-
   const fetchConversationNames = async () => {
     if (!token || !currentUserId) return;
     try {
-      const res = await fetch(`${API_BASE}/api/Conversation/User/${currentUserId}`, {
-        headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-      });
-      if (!res.ok) return;
-      const list = normalizeList(await res.json());
+      const list = await fetchConversationsByUser(currentUserId);
       const map: Record<string, { lessorUserName: string; lesseeUserName: string }> = {};
       list.forEach((conv: any) => {
         const lessorId = conv.lessorId ?? conv.LessorId;
@@ -124,39 +118,12 @@ export const MyContractsPage: React.FC = () => {
     return null; // ALL -> không truyền Status, để BE trả hết
   };
 
-  // Gọi 2 lần vì mình có thể là Bên A (Lessor) hoặc Bên B (Lessee) tuỳ hợp đồng,
-  // API GetAll chỉ lọc theo đúng 1 role trong 1 lần gọi. status = null nghĩa là không lọc theo Status.
-  const fetchContractsByStatus = async (status: string | null) => {
-    const statusQuery = status ? `&Status=${status}` : '';
-    const [asLessorRes, asLesseeRes] = await Promise.all([
-      fetch(`${API_BASE}/api/Contract/GetAll?LessorId=${currentUserId}${statusQuery}`, {
-        headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-      }),
-      fetch(`${API_BASE}/api/Contract/GetAll?LesseeId=${currentUserId}${statusQuery}`, {
-        headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-      }),
-    ]);
-
-    const asLessor = asLessorRes.ok ? normalizeList(await asLessorRes.json()) : [];
-    const asLessee = asLesseeRes.ok ? normalizeList(await asLesseeRes.json()) : [];
-
-    // Gộp và loại trùng theo id
-    const map = new Map<string, any>();
-    [...asLessor, ...asLessee].forEach((c) => map.set(String(c.id ?? c.Id), c));
-
-    return Array.from(map.values()).sort((a, b) => {
-      const idA = Number(a.id ?? a.Id ?? 0);
-      const idB = Number(b.id ?? b.Id ?? 0);
-      return idB - idA; // mới nhất lên trên
-    });
-  };
-
   // Tải danh sách theo đúng tab đang chọn (dùng Status query param thật của BE)
   const fetchMyContracts = async () => {
     if (!token || !currentUserId) return;
     setIsLoading(true);
     try {
-      const list = await fetchContractsByStatus(statusParamOf(filter));
+      const list = await fetchMyContractsAsEitherParty(currentUserId, statusParamOf(filter));
       setContracts(list);
 
       // Nếu đang xem "Tất cả" thì tận dụng luôn kết quả này để tính số đếm cho các tab,
@@ -171,8 +138,9 @@ export const MyContractsPage: React.FC = () => {
 
   // Tải riêng danh sách "Tất cả" một lần khi vào trang, chỉ để tính số đếm hiển thị trên tab
   const fetchCounts = async () => {
+    if (!currentUserId) return;
     try {
-      const list = await fetchContractsByStatus(null);
+      const list = await fetchMyContractsAsEitherParty(currentUserId, null);
       setAllContracts(list);
     } catch (err) {
       console.error('Lỗi tải số đếm hợp đồng:', err);
@@ -221,10 +189,7 @@ export const MyContractsPage: React.FC = () => {
   const handleDeleteContract = async (contractId: string) => {
     if (!window.confirm('Bạn có chắc chắn muốn thu hồi và huỷ bỏ hợp đồng này?')) return;
     try {
-      const res = await fetch(`${API_BASE}/api/Contract/Delete/${contractId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-      });
+      const res = await deleteContract(contractId);
       if (!res.ok) throw new Error('Thu hồi thất bại. Có thể hợp đồng đã được ký hoặc không tồn tại.');
       alert('Đã thu hồi hợp đồng thành công!');
       setViewingContract(null);

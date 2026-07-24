@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, FileText, Calendar, User } from 'lucide-react';
+import { fetchBookingRequestsByStatus, updateBookingRequestStatus } from '../api/bookingRequest.api';
+import { createConversation } from '../api/conversation.api';
 
 export const OwnerBookingRequests: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const currentUserId = localStorage.getItem('current_user_id');
-  const token = localStorage.getItem('portal_token');
 
   // ĐÁNH DẤU CÁC ĐƠN ĐÃ FETCH LÀ "ĐÃ XEM" ĐỂ HEADER TẮT BADGE ĐỎ
   const markRequestsAsSeen = (ids: (string | number)[]) => {
@@ -26,19 +27,12 @@ export const OwnerBookingRequests: React.FC = () => {
   const fetchRequests = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll?status=Pending', {
-        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
+      const safeData = await fetchBookingRequestsByStatus('Pending');
+      const myRequests = safeData.filter((req: any) => req.lessorId === currentUserId);
+      setRequests(myRequests);
 
-        const myRequests = safeData.filter((req: any) => req.lessorId === currentUserId);
-        setRequests(myRequests);
-
-        // Đánh dấu tất cả các đơn vừa load là "đã xem" -> Header sẽ tắt badge đỏ
-        markRequestsAsSeen(myRequests.map((r: any) => r.id || r.Id));
-      }
+      // Đánh dấu tất cả các đơn vừa load là "đã xem" -> Header sẽ tắt badge đỏ
+      markRequestsAsSeen(myRequests.map((r: any) => r.id || r.Id));
     } catch (error) {
       console.error("Lỗi tải danh sách yêu cầu:", error);
     } finally {
@@ -57,15 +51,7 @@ export const OwnerBookingRequests: React.FC = () => {
     if (!window.confirm(`Bạn có chắc muốn ${newStatus === 'Approved' ? 'DUYỆT' : 'TỪ CHỐI'} yêu cầu này?`)) return;
 
     try {
-      // SỬA FIX LỖI JSON BỊ 400 BAD REQUEST CHỖ NÀY RỒI NHA
-      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/Status/${requestId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: newStatus }) 
-      });
+      const res = await updateBookingRequestStatus(requestId, newStatus);
 
       if (!res.ok) {
         alert("Lỗi khi cập nhật trạng thái đơn!");
@@ -74,13 +60,7 @@ export const OwnerBookingRequests: React.FC = () => {
 
       if (newStatus === 'Approved' && lesseeId) {
         try {
-          const convRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Conversation/Create?lessorId=${currentUserId}&lesseeId=${lesseeId}`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'accept': '*/*'
-            }
-          });
+          const convRes = await createConversation(currentUserId || '', lesseeId);
 
           if (convRes.ok) {
             // Đọc luôn data phòng chat vừa tạo (BE trả về object chứa id/lessorId/lesseeId...)

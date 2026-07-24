@@ -18,10 +18,11 @@ import {
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { ContractViewModal } from '../../../components/Contract/ContractViewModal';
+import { fetchLessorContracts } from '../api/contract.api';
+import { fetchOwnerSpaces } from '../api/space.api';
+import { fetchUserById } from '../api/user.api';
 import '../../shared/ModalShell.css';
 import './OwnerTenants.css';
-
-const API_BASE = 'https://flexi-space-capstone-project.onrender.com';
 
 type ContractStatus = 'Active' | 'Draft' | 'Expired' | 'Cancelled';
 
@@ -48,8 +49,6 @@ const statusConfig: Record<ContractStatus, { className: string; icon: React.Reac
   Expired: { className: 'badge--neutral', icon: <XCircle size={11} /> },
   Cancelled: { className: 'badge--negative', icon: <Ban size={11} /> },
 };
-
-const normalizeList = (data: any) => (Array.isArray(data) ? data : data?.data || data?.items || []);
 
 const getInitials = (name: string) =>
   name.split(' ').filter(Boolean).slice(-2).map((w) => w[0]).join('').toUpperCase() || '??';
@@ -108,34 +107,18 @@ export const OwnerTenants: React.FC = () => {
       }
       setIsLoading(true);
       try {
-        const [contractRes, spaceRes] = await Promise.all([
-          fetch(`${API_BASE}/api/Contract/GetAll?LessorId=${encodeURIComponent(currentUserId)}`, {
-            headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-          }),
-          fetch(`${API_BASE}/api/Space/GetAll?OwnerId=${encodeURIComponent(currentUserId)}`, {
-            headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-          }),
+        const [contracts, spaces] = await Promise.all([
+          fetchLessorContracts(currentUserId),
+          fetchOwnerSpaces(currentUserId),
         ]);
 
-        const contracts = contractRes.ok ? normalizeList(await contractRes.json()) : [];
-        const spaces = spaceRes.ok ? normalizeList(await spaceRes.json()) : [];
         const spaceMap = new Map<number, any>(spaces.map((s: any) => [s.id ?? s.Id, s]));
 
         // Contract GetAll không trả tên/sđt/email người thuê, nên phải gọi riêng User/{id}
         // cho từng lesseeId duy nhất (tránh gọi trùng nếu 1 người thuê nhiều hợp đồng).
-        const uniqueLesseeIds = Array.from(new Set(contracts.map((c: any) => c.lesseeId ?? c.LesseeId).filter(Boolean)));
+        const uniqueLesseeIds = Array.from(new Set(contracts.map((c: any) => c.lesseeId ?? c.LesseeId).filter(Boolean))) as string[];
         const userEntries = await Promise.all(
-          uniqueLesseeIds.map(async (id) => {
-            try {
-              const res = await fetch(`${API_BASE}/api/User/${id}`, {
-                headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-              });
-              if (!res.ok) return [id, null] as const;
-              return [id, await res.json()] as const;
-            } catch {
-              return [id, null] as const;
-            }
-          })
+          uniqueLesseeIds.map(async (id) => [id, await fetchUserById(id)] as const)
         );
         const userMap = new Map(userEntries);
 

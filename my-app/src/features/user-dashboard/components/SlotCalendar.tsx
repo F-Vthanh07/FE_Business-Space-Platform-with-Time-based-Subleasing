@@ -27,7 +27,7 @@ import { vi, enUS } from 'date-fns/locale';
 import { SubleaseSlotForm } from './SubleaseSlotForm';
 import { SubBookingForm } from './SubBookingForm';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import { API_BASE_URL } from '../../../config/api';
+import { fetchOwnerSpaces } from '../api/space.api';
 import './SlotCalendar.css';
 
 import type { SubSlot } from '../types';
@@ -72,25 +72,10 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
   const fetchOwnedSpaces = useCallback(async () => {
     setIsSpacesLoading(true);
     try {
-      const token = localStorage.getItem('portal_token');
-      const ownerId = localStorage.getItem('current_user_id');
-      const url = `${API_BASE_URL}/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId || '')}`;
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          accept: '*/*',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const safeData: OwnedSpace[] = Array.isArray(data) ? data : (data?.data || data?.items || []);
-        setOwnedSpaces(safeData);
-        setSelectedSpaceId((prev) => prev || (safeData[0] ? String(safeData[0].id) : ''));
-      } else {
-        setOwnedSpaces([]);
-      }
+      const ownerId = localStorage.getItem('current_user_id') || '';
+      const safeData = (await fetchOwnerSpaces(ownerId)) as OwnedSpace[];
+      setOwnedSpaces(safeData);
+      setSelectedSpaceId((prev) => prev || (safeData[0] ? String(safeData[0].id) : ''));
     } catch (error) {
       console.error('Lỗi khi tải danh sách mặt bằng:', error);
       setOwnedSpaces([]);

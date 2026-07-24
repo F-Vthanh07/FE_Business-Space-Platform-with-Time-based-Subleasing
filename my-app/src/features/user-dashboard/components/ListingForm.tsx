@@ -5,7 +5,10 @@ import { X, DollarSign, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, U
 import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
 import '../../shared/ModalShell.css';
 import './ListingForm.css';
-import { createShareListing, updateShareListing } from './shareListing.api';
+import { createShareListing, updateShareListing } from '../api/shareListing.api';
+import { fetchOwnerSpaces } from '../api/space.api';
+import { createListing, updateListing } from '../api/listing.api';
+import { uploadListingPictures } from '../api/picture.api';
 import type { ShareListingPayload } from '../types';
 
 interface ListingFormProps {
@@ -80,25 +83,16 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   );
 
   useEffect(() => {
-    const fetchSpaces = async () => {
+    const loadSpaces = async () => {
       try {
-        const token = localStorage.getItem('portal_token');
         const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
-        const url = `https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
-
-        const res = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setMySpaces(Array.isArray(data) ? data : (data?.data || []));
-        }
+        const data = await fetchOwnerSpaces(ownerId);
+        setMySpaces(data);
       } catch (err) {
         console.error("Lỗi lấy danh sách mặt bằng:", err);
       }
     };
-    fetchSpaces();
+    loadSpaces();
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,7 +227,6 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       };
 
       try {
-        const token = localStorage.getItem('portal_token');
         const targetId = initialData?.id || initialData?.Id;
         let createdShareListingId: any = targetId;
 
@@ -245,15 +238,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         }
 
         if (selectedFiles.length > 0 && createdShareListingId) {
-          const formData = new FormData();
-          selectedFiles.forEach(file => formData.append('file', file));
-          formData.append('listingId', createdShareListingId.toString());
-
-          const picRes = await fetch('https://flexi-space-capstone-project.onrender.com/api/Picture', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' },
-            body: formData
-          });
+          const picRes = await uploadListingPictures(createdShareListingId, selectedFiles);
 
           if (!picRes.ok) {
             console.error("LỖI UP ẢNH:", await picRes.text());
@@ -273,8 +258,8 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     }
 
     // ===== NHÁNH 2: CHO THUÊ DÀI HẠN (logic cũ) =====
-    const token = localStorage.getItem('portal_token');
     const ownerId = localStorage.getItem('current_user_id');
+    const token = localStorage.getItem('portal_token');
 
     if (!ownerId || !token) {
       setError("Phiên đăng nhập đã hết hạn hoặc không tìm thấy ID. Vui lòng đăng nhập lại!");
@@ -285,9 +270,6 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     try {
       const isEditing = !!initialData;
       const targetId = initialData?.id || initialData?.Id;
-      const url = isEditing
-        ? `https://flexi-space-capstone-project.onrender.com/api/Listing/Update/${targetId}`
-        : `https://flexi-space-capstone-project.onrender.com/api/Listing/Create`;
 
       const listingPayload = {
         spaceId: Number(spaceId),
@@ -298,15 +280,9 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         listingPictures: []
       };
 
-      const res = await fetch(url, {
-        method: isEditing ? 'PUT' : 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'accept': '*/*'
-        },
-        body: JSON.stringify(isEditing ? { ...listingPayload, id: targetId } : listingPayload)
-      });
+      const res = isEditing
+        ? await updateListing(targetId, listingPayload)
+        : await createListing(listingPayload);
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -328,20 +304,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       }
 
       if (selectedFiles.length > 0 && createdListingId) {
-        const formData = new FormData();
-        selectedFiles.forEach(file => {
-          formData.append('file', file);
-        });
-        formData.append('listingId', createdListingId.toString());
-
-        const picRes = await fetch('https://flexi-space-capstone-project.onrender.com/api/Picture', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'accept': '*/*'
-          },
-          body: formData
-        });
+        const picRes = await uploadListingPictures(createdListingId, selectedFiles);
 
         if (!picRes.ok) {
           console.error("LỖI UP ẢNH:", await picRes.text());

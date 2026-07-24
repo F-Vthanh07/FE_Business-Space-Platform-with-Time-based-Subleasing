@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { MeshBackground } from './components/MeshBackground';
-import { UserDashboardPage } from './features/user-dashboard/UserDashboardPage';
+import { UserDashboardPage } from './features/user-dashboard';
 import { AdminDashboardPage } from './features/admin-dashboard/AdminDashboardPage';
 import { AccessDeniedPage } from './components/AccessDeniedPage';
 import { Homepage } from './features/homepage/Homepage';

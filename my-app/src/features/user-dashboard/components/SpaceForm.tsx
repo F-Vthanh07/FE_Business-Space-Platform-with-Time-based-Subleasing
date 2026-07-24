@@ -3,6 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { X, Building2, MapPin, Clock, Check, ShieldAlert, Briefcase } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
+import { fetchProvinces as fetchProvincesApi, fetchDistricts as fetchDistrictsApi, fetchWards as fetchWardsApi, createSpace, updateSpace } from '../api/space.api';
+import { fetchBusinessCategories } from '../api/businessCategory.api';
+import { tryGeocode } from '../utils/geocode';
 import '../../shared/ModalShell.css';
 import './SpaceForm.css';
 
@@ -30,10 +33,6 @@ const getDayLabel = (id: number, lang: 'en' | 'vi') => {
   };
   return days[id]?.[lang] || '';
 };
-
-// ĐỔI SANG EMAIL LIÊN HỆ THẬT CỦA BẠN — Nominatim dùng cái này để định danh app,
-// không dùng được header User-Agent tự set (trình duyệt chặn header đó).
-const NOMINATIM_CONTACT_EMAIL = 'contact@yourdomain.com';
 
 export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initialData }) => {
   const { t, language } = useThemeLanguage();
@@ -76,40 +75,30 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
   const [geoWarning, setGeoWarning] = useState('');
 
   useEffect(() => {
-    const fetchProvinces = async () => {
+    const loadProvinces = async () => {
       try {
-        const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/Space/GetAddress', {
-          headers: { 'accept': '*/*' }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setProvinces(Array.isArray(data) ? data : []);
-        }
+        const data = await fetchProvincesApi();
+        setProvinces(data);
       } catch (err) {
         console.error("Lỗi lấy danh sách tỉnh/thành:", err);
       }
     };
-    fetchProvinces();
+    loadProvinces();
   }, []);
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const loadCategories = async () => {
       setIsCategoriesLoading(true);
       try {
-        const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/GetAll', {
-          headers: { 'accept': '*/*' }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setApiCategories(Array.isArray(data) ? data : (data?.items || []));
-        }
+        const data = await fetchBusinessCategories();
+        setApiCategories(data);
       } catch (err) {
         console.error("Lỗi lấy danh sách ngành nghề:", err);
       } finally {
         setIsCategoriesLoading(false);
       }
     };
-    fetchCategories();
+    loadCategories();
   }, []);
 
   useEffect(() => {
@@ -152,14 +141,8 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     setWards([]);
 
     try {
-      const res = await fetch(
-        `https://flexi-space-capstone-project.onrender.com/api/Space/GetAddress?provinceCode=${encodeURIComponent(value)}`,
-        { headers: { 'accept': '*/*' } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setDistricts(Array.isArray(data) ? data : []);
-      }
+      const data = await fetchDistrictsApi(value);
+      setDistricts(data);
     } catch (err) {
       console.error("Lỗi lấy danh sách quận/huyện:", err);
     }
@@ -173,14 +156,8 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     setWards([]);
 
     try {
-      const res = await fetch(
-        `https://flexi-space-capstone-project.onrender.com/api/Space/GetAddress?provinceCode=${encodeURIComponent(provinceCode)}&districtCode=${encodeURIComponent(value)}`,
-        { headers: { 'accept': '*/*' } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setWards(Array.isArray(data) ? data : []);
-      }
+      const data = await fetchWardsApi(provinceCode, value);
+      setWards(data);
     } catch (err) {
       console.error("Lỗi lấy danh sách phường/xã:", err);
     }
@@ -201,35 +178,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
   const cleanAddress = (text: string) => {
     if (!text) return '';
     return text.replace(/(Xã|Phường|Thị trấn|Huyện|Quận|Thành phố|Tỉnh|TP\.?)\s+/gi, '').trim();
-  };
-
-  // Gọi Nominatim 1 lần, trả về {lat,lng} hoặc null. Log rõ status/lý do fail ra console.
-  const tryGeocode = async (query: string): Promise<{ lat: number; lng: number } | null> => {
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=1&countrycodes=vn&email=${encodeURIComponent(NOMINATIM_CONTACT_EMAIL)}`;
-      const geoRes = await fetch(url, {
-        headers: { 'Accept-Language': 'vi' }
-        // Lưu ý: KHÔNG set 'User-Agent' ở đây — trình duyệt luôn chặn/ghi đè header này,
-        // set vào code cũ không có tác dụng gì và có thể khiến bạn lầm tưởng đã định danh app.
-      });
-
-      if (!geoRes.ok) {
-        console.error(`[Geocode] HTTP ${geoRes.status} cho query: "${query}"`);
-        return null;
-      }
-
-      const geoData = await geoRes.json();
-      if (Array.isArray(geoData) && geoData.length > 0) {
-        return { lat: parseFloat(geoData[0].lat), lng: parseFloat(geoData[0].lon) };
-      }
-      console.warn(`[Geocode] Không có kết quả cho query: "${query}"`);
-      return null;
-    } catch (err) {
-      // Lỗi kiểu "Failed to fetch" ở đây thường là do CORS bị chặn hoặc mất mạng —
-      // mở tab Network xem request tới nominatim.openstreetmap.org có màu đỏ không.
-      console.error(`[Geocode] Fetch lỗi cho query: "${query}"`, err);
-      return null;
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -282,8 +230,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     const city = [wardLabel, districtLabel, provinceLabel].filter(Boolean).join(', ');
 
     // 3. CHUẨN BỊ PAYLOAD
-    const token = localStorage.getItem('portal_token');
-
     const customAmenities = customAmenityChecked
       ? customAmenityText
       .split(',')
@@ -318,19 +264,9 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     // 4. GỌI API TẠO / CẬP NHẬT SPACE
     try {
       const isEditing = !!initialData;
-      const url = isEditing
-        ? `https://flexi-space-capstone-project.onrender.com/api/Space/Update${initialData.id}`
-        : 'https://flexi-space-capstone-project.onrender.com/api/Space/Create';
-
-      const response = await fetch(url, {
-        method: isEditing ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'accept': '*/*'
-        },
-        body: JSON.stringify(isEditing ? { ...payload, id: initialData.id } : payload)
-      });
+      const response = isEditing
+        ? await updateSpace(initialData.id, payload)
+        : await createSpace(payload);
 
       if (!response.ok) {
         throw new Error(`Lỗi khi ${isEditing ? 'cập nhật' : 'tạo'} mặt bằng.`);

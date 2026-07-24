@@ -5,6 +5,8 @@ import { gsap } from 'gsap';
 import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X } from 'lucide-react';
 import { SpaceForm } from './SpaceForm';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import { fetchOwnerSpaces, deleteSpace } from '../api/space.api';
+import { fetchBusinessCategories } from '../api/businessCategory.api';
 import '../../shared/ModalShell.css';
 import './OwnerSpaces.css';
 
@@ -38,46 +40,24 @@ export const OwnerSpaces: React.FC = () => {
 
   // --- 1. LẤY DANH MỤC NGÀNH NGHỀ TỪ API ---
   useEffect(() => {
-    const fetchCategories = async () => {
+    const loadCategories = async () => {
       try {
-        const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/GetAll', {
-          headers: { 'accept': '*/*' }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setApiCategories(Array.isArray(data) ? data : []);
-        }
+        const data = await fetchBusinessCategories();
+        setApiCategories(data);
       } catch (err) {
         console.error("Lỗi lấy danh mục ngành nghề:", err);
       }
     };
-    fetchCategories();
+    loadCategories();
   }, []);
 
-  // --- 2. API GET ALL VỚI QUERY THAM SỐ (Lấy mặt bằng của chính mình) ---
+  // --- 2. LẤY MẶT BẰNG CỦA CHÍNH MÌNH ---
   const fetchSpaces = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('portal_token');
       const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
-
-      const url = `https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'accept': '*/*'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-        setSpaces(safeData);
-      } else {
-        setSpaces([]);
-      }
+      const safeData = await fetchOwnerSpaces(ownerId);
+      setSpaces(safeData);
     } catch (error) {
       console.error("Lỗi khi tải danh sách mặt bằng:", error);
       setSpaces([]);
@@ -143,14 +123,7 @@ export const OwnerSpaces: React.FC = () => {
 
     if (window.confirm(t('spaces.confirmDeleteSpace') || 'Bạn có chắc chắn muốn xóa mặt bằng này?')) {
       try {
-        const token = localStorage.getItem('portal_token');
-        const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/Delete${targetId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'accept': '*/*'
-          }
-        });
+        const response = await deleteSpace(targetId);
 
         if (response.ok) {
           setSpaces(prev => prev.filter(s => (s.id || (s as any).Id) !== targetId));

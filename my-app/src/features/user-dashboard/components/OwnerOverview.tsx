@@ -21,7 +21,9 @@ import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { useIdentityVerification } from '../../identity-verification';
 import { fetchWalletAccount } from '../../wallet/api/wallet.api';
 import { formatVnd } from '../../wallet/utils/format';
-import { API_BASE_URL } from '../../../config/api';
+import { fetchMySpaces } from '../api/space.api';
+import { fetchMyListings } from '../api/listing.api';
+import { fetchMyContractsCount, fetchBookingRequestsByStatus } from '../api/bookingRequest.api';
 import './OwnerOverview.css';
 
 interface OwnerOverviewProps {
@@ -91,41 +93,17 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
           fetchWalletAccount(token).then((a) => a.balance),
 
           // 2. My spaces (full array)
-          fetch(`${API_BASE_URL}/api/Space/owner`, {
-            headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-          }).then(async (r) => {
-            if (!r.ok) return [] as DashboardSpace[];
-            const d = await r.json();
-            return (Array.isArray(d) ? d : d?.data || d?.items || []) as DashboardSpace[];
-          }),
+          fetchMySpaces(token) as Promise<DashboardSpace[]>,
 
           // 3. My contracts count
-          fetch(`${API_BASE_URL}/api/PrimaryBookingRequest/user/my-contracts`, {
-            headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-          }).then(async (r) => {
-            if (!r.ok) return 0;
-            const d = await r.json();
-            const arr = Array.isArray(d) ? d : d?.data || d?.items || [];
-            return arr.length;
-          }),
+          fetchMyContractsCount(token),
 
           // 4. My listings (full array)
-          fetch(`${API_BASE_URL}/api/Listing/mine`, {
-            headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-          }).then(async (r) => {
-            if (!r.ok) return [] as DashboardListing[];
-            const d = await r.json();
-            return (Array.isArray(d) ? d : d?.data || d?.items || []) as DashboardListing[];
-          }),
+          fetchMyListings(token) as Promise<DashboardListing[]>,
 
           // 5. Pending booking requests (my lessor pending)
-          fetch(`${API_BASE_URL}/api/PrimaryBookingRequest/GetAll?status=Pending`, {
-            headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-          }).then(async (r) => {
-            if (!r.ok) return [];
-            const d = await r.json();
-            const arr = Array.isArray(d) ? d : d?.data || d?.items || [];
-            return arr
+          fetchBookingRequestsByStatus('Pending').then((arr) =>
+            arr
               .filter((req: any) => req.lessorId === currentUserId)
               .slice(0, 5)
               .map((req: any) => ({
@@ -137,8 +115,8 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
                 listingTitle: req.listingTitle || '',
                 createdAt: req.createdAt || req.CreatedAt || '',
                 status: req.status || 'Pending',
-              }));
-          }),
+              }))
+          ),
         ]);
 
       setWalletBalance(walletResult.status === 'fulfilled' ? walletResult.value : 0);

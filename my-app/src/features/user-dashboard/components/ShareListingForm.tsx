@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { X, DollarSign, Users, ShieldCheck, ShieldAlert, Plus, Trash2, Clock } from 'lucide-react';
 import '../../shared/ModalShell.css';
 import type { ShareListingPayload } from '../types';
-import { createShareListing, updateShareListing } from './shareListing.api';
+import { createShareListing, updateShareListing } from '../api/shareListing.api';
 
 interface SpaceOption {
   id: number;

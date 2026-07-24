@@ -5,8 +5,8 @@ import { gsap } from 'gsap';
 import { Plus, Search, Users, MapPin, Edit3, Trash2 } from 'lucide-react';
 import { ShareListingForm } from './ShareListingForm';
 import './OwnerListings.css'; // tái dùng style glass-card / badge / grid có sẵn
-import { deleteShareListing, fetchMyShareListings } from './shareListing.api';
-import { fetchActiveRentedContracts, spaceNameOf } from './contract.api';
+import { deleteShareListing, fetchMyShareListings } from '../api/shareListing.api';
+import { fetchActiveRentedContracts, spaceNameOf } from '../api/contract.api';
 
 export const SharedSpaceManagement: React.FC = () => {
   const [shareListings, setShareListings] = useState<any[]>([]);

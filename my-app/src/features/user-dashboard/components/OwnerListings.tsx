@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { ListingForm } from './ListingForm';
+import { fetchOwnerSpaces } from '../api/space.api';
+import { fetchAllListings, deleteListing } from '../api/listing.api';
 import './OwnerListings.css';
 import '../../shared/ModalShell.css';
 import { createPortal } from 'react-dom';
@@ -47,54 +49,37 @@ export const OwnerListings: React.FC = () => {
     return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  // --- API LẤY BÀI ĐĂNG CỦA RIÊNG MÌNH ---
+  // --- LẤY BÀI ĐĂNG CỦA RIÊNG MÌNH ---
   const fetchListings = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('portal_token');
       const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
 
       // BƯỚC 1: Lấy danh sách Mặt bằng (Space) của chính ông này
-      const spaceRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-      });
-
-      let mySpaces: any[] = [];
-      let mySpaceIds: any[] = [];
-      if (spaceRes.ok) {
-        const spaceData = await spaceRes.json();
-        mySpaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
-        mySpaceIds = mySpaces.map((s: any) => s.id || s.Id);
-      }
+      const mySpaces = await fetchOwnerSpaces(ownerId);
+      const mySpaceIds = mySpaces.map((s: any) => s.id || s.Id);
 
       // BƯỚC 2: Lấy tất cả bài đăng
-      const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', {
-        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      const safeData = await fetchAllListings();
+
+      // BƯỚC 3: LỌC & GHÉP DATA MẶT BẰNG
+      const myListings = safeData.filter((l: any) => {
+        const currentSpaceId = l.spaceId || l.SpaceId;
+        return mySpaceIds.includes(currentSpaceId) || l.ownerId === ownerId || l.createdBy === ownerId || l.creatorId === ownerId;
+      }).map((l: any) => {
+        // BƯỚC 4: Tìm mặt bằng gốc của bài đăng này
+        const currentSpaceId = l.spaceId || l.SpaceId;
+        const parentSpace = mySpaces.find(s => (s.id || s.Id) === currentSpaceId);
+
+        return {
+          ...l,
+          // Móc địa chỉ từ Mặt bằng sang Bài đăng nếu bài đăng không có sẵn
+          address: l.location || l.address || l.spaceAddress || parentSpace?.address || parentSpace?.location || '',
+          area: l.area || parentSpace?.area || ''
+        };
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-
-        // BƯỚC 3: LỌC & GHÉP DATA MẶT BẰNG
-        const myListings = safeData.filter((l: any) => {
-          const currentSpaceId = l.spaceId || l.SpaceId;
-          return mySpaceIds.includes(currentSpaceId) || l.ownerId === ownerId || l.createdBy === ownerId || l.creatorId === ownerId;
-        }).map((l: any) => {
-          // BƯỚC 4: Tìm mặt bằng gốc của bài đăng này
-          const currentSpaceId = l.spaceId || l.SpaceId;
-          const parentSpace = mySpaces.find(s => (s.id || s.Id) === currentSpaceId);
-
-          return {
-            ...l,
-            // Móc địa chỉ từ Mặt bằng sang Bài đăng nếu bài đăng không có sẵn
-            address: l.location || l.address || l.spaceAddress || parentSpace?.address || parentSpace?.location || '',
-            area: l.area || parentSpace?.area || ''
-          };
-        });
-
-        setListings(myListings);
-      }
+      setListings(myListings);
     } catch (err) {
       console.error("Lỗi lấy danh sách bài đăng:", err);
     } finally {
@@ -155,11 +140,7 @@ export const OwnerListings: React.FC = () => {
           return;
         }
 
-        const token = localStorage.getItem('portal_token');
-        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/Delete/${targetId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-        });
+        const res = await deleteListing(targetId);
 
         if (res.ok) {
           setListings(prev => prev.filter(l => (l.id || l.Id) !== targetId));

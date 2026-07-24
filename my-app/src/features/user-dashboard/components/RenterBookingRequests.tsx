@@ -13,6 +13,7 @@ import {
   User
 } from 'lucide-react';
 import '../../shared/ModalShell.css';
+import { fetchBookingRequestsByStatus, updateBookingRequest, deleteBookingRequest } from '../api/bookingRequest.api';
 
 interface BookingRequestEditData {
   listingId: number;
@@ -48,7 +49,6 @@ export const RenterBookingRequests: React.FC = () => {
   const [error, setError] = useState('');
 
   const currentUserId = localStorage.getItem('current_user_id');
-  const token = localStorage.getItem('portal_token');
 
   // LẤY DANH SÁCH ĐƠN THUÊ CỦA CHÍNH MÌNH (LESSEE)
   // GỌI RIÊNG TỪNG STATUS VÌ RESPONSE CỦA GetAll KHÔNG TRẢ SẴN FIELD "status"
@@ -57,13 +57,7 @@ export const RenterBookingRequests: React.FC = () => {
     try {
       const results = await Promise.all(
         STATUS_LIST.map(async (status) => {
-          const res = await fetch(
-            `https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll?status=${status}`,
-            { headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' } }
-          );
-          if (!res.ok) return [];
-          const data = await res.json();
-          const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
+          const safeData = await fetchBookingRequestsByStatus(status);
           return safeData.map((req: any) => ({ ...req, status }));
         })
       );
@@ -108,17 +102,10 @@ export const RenterBookingRequests: React.FC = () => {
     setIsSaving(true);
     setError('');
     try {
-      const res = await fetch(
-        `https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/Update/${editingRequest.id || editingRequest.Id}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({
-            ...editForm,
-            expectedStartDate: new Date(editForm.expectedStartDate).toISOString()
-          })
-        }
-      );
+      const res = await updateBookingRequest(editingRequest.id || editingRequest.Id, {
+        ...editForm,
+        expectedStartDate: new Date(editForm.expectedStartDate).toISOString()
+      });
       if (!res.ok) {
         setError('Lỗi khi cập nhật yêu cầu thuê!');
         return;
@@ -136,10 +123,7 @@ export const RenterBookingRequests: React.FC = () => {
   const handleDelete = async (requestId: number) => {
     if (!window.confirm('Bạn có chắc muốn xoá yêu cầu thuê này không?')) return;
     try {
-      const res = await fetch(
-        `https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/Delete/${requestId}`,
-        { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' } }
-      );
+      const res = await deleteBookingRequest(requestId);
       if (!res.ok) {
         alert('Lỗi khi xoá yêu cầu thuê!');
         return;
