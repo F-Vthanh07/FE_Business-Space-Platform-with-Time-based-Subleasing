@@ -4,44 +4,47 @@ import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import {
   Plus, Search, Eye, Edit3, Trash2, MoreHorizontal,
-  Building2, MapPin, Clock, CheckCircle2, XCircle, Star, ChevronLeft, ChevronRight, X
+  Building2, MapPin, Clock, CheckCircle2, XCircle, Star, ChevronLeft, ChevronRight, X, Users
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { ListingForm } from './ListingForm';
 import './OwnerListings.css';
+import '../../shared/ModalShell.css';
 import { createPortal } from 'react-dom';
 
-const statusConfig: Record<string, { className: string, icon: React.ReactNode }> = {
-  published: { className: 'badge--positive', icon: <CheckCircle2 size={11} /> },
-  pending: { className: 'badge--warning', icon: <Clock size={11} /> },
-  draft: { className: 'badge--neutral', icon: <Edit3 size={11} /> },
-  expired: { className: 'badge--negative', icon: <XCircle size={11} /> },
+// Chỉ có đúng 2 status thật từ BE: Accepted / Ban
+const statusConfig: Record<string, { className: string; icon: React.ReactNode; label: string }> = {
+  Accepted: { className: 'badge--positive', icon: <CheckCircle2 size={11} />, label: 'Đang hoạt động' },
+  Ban: { className: 'badge--negative', icon: <XCircle size={11} />, label: 'Đã bị khóa' },
 };
+
+// Chỉ có đúng 2 listingType thật từ BE: EntireSpace / SharedSpace
+const isShareListing = (l: any) => l?.listingType === 'SharedSpace';
 
 export const OwnerListings: React.FC = () => {
   const [listings, setListings] = useState<any[]>([]); // Data lấy từ API
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterType, setFilterType] = useState<'all' | 'EntireSpace' | 'SharedSpace'>('all');
   const [isLoading, setIsLoading] = useState(true);
 
   // States quản lý Form
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingListing, setEditingListing] = useState<any | null>(null);
 
-  const [viewingListing, setViewingListing] = useState<any | null>(null); 
+  const [viewingListing, setViewingListing] = useState<any | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const { t, language } = useThemeLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'published': return t('listings.published') || 'Đang đăng';
-      case 'pending': return t('listings.pending') || 'Chờ duyệt';
-      case 'draft': return t('listings.draft') || 'Bản nháp';
-      case 'expired': return t('listings.expired') || 'Hết hạn';
-      default: return 'Không rõ';
-    }
+  const getStatusLabel = (status: string) => statusConfig[status]?.label || 'Không rõ';
+
+  const formatDate = (dateStr: any) => {
+    if (!dateStr) return 'Không rõ';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'Không rõ';
+    return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   // --- API LẤY BÀI ĐĂNG CỦA RIÊNG MÌNH ---
@@ -55,7 +58,7 @@ export const OwnerListings: React.FC = () => {
       const spaceRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
-      
+
       let mySpaces: any[] = [];
       let mySpaceIds: any[] = [];
       if (spaceRes.ok) {
@@ -68,28 +71,29 @@ export const OwnerListings: React.FC = () => {
       const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', {
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-        
+
         // BƯỚC 3: LỌC & GHÉP DATA MẶT BẰNG
         const myListings = safeData.filter((l: any) => {
           const currentSpaceId = l.spaceId || l.SpaceId;
-          return mySpaceIds.includes(currentSpaceId) || l.ownerId === ownerId || l.createdBy === ownerId;
+          return mySpaceIds.includes(currentSpaceId) || l.ownerId === ownerId || l.createdBy === ownerId || l.creatorId === ownerId;
         }).map((l: any) => {
           // BƯỚC 4: Tìm mặt bằng gốc của bài đăng này
           const currentSpaceId = l.spaceId || l.SpaceId;
           const parentSpace = mySpaces.find(s => (s.id || s.Id) === currentSpaceId);
-          
+
           return {
             ...l,
             // Móc địa chỉ từ Mặt bằng sang Bài đăng nếu bài đăng không có sẵn
-            address: l.location || l.address || parentSpace?.address || parentSpace?.location || ''
+            address: l.location || l.address || l.spaceAddress || parentSpace?.address || parentSpace?.location || '',
+            area: l.area || parentSpace?.area || ''
           };
         });
 
-        setListings(myListings); 
+        setListings(myListings);
       }
     } catch (err) {
       console.error("Lỗi lấy danh sách bài đăng:", err);
@@ -105,10 +109,11 @@ export const OwnerListings: React.FC = () => {
 
   // Tìm kiếm theo địa chỉ (đã được bốc từ Space sang)
   const filtered = listings.filter((l) => {
-    const safeLocation = l?.location || l?.address || ''; 
+    const safeLocation = l?.location || l?.address || '';
     const matchSearch = safeLocation.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || l?.status === filterStatus;
-    return matchSearch && matchStatus;
+    const matchType = filterType === 'all' || l?.listingType === filterType;
+    return matchSearch && matchStatus && matchType;
   });
 
   // Hiệu ứng GSAP mượt mà
@@ -116,14 +121,14 @@ export const OwnerListings: React.FC = () => {
     const ctx = gsap.context(() => {
       const cards = gsap.utils.toArray('.listing-card');
       if (cards.length > 0) {
-        gsap.fromTo(cards, 
+        gsap.fromTo(cards,
           { opacity: 0, y: 20 },
           { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out' }
         );
       }
     }, containerRef);
     return () => ctx.revert();
-  }, [filtered.length, filterStatus]);
+  }, [filtered.length, filterStatus, filterType]);
 
   // --- HÀM XỬ LÝ SỰ KIỆN ---
   const handleOpenNew = () => {
@@ -143,7 +148,7 @@ export const OwnerListings: React.FC = () => {
   const handleDelete = async (listingItem: any) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa bài đăng này?')) {
       try {
-        const targetId = listingItem.id || listingItem.Id; 
+        const targetId = listingItem.id || listingItem.Id;
 
         if (!targetId) {
           alert('Lỗi FE: Không tìm thấy ID của bài đăng này!');
@@ -155,7 +160,7 @@ export const OwnerListings: React.FC = () => {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
         });
-        
+
         if (res.ok) {
           setListings(prev => prev.filter(l => (l.id || l.Id) !== targetId));
         } else {
@@ -170,7 +175,7 @@ export const OwnerListings: React.FC = () => {
 
   const handleFormSuccess = () => {
     setIsFormOpen(false);
-    fetchListings(); 
+    fetchListings();
   };
 
   return (
@@ -178,8 +183,8 @@ export const OwnerListings: React.FC = () => {
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t('listings.rentalListings') || 'Danh sách cho thuê'}</h1>
-          <p className="page-subtitle text-secondary">{t('listings.listingsSubtitle') || 'Quản lý các bài đăng hiển thị trên hệ thống'}</p>
+          <h1 className="page-title">{t('listings.rentalListings') || 'Bài đăng cho thuê mặt bằng'}</h1>
+          <p className="page-subtitle text-secondary">{t('listings.listingsSubtitle') || 'Quản lý tất cả các bài đăng cho thuê mặt bằng của bạn'}</p>
         </div>
         <button className="btn-primary" onClick={handleOpenNew}>
           <Plus size={16} />
@@ -191,9 +196,9 @@ export const OwnerListings: React.FC = () => {
       <div className="listings-summary">
         {[
           { label: t('listings.totalListings') || 'Tổng số bài', value: listings.length, color: '#fff' },
-          { label: t('listings.published') || 'Đang đăng', value: listings.filter(l => l.status === 'published').length, color: 'var(--color-positive)' },
-          { label: t('listings.pending') || 'Chờ duyệt', value: listings.filter(l => l.status === 'pending').length, color: 'var(--color-gold)' },
-          { label: t('listings.draft') || 'Bản nháp', value: listings.filter(l => l.status === 'draft').length, color: 'var(--color-text-secondary)' },
+          { label: 'Đang hoạt động', value: listings.filter(l => l.status === 'Accepted').length, color: 'var(--color-positive)' },
+          { label: 'Đã bị khóa', value: listings.filter(l => l.status === 'Ban').length, color: 'var(--color-negative)' },
+          { label: 'Chia sẻ mặt bằng', value: listings.filter(l => l.listingType === 'SharedSpace').length, color: 'var(--color-text-secondary)' },
         ].map((s, i) => (
           <div key={i} className="glass-card listings-summary-item">
             <span className="listings-summary-value" style={{ color: s.color }}>{s.value}</span>
@@ -208,14 +213,14 @@ export const OwnerListings: React.FC = () => {
           <Search size={15} style={{ color: 'var(--color-text-secondary)' }} />
           <input
             type="text"
-            placeholder={t('listings.searchListingPlaceholder') || 'Tìm kiếm địa điểm...'}
+            placeholder={t('listings.searchListingPlaceholder') || 'Tìm kiếm bài đăng, địa điểm...'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="search-input"
           />
         </div>
         <div className="listings-filters">
-          {['all', 'published', 'pending', 'draft', 'expired'].map((f) => (
+          {['all', 'Accepted', 'Ban'].map((f) => (
             <button
               key={f}
               className={`filter-tab ${filterStatus === f ? 'filter-tab--active' : ''}`}
@@ -225,21 +230,33 @@ export const OwnerListings: React.FC = () => {
             </button>
           ))}
         </div>
+        <div className="listings-filters">
+          {(['all', 'EntireSpace', 'SharedSpace'] as const).map((f) => (
+            <button
+              key={f}
+              className={`filter-tab ${filterType === f ? 'filter-tab--active' : ''}`}
+              onClick={() => setFilterType(f)}
+            >
+              {f === 'all' ? 'Tất cả loại' : f === 'EntireSpace' ? 'Dài hạn' : 'Chia sẻ'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Listings Grid */}
       <div className="listings-grid">
         {isLoading && listings.length === 0 && <p className="text-secondary" style={{ padding: '20px' }}>Đang tải dữ liệu...</p>}
+        {!isLoading && filtered.length === 0 && <p className="text-secondary" style={{ padding: '20px' }}>Không có bài đăng nào phù hợp.</p>}
         {filtered.map((listing, index) => {
           const currentId = listing.id || listing.Id;
 
           return (
             <div key={currentId || index} className="glass-card listing-card">
-              
+
               <div className="listing-card-top">
-                <div className="listing-type-tag">
-                  <Building2 size={13} />
-                  {listing.type || 'Mặt bằng'}
+                <div className="listing-type-tag" style={isShareListing(listing) ? { background: 'rgba(0,180,160,0.15)', color: 'var(--color-positive)' } : undefined}>
+                  {isShareListing(listing) ? <Users size={13} /> : <Building2 size={13} />}
+                  {isShareListing(listing) ? 'Chia sẻ' : 'Dài hạn'}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span className={`badge ${statusConfig[listing.status]?.className || 'badge--neutral'}`}>
@@ -254,12 +271,12 @@ export const OwnerListings: React.FC = () => {
 
               <div className="listing-visual" style={{ overflow: 'hidden' }}>
                 {listing.listingPictures && listing.listingPictures.length > 0 ? (
-                  <img 
-                    src={typeof listing.listingPictures[0] === 'string' 
-                          ? listing.listingPictures[0] 
-                          : (listing.listingPictures[0].imageUrl || listing.listingPictures[0].url)} 
-                    alt="cover" 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  <img
+                    src={typeof listing.listingPictures[0] === 'string'
+                      ? listing.listingPictures[0]
+                      : (listing.listingPictures[0].imageUrl || listing.listingPictures[0].url)}
+                    alt="cover"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
                       (e.target as HTMLImageElement).parentElement?.classList.add('fallback-icon');
@@ -268,7 +285,7 @@ export const OwnerListings: React.FC = () => {
                 ) : (
                   <Building2 className="fallback-icon" size={32} style={{ color: 'rgba(0, 212, 160, 0.4)' }} />
                 )}
-                
+
                 <div className="listing-area-badge">{listing.area || 'N/A'}</div>
                 {listing.subleasing && (
                   <div className="sublease-badge">{t('listings.subleaseBadge') || 'Cho thuê lại'}</div>
@@ -304,17 +321,17 @@ export const OwnerListings: React.FC = () => {
                 </div>
 
                 <p className="listing-date text-secondary">
-                  {t('listings.postedOn', { date: listing.postedDate || 'gần đây' }) || `Đăng ngày ${listing.postedDate || 'gần đây'}`}
+                  Đăng ngày {formatDate(listing.createdAt)}
                 </p>
               </div>
 
               <div className="listing-card-actions">
-                <button 
-                  className="btn-ghost" 
-                  style={{ flex: 1, justifyContent: 'center' }} 
+                <button
+                  className="btn-ghost"
+                  style={{ flex: 1, justifyContent: 'center' }}
                   onClick={() => {
                     setViewingListing(listing);
-                    setCurrentImageIndex(0); 
+                    setCurrentImageIndex(0);
                   }}
                 >
                   <Eye size={14} /> {language === 'en' ? 'View' : 'Xem'}
@@ -332,24 +349,24 @@ export const OwnerListings: React.FC = () => {
       </div>
 
       {isFormOpen && (
-        <ListingForm 
-          onClose={() => setIsFormOpen(false)} 
-          onSuccess={handleFormSuccess} 
-          initialData={editingListing} 
+        <ListingForm
+          onClose={() => setIsFormOpen(false)}
+          onSuccess={handleFormSuccess}
+          initialData={editingListing}
         />
       )}
-      
+
       {/* ========================================== */}
       {/* POP-UP XEM CHI TIẾT BÀI ĐĂNG (FACEBOOK STYLE) */}
       {/* ========================================== */}
       {viewingListing && createPortal(
-        <div className="listing-form-backdrop" onClick={() => setViewingListing(null)}>
-          <div 
-            className="listing-form-modal" 
-            onClick={(e) => e.stopPropagation()} 
+        <div className="modal-backdrop" onClick={() => setViewingListing(null)}>
+          <div
+            className="modal-shell modal-shell--wide"
+            onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: '700px', width: '95%', padding: 0, overflow: 'hidden' }}
           >
-            <div className="listing-form-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="modal-header" style={{ padding: '16px 20px' }}>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>Chi tiết bài đăng</h2>
               <button type="button" className="btn-icon" onClick={() => setViewingListing(null)}>
                 <X size={20} />
@@ -359,23 +376,23 @@ export const OwnerListings: React.FC = () => {
             <div style={{ maxHeight: '80vh', overflowY: 'auto' }}>
               {viewingListing.listingPictures && viewingListing.listingPictures.length > 0 ? (
                 <div style={{ position: 'relative', width: '100%', height: '400px', backgroundColor: '#111' }}>
-                  <img 
-                    src={typeof viewingListing.listingPictures[currentImageIndex] === 'string' 
-                      ? viewingListing.listingPictures[currentImageIndex] 
-                      : (viewingListing.listingPictures[currentImageIndex].imageUrl || viewingListing.listingPictures[currentImageIndex].url)} 
-                    alt="gallery" 
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                  <img
+                    src={typeof viewingListing.listingPictures[currentImageIndex] === 'string'
+                      ? viewingListing.listingPictures[currentImageIndex]
+                      : (viewingListing.listingPictures[currentImageIndex].imageUrl || viewingListing.listingPictures[currentImageIndex].url)}
+                    alt="gallery"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
-                  
+
                   {viewingListing.listingPictures.length > 1 && (
                     <>
-                      <button 
+                      <button
                         onClick={() => setCurrentImageIndex(prev => prev > 0 ? prev - 1 : viewingListing.listingPictures.length - 1)}
                         style={{ position: 'absolute', top: '50%', left: '10px', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
                       >
                         <ChevronLeft size={20} color="#000" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => setCurrentImageIndex(prev => prev < viewingListing.listingPictures.length - 1 ? prev + 1 : 0)}
                         style={{ position: 'absolute', top: '50%', right: '10px', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
                       >
@@ -394,7 +411,7 @@ export const OwnerListings: React.FC = () => {
               )}
 
               <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
                   <div>
                     <h3 style={{ margin: '0 0 8px 0', fontSize: '22px', color: 'var(--color-primary)' }}>
                       {viewingListing.price ? `${viewingListing.price.toLocaleString('vi-VN')} ₫ / giờ` : 'Thỏa thuận'}
@@ -403,9 +420,14 @@ export const OwnerListings: React.FC = () => {
                       <MapPin size={16} /> {viewingListing.location || viewingListing.address || 'Chưa cập nhật địa chỉ'}
                     </p>
                   </div>
-                  <span className={`badge ${statusConfig[viewingListing.status]?.className || 'badge--neutral'}`}>
-                    {getStatusLabel(viewingListing.status)}
-                  </span>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span className={`badge ${statusConfig[viewingListing.status]?.className || 'badge--neutral'}`}>
+                      {getStatusLabel(viewingListing.status)}
+                    </span>
+                    <span className="badge badge--neutral">
+                      {isShareListing(viewingListing) ? 'Chia sẻ mặt bằng' : 'Cho thuê dài hạn'}
+                    </span>
+                  </div>
                 </div>
 
                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '8px' }}>
@@ -414,8 +436,12 @@ export const OwnerListings: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-                  <div><strong>Bắt đầu:</strong> {new Date(viewingListing.allowedStartTime).toLocaleString('vi-VN')}</div>
-                  <div><strong>Kết thúc:</strong> {new Date(viewingListing.allowedEndTime).toLocaleString('vi-VN')}</div>
+                  <div><strong>Bắt đầu:</strong> {formatDate(viewingListing.allowedStartTime)}</div>
+                  <div><strong>Kết thúc:</strong> {formatDate(viewingListing.allowedEndTime)}</div>
+                  <div><strong>Đăng lúc:</strong> {formatDate(viewingListing.createdAt)}</div>
+                  {isShareListing(viewingListing) && (
+                    <div><strong>Số người thuê chung tối đa:</strong> {viewingListing.shareSpaceDetailMaxSubRenter ?? 'N/A'}</div>
+                  )}
                 </div>
               </div>
             </div>

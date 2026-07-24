@@ -19,6 +19,14 @@ export const FloatingChat: React.FC = () => {
   const [connection, setConnection] = useState<HubConnection | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Lưu lại connection hiện tại bằng ref để dùng trong các hàm không nằm trong closure
+  // của useEffect khởi tạo (vd hàm refetch được gọi từ event listener bên ngoài).
+  const connectionRef = useRef<HubConnection | null>(null);
+
+  // Theo dõi các phòng chat đã Join qua SignalR, tránh gọi JoinConversation lặp lại
+  // nhiều lần cho cùng 1 phòng mỗi khi refetch danh sách.
+  const joinedRoomIdsRef = useRef<Set<any>>(new Set());
+
   const currentUserId = localStorage.getItem('current_user_id');
   const token = localStorage.getItem('portal_token');
 
@@ -64,14 +72,46 @@ export const FloatingChat: React.FC = () => {
     if (view === 'CHAT') scrollToBottom();
   }, [chatHistory, view]);
 
+  // HÀM DÙNG CHUNG: fetch lại danh sách phòng chat từ BE, cập nhật state,
+  // và tự động Join (qua SignalR) các phòng nào chưa từng Join trước đó.
+  // Được gọi cả lúc mount lần đầu VÀ mỗi khi có sự kiện 'conversation-created'
+  // bắn ra từ nơi khác trong app (vd sau khi chủ nhà vừa duyệt đơn thuê).
+  const fetchAndSyncConversations = async () => {
+    if (!currentUserId || !token) return;
+    try {
+      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Conversation/User/${currentUserId}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+      if (!res.ok) return;
+      const myRooms: any[] = await res.json();
+      setConversations(myRooms);
+
+      const activeConnection = connectionRef.current;
+      if (activeConnection) {
+        for (const room of myRooms) {
+          const roomId = room.id || room.Id;
+          if (!joinedRoomIdsRef.current.has(roomId)) {
+            try {
+              await activeConnection.invoke("JoinConversation", roomId);
+              joinedRoomIdsRef.current.add(roomId);
+            } catch (err) {
+              console.error("Lỗi Join phòng chat mới:", err);
+            }
+          }
+        }
+      }
+      return myRooms;
+    } catch (error) {
+      console.error("Lỗi fetch danh sách hội thoại:", error);
+    }
+  };
+
   useEffect(() => {
     if (!currentUserId || !token) return;
     let globalConnection: HubConnection;
     const initGlobalChat = async () => {
       try {
-        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Conversation/User/${currentUserId}`, { headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }});
-        let myRooms: any[] = [];
-        if (res.ok) { myRooms = await res.json(); setConversations(myRooms); }
+        const myRooms = (await fetchAndSyncConversations()) || [];
 
         globalConnection = new HubConnectionBuilder()
           .withUrl("https://flexi-space-capstone-project.onrender.com/chatHub", { accessTokenFactory: () => token || "" })
@@ -108,13 +148,63 @@ export const FloatingChat: React.FC = () => {
             window.dispatchEvent(event);
           }
         });
+
+        // BẮT SỰ KIỆN NÀY NẾU/KHI BACKEND HỖ TRỢ: khi chủ nhà duyệt đơn ở 1 máy khác,
+        // BE có thể đẩy trực tiếp qua SignalR cho bên Khách thuê (lessee) biết vừa có
+        // phòng chat mới, thay vì phải chờ họ F5 lại trang. Hiện BE CHƯA emit event này,
+        // đây là chỗ FE đã chờ sẵn để khi BE bổ sung thì chỉ cần đúng tên event là chạy được luôn.
+        globalConnection.on("ReceiveNewConversation", () => {
+          fetchAndSyncConversations();
+        });
+
         await globalConnection.start();
-        for (const room of myRooms) await globalConnection.invoke("JoinConversation", room.id || room.Id);
+        for (const room of myRooms) {
+          const roomId = room.id || room.Id;
+          await globalConnection.invoke("JoinConversation", roomId);
+          joinedRoomIdsRef.current.add(roomId);
+        }
+        connectionRef.current = globalConnection;
         setConnection(globalConnection);
       } catch (error) { console.error(error); }
     };
     initGlobalChat();
-    return () => { if (globalConnection) globalConnection.stop(); };
+    return () => {
+      if (globalConnection) globalConnection.stop();
+      connectionRef.current = null;
+      joinedRoomIdsRef.current.clear();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId, token]);
+
+  // LẮNG NGHE SỰ KIỆN 'conversation-created': bắn ra ngay sau khi chủ nhà (lessor)
+  // duyệt đơn thuê và tạo phòng chat thành công (xem OwnerBookingRequests.tsx).
+  // LƯU Ý QUAN TRỌNG: sự kiện này chỉ chạy được TRONG ĐÚNG TAB đang thao tác (tab của
+  // chủ nhà vừa bấm Duyệt). Nó KHÔNG thể "đi" sang tab/trình duyệt khác của khách thuê -
+  // nên chỉ giúp chủ nhà thấy phòng chat ngay lập tức, không giúp được khách thuê.
+  useEffect(() => {
+    const handleConversationCreated = () => {
+      fetchAndSyncConversations();
+    };
+    window.addEventListener('conversation-created', handleConversationCreated);
+    return () => window.removeEventListener('conversation-created', handleConversationCreated);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // GIẢI PHÁP TẠM THỜI CHO PHÍA KHÁCH THUÊ (chưa có SignalR push từ Backend):
+  // Tự động fetch lại danh sách phòng chat mỗi vài giây (polling), để khi chủ nhà duyệt
+  // đơn ở 1 tab/trình duyệt KHÁC, khách thuê vẫn tự thấy phòng chat xuất hiện sau vài giây,
+  // không cần F5 lại trang. Khi nào Backend làm xong SignalR event "ReceiveNewConversation"
+  // thật sự (đẩy real-time, không delay) thì có thể bỏ đoạn polling này đi cho nhẹ máy.
+  const POLLING_INTERVAL_MS = 8000;
+  useEffect(() => {
+    if (!currentUserId || !token) return;
+    const intervalId = setInterval(() => {
+      // Chỉ cần polling khi đang KHÔNG mở khung chat (view LIST hoặc đang đóng),
+      // để tránh vừa polling vừa đang gõ tin nhắn gây giật UI không cần thiết.
+      fetchAndSyncConversations();
+    }, POLLING_INTERVAL_MS);
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId, token]);
 
   useEffect(() => {
