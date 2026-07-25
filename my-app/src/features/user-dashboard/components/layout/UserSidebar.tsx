@@ -16,9 +16,9 @@ import {
   Wallet,
   Inbox // <-- THÊM ICON INBOX VÀO ĐÂY
 } from 'lucide-react';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import './UserSidebar.css';
-import type { UserPage } from '../types';
+import type { UserPage } from '../../types';
 
 interface UserSidebarProps {
   activePage: UserPage | string; // Nới lỏng type một chút để khỏi báo lỗi

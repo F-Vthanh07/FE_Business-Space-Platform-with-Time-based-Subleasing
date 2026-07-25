@@ -10,9 +10,9 @@ import {
   Moon,
   ArrowLeft,
 } from 'lucide-react';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import './UserSidebar.css';
-import type { UserPage } from '../types';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import '../layout/UserSidebar.css';
+import type { UserPage } from '../../types';
 
 interface ProfileSidebarProps {
   activePage: UserPage | string;

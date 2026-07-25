@@ -12,7 +12,7 @@ import {
   StickyNote,
   User
 } from 'lucide-react';
-import '../../shared/ModalShell.css';
+import '../../../shared/ModalShell.css';
 
 interface BookingRequestEditData {
   listingId: number;

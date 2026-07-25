@@ -16,9 +16,9 @@ import {
   X,
   MapPin,
 } from 'lucide-react';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import { ContractViewModal } from '../../../components/Contract/ContractViewModal';
-import '../../shared/ModalShell.css';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { ContractViewModal } from '../../../../components/Contract/ContractViewModal';
+import '../../../shared/ModalShell.css';
 import './OwnerTenants.css';
 
 const API_BASE = 'https://flexi-space-capstone-project.onrender.com';

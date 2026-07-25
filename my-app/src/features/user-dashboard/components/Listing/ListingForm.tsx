@@ -2,11 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, DollarSign, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, Users, ShieldCheck, Clock } from 'lucide-react';
-import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
-import '../../shared/ModalShell.css';
+import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
+import "../../../shared/ModalShell.css";
 import './ListingForm.css';
 import { createShareListing, updateShareListing } from './shareListing.api';
-import type { ShareListingPayload } from '../types';
+import type { ShareListingPayload } from '../../types';
 
 interface ListingFormProps {
   onClose: () => void;

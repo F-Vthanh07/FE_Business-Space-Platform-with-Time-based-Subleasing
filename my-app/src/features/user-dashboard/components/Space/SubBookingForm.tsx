@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
 import { X, Calendar, CreditCard, User, AlertCircle } from 'lucide-react';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
 import './SubBookingForm.css';
 
 interface SubBookingFormProps {

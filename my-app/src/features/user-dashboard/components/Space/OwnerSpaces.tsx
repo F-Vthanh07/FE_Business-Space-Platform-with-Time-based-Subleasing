@@ -4,8 +4,8 @@ import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X } from 'lucide-react';
 import { SpaceForm } from './SpaceForm';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import '../../shared/ModalShell.css';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import '../../../shared/ModalShell.css';
 import './OwnerSpaces.css';
 
 interface Space {

@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, DollarSign, Users, ShieldCheck, ShieldAlert, Plus, Trash2, Clock } from 'lucide-react';
-import '../../shared/ModalShell.css';
-import type { ShareListingPayload } from '../types';
+import "../../../shared/ModalShell.css";
+import type { ShareListingPayload } from '../../types';
 import { createShareListing, updateShareListing } from './shareListing.api';
 
 interface SpaceOption {

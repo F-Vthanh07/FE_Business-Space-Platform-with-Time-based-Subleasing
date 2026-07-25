@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
 import {
   Search,
@@ -13,8 +14,8 @@ import {
   Clock,
   TrendingUp,
 } from 'lucide-react';
-import type { SubSlot } from '../types';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import type { SubSlot } from '../../types';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import './RenterSubTenants.css';
 
 interface RenterSubTenantsProps {

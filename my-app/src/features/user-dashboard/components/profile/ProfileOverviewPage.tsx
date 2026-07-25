@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Pencil } from 'lucide-react';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import { CccdVerificationSection, VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
-import { updateProfile } from '../../onboarding';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { CccdVerificationSection, VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
+import { updateProfile } from '../../../onboarding';
 import './ProfileOverviewPage.css';
 
 const EMPTY_DATE = '0001-01-01';
