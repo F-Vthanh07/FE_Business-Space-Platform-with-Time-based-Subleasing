@@ -24,8 +24,8 @@ import {
   subMonths,
 } from 'date-fns';
 import { vi, enUS } from 'date-fns/locale';
-import { SubleaseSlotForm } from './SubleaseSlotForm';
-import { SubBookingForm } from './SubBookingForm';
+import { SubleaseSlotForm } from './Space/SubleaseSlotForm';
+import { SubBookingForm } from './Space/SubBookingForm';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { API_BASE_URL } from '../../../config/api';
 import './SlotCalendar.css';

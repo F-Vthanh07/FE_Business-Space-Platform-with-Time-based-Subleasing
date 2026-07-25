@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, Clock, DollarSign, Share2, AlertCircle } from 'lucide-react';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
 import './SubleaseSlotForm.css';
 
 interface SubleaseSlotFormProps {

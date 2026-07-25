@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import { requestPasswordReset, resetPassword } from '../../auth';
-import './ProfileOverviewPage.css';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { requestPasswordReset, resetPassword } from '../../../auth';
+import "../profile/ProfileOverviewPage.css";
 
 export const ForgotPasswordPage: React.FC = () => {
   const { language } = useThemeLanguage();

@@ -11,8 +11,8 @@ import {
   Users,
   RefreshCcw,
 } from 'lucide-react';
-import { ContractCreateModal } from '../../../components/Contract/ContractCreateModal';
-import { ContractViewModal } from '../../../components/Contract/ContractViewModal';
+import { ContractCreateModal } from '../../../../components/Contract/ContractCreateModal';
+import { ContractViewModal } from '../../../../components/Contract/ContractViewModal';
 
 const API_BASE = 'https://flexi-space-capstone-project.onrender.com';
 

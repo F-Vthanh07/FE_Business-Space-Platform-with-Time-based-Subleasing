@@ -17,11 +17,11 @@ import {
   MapPin,
   Eye,
 } from 'lucide-react';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import { useIdentityVerification } from '../../identity-verification';
-import { fetchWalletAccount } from '../../wallet/api/wallet.api';
-import { formatVnd } from '../../wallet/utils/format';
-import { API_BASE_URL } from '../../../config/api';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { useIdentityVerification } from '../../../identity-verification';
+import { fetchWalletAccount } from '../../../wallet/api/wallet.api';
+import { formatVnd } from '../../../wallet/utils/format';
+import { API_BASE_URL } from '../../../../config/api';
 import './OwnerOverview.css';
 
 interface OwnerOverviewProps {

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { X, Building2, MapPin, Clock, Check, ShieldAlert, Briefcase } from 'lucide-react';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import { VerificationWarningBanner, useIdentityVerification } from '../../identity-verification';
-import '../../shared/ModalShell.css';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
+import '../../../shared/ModalShell.css';
 import './SpaceForm.css';
 
 interface SpaceFormProps {

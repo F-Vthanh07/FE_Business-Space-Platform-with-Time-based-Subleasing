@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { Plus, Search, Users, MapPin, Edit3, Trash2 } from 'lucide-react';
-import { ShareListingForm } from './ShareListingForm';
-import './OwnerListings.css'; // tái dùng style glass-card / badge / grid có sẵn
-import { deleteShareListing, fetchMyShareListings } from './shareListing.api';
-import { fetchActiveRentedContracts, spaceNameOf } from './contract.api';
+import { ShareListingForm } from '../Listing/ShareListingForm';
+import { deleteShareListing, fetchMyShareListings } from '../Listing/shareListing.api';
+import { fetchActiveRentedContracts, spaceNameOf } from '../contract/contract.api';
+import "../Listing/OwnerListings.css";
 
 export const SharedSpaceManagement: React.FC = () => {
   const [shareListings, setShareListings] = useState<any[]>([]);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import { changePassword } from '../../auth/api/auth.api';
+import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { changePassword } from '../../../auth/api/auth.api';
 import './ProfileOverviewPage.css';
 
 export const ChangePasswordPage: React.FC = () => {
