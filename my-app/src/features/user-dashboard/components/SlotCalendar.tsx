@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Plus,
   Clock,
   User,
@@ -64,9 +65,22 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
 
   const [ownedSpaces, setOwnedSpaces] = useState<OwnedSpace[]>([]);
   const [isSpacesLoading, setIsSpacesLoading] = useState(true);
+  const [isSpaceDropdownOpen, setIsSpaceDropdownOpen] = useState(false);
+  const spaceDropdownRef = useRef<HTMLDivElement>(null);
 
   const { t, language } = useThemeLanguage();
   const dateLocale = language === 'en' ? enUS : vi;
+
+  // Đóng dropdown khi click ra ngoài khu vực chọn mặt bằng
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (spaceDropdownRef.current && !spaceDropdownRef.current.contains(e.target as Node)) {
+        setIsSpaceDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Lấy danh sách mặt bằng của chính người dùng (chỉ cần hiển thị địa chỉ)
   const fetchOwnedSpaces = useCallback(async () => {
@@ -142,37 +156,42 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
       {/* Calendar Panel */}
       <div className="glass-card calendar-panel">
         
-        {/* Bộ chọn Mặt bằng (Space Selector Dropdown) */}
-        <div className="space-selector-dropdown" style={{ marginBottom: 20 }}>
-          <select
-            className="glass-card--inset"
-            value={selectedSpaceId}
-            onChange={(e) => setSelectedSpaceId(e.target.value)}
+        {/* Bộ chọn Mặt bằng (Space Selector Dropdown) — custom, đồng bộ theme dark glass */}
+        <div className="space-selector-dropdown" ref={spaceDropdownRef}>
+          <button
+            type="button"
+            className="space-selector-trigger"
             disabled={isSpacesLoading || ownedSpaces.length === 0}
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              borderRadius: 8,
-              border: 'none',
-              background: 'rgba(255, 255, 255, 0.08)',
-              color: 'var(--color-text-primary)',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: ownedSpaces.length === 0 ? 'default' : 'pointer',
-            }}
+            onClick={() => setIsSpaceDropdownOpen((prev) => !prev)}
           >
-            {isSpacesLoading && (
-              <option value="">{language === 'en' ? 'Loading spaces...' : 'Đang tải mặt bằng...'}</option>
-            )}
-            {!isSpacesLoading && ownedSpaces.length === 0 && (
-              <option value="">{language === 'en' ? 'No spaces found' : 'Bạn chưa có mặt bằng nào'}</option>
-            )}
-            {ownedSpaces.map(sp => (
-              <option key={sp.id} value={String(sp.id)}>
-                {sp.address}
-              </option>
-            ))}
-          </select>
+            <span className="space-selector-trigger-label">
+              {isSpacesLoading
+                ? (language === 'en' ? 'Loading spaces...' : 'Đang tải mặt bằng...')
+                : ownedSpaces.length === 0
+                  ? (language === 'en' ? 'No spaces found' : 'Bạn chưa có mặt bằng nào')
+                  : ownedSpaces.find((sp) => String(sp.id) === selectedSpaceId)?.address
+                    ?? (language === 'en' ? 'Select a space' : 'Chọn mặt bằng')}
+            </span>
+            <ChevronDown size={14} className={`space-selector-chevron ${isSpaceDropdownOpen ? 'space-selector-chevron--open' : ''}`} />
+          </button>
+
+          {isSpaceDropdownOpen && !isSpacesLoading && ownedSpaces.length > 0 && (
+            <div className="space-selector-menu">
+              {ownedSpaces.map((sp) => (
+                <button
+                  key={sp.id}
+                  type="button"
+                  className={`space-selector-option ${String(sp.id) === selectedSpaceId ? 'space-selector-option--active' : ''}`}
+                  onClick={() => {
+                    setSelectedSpaceId(String(sp.id));
+                    setIsSpaceDropdownOpen(false);
+                  }}
+                >
+                  {sp.address}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Month Navigation */}

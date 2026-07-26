@@ -15,9 +15,12 @@ import {
   Eye,
   X,
   MapPin,
+  Edit3,
+  Trash2,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import { ContractViewModal } from '../../../../components/Contract/ContractViewModal';
+import { ContractCreateModal } from '../../../../components/Contract/ContractCreateModal';
 import '../../../shared/ModalShell.css';
 import './OwnerTenants.css';
 
@@ -77,6 +80,8 @@ export const OwnerTenants: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [viewingContract, setViewingContract] = useState<any>(null);
   const [viewingTenant, setViewingTenant] = useState<Tenant | null>(null);
+  const [editingContract, setEditingContract] = useState<any>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { t, language } = useThemeLanguage();
 
   const token = localStorage.getItem('portal_token');
@@ -100,81 +105,105 @@ export const OwnerTenants: React.FC = () => {
     return 'var(--color-positive)';
   };
 
+  const fetchTenants = async () => {
+    if (!token || !currentUserId) {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const [contractRes, spaceRes] = await Promise.all([
+        fetch(`${API_BASE}/api/Contract/GetAll?LessorId=${encodeURIComponent(currentUserId)}`, {
+          headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+        }),
+        fetch(`${API_BASE}/api/Space/GetAll?OwnerId=${encodeURIComponent(currentUserId)}`, {
+          headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+        }),
+      ]);
+
+      const contracts = contractRes.ok ? normalizeList(await contractRes.json()) : [];
+      const spaces = spaceRes.ok ? normalizeList(await spaceRes.json()) : [];
+      const spaceMap = new Map<number, any>(spaces.map((s: any) => [s.id ?? s.Id, s]));
+
+      // Contract GetAll không trả tên/sđt/email người thuê, nên phải gọi riêng User/{id}
+      // cho từng lesseeId duy nhất (tránh gọi trùng nếu 1 người thuê nhiều hợp đồng).
+      const uniqueLesseeIds = Array.from(new Set(contracts.map((c: any) => c.lesseeId ?? c.LesseeId).filter(Boolean)));
+      const userEntries = await Promise.all(
+        uniqueLesseeIds.map(async (id) => {
+          try {
+            const res = await fetch(`${API_BASE}/api/User/${id}`, {
+              headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+            });
+            if (!res.ok) return [id, null] as const;
+            return [id, await res.json()] as const;
+          } catch {
+            return [id, null] as const;
+          }
+        })
+      );
+      const userMap = new Map(userEntries);
+
+      const list: Tenant[] = contracts.map((c: any) => {
+        const lesseeId = c.lesseeId ?? c.LesseeId;
+        const spaceId = c.spaceId ?? c.SpaceId;
+        const user = userMap.get(lesseeId);
+        const space = spaceMap.get(spaceId);
+        const name = user?.profileFullName || user?.userName || (language === 'en' ? `Tenant #${lesseeId}` : `Người thuê #${lesseeId}`);
+
+        return {
+          contractId: c.id ?? c.Id,
+          lesseeId,
+          name,
+          initials: getInitials(name),
+          phone: user?.phoneNumber || '',
+          email: user?.email || '',
+          spaceId,
+          space: space?.name || (language === 'en' ? `Space #${spaceId}` : `Mặt bằng #${spaceId}`),
+          spaceAddress: space?.address || (language === 'en' ? 'Not updated' : 'Chưa cập nhật địa chỉ'),
+          startDate: c.startDate ?? c.StartDate,
+          endDate: c.endDate ?? c.EndDate,
+          monthlyRent: c.price ?? c.Price ?? 0,
+          status: (c.status ?? c.Status ?? 'Draft') as ContractStatus,
+          contract: c,
+        };
+      });
+
+      list.sort((a, b) => b.contractId - a.contractId);
+      setTenants(list);
+    } catch (err) {
+      console.error('Lỗi tải danh sách người thuê:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchTenants = async () => {
-      if (!token || !currentUserId) {
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const [contractRes, spaceRes] = await Promise.all([
-          fetch(`${API_BASE}/api/Contract/GetAll?LessorId=${encodeURIComponent(currentUserId)}`, {
-            headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-          }),
-          fetch(`${API_BASE}/api/Space/GetAll?OwnerId=${encodeURIComponent(currentUserId)}`, {
-            headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-          }),
-        ]);
-
-        const contracts = contractRes.ok ? normalizeList(await contractRes.json()) : [];
-        const spaces = spaceRes.ok ? normalizeList(await spaceRes.json()) : [];
-        const spaceMap = new Map<number, any>(spaces.map((s: any) => [s.id ?? s.Id, s]));
-
-        // Contract GetAll không trả tên/sđt/email người thuê, nên phải gọi riêng User/{id}
-        // cho từng lesseeId duy nhất (tránh gọi trùng nếu 1 người thuê nhiều hợp đồng).
-        const uniqueLesseeIds = Array.from(new Set(contracts.map((c: any) => c.lesseeId ?? c.LesseeId).filter(Boolean)));
-        const userEntries = await Promise.all(
-          uniqueLesseeIds.map(async (id) => {
-            try {
-              const res = await fetch(`${API_BASE}/api/User/${id}`, {
-                headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-              });
-              if (!res.ok) return [id, null] as const;
-              return [id, await res.json()] as const;
-            } catch {
-              return [id, null] as const;
-            }
-          })
-        );
-        const userMap = new Map(userEntries);
-
-        const list: Tenant[] = contracts.map((c: any) => {
-          const lesseeId = c.lesseeId ?? c.LesseeId;
-          const spaceId = c.spaceId ?? c.SpaceId;
-          const user = userMap.get(lesseeId);
-          const space = spaceMap.get(spaceId);
-          const name = user?.profileFullName || user?.userName || (language === 'en' ? `Tenant #${lesseeId}` : `Người thuê #${lesseeId}`);
-
-          return {
-            contractId: c.id ?? c.Id,
-            lesseeId,
-            name,
-            initials: getInitials(name),
-            phone: user?.phoneNumber || '',
-            email: user?.email || '',
-            spaceId,
-            space: space?.name || (language === 'en' ? `Space #${spaceId}` : `Mặt bằng #${spaceId}`),
-            spaceAddress: space?.address || (language === 'en' ? 'Not updated' : 'Chưa cập nhật địa chỉ'),
-            startDate: c.startDate ?? c.StartDate,
-            endDate: c.endDate ?? c.EndDate,
-            monthlyRent: c.price ?? c.Price ?? 0,
-            status: (c.status ?? c.Status ?? 'Draft') as ContractStatus,
-            contract: c,
-          };
-        });
-
-        list.sort((a, b) => b.contractId - a.contractId);
-        setTenants(list);
-      } catch (err) {
-        console.error('Lỗi tải danh sách người thuê:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTenants();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, currentUserId, language]);
+
+  const handleDeleteContract = async (contractId: number) => {
+    if (!window.confirm(language === 'en' ? 'Are you sure you want to revoke and cancel this contract?' : 'Bạn có chắc chắn muốn thu hồi và huỷ bỏ hợp đồng này?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/Contract/Delete/${contractId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+      });
+      if (!res.ok) throw new Error(language === 'en' ? 'Failed to revoke. The contract may already be signed or no longer exists.' : 'Thu hồi thất bại. Có thể hợp đồng đã được ký hoặc không tồn tại.');
+      alert(language === 'en' ? 'Contract revoked successfully!' : 'Đã thu hồi hợp đồng thành công!');
+      setViewingContract(null);
+      fetchTenants();
+    } catch (err: any) {
+      alert(err.message || (language === 'en' ? 'Server connection error.' : 'Lỗi kết nối đến máy chủ.'));
+    }
+  };
+
+  const handleEditContract = (contract: any) => {
+    setEditingContract(contract);
+    setIsEditModalOpen(true);
+    setViewingContract(null);
+  };
 
   const filtered = tenants.filter((tenant) => {
     const matchSearch =
@@ -370,6 +399,26 @@ export const OwnerTenants: React.FC = () => {
                     {t('tenants.contract')}
                   </button>
                 </div>
+                {tenant.status === 'Draft' && (
+                  <div className="tenant-card-actions" style={{ marginTop: 8 }}>
+                    <button
+                      className="btn-ghost"
+                      style={{ flex: 1, justifyContent: 'center', fontSize: 12 }}
+                      onClick={() => handleEditContract(tenant.contract)}
+                    >
+                      <Edit3 size={13} />
+                      {language === 'en' ? 'Edit' : 'Chỉnh sửa'}
+                    </button>
+                    <button
+                      className="btn-ghost"
+                      style={{ flex: 1, justifyContent: 'center', fontSize: 12, color: 'var(--color-negative)' }}
+                      onClick={() => handleDeleteContract(tenant.contractId)}
+                    >
+                      <Trash2 size={13} />
+                      {language === 'en' ? 'Delete' : 'Thu hồi'}
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -505,8 +554,34 @@ export const OwnerTenants: React.FC = () => {
           contract={viewingContract}
           onClose={() => setViewingContract(null)}
           isLessor
+          onEdit={() => handleEditContract(viewingContract)}
+          onDelete={() => handleDeleteContract(viewingContract.id ?? viewingContract.Id)}
         />
       )}
+
+      <ContractCreateModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingContract(null);
+        }}
+        activeChat={
+          editingContract
+            ? {
+                lessorId: editingContract.lessorId ?? editingContract.LessorId,
+                lesseeId: editingContract.lesseeId ?? editingContract.LesseeId,
+                conversationId: editingContract.conversationId ?? editingContract.ConversationId,
+              }
+            : null
+        }
+        token={token}
+        onCreated={async () => {
+          setIsEditModalOpen(false);
+          setEditingContract(null);
+          await fetchTenants();
+        }}
+        existingContract={editingContract}
+      />
     </div>
   );
 };

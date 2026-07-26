@@ -242,7 +242,7 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
             </div>
 
             {/* Contracts */}
-            <div className="glass-card stat-card" onClick={() => navigate('contracts')}>
+            <div className="glass-card stat-card" onClick={() => navigate('tenants')}>
               <div className="stat-card-icon stat-card-icon--contracts">
                 <ScrollText size={18} />
               </div>

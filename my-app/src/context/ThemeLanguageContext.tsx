@@ -526,12 +526,12 @@ const translations: Translations = {
 
   // Owner Tenants
   'tenants.monthlyTenants': {
-    en: 'Monthly Tenants',
-    vi: 'Người thuê hàng tháng',
+    en: 'Contract Management',
+    vi: 'Quản lý hợp đồng',
   },
   'tenants.tenantsSubtitle': {
-    en: 'Manage tenancy contracts and payment statuses',
-    vi: 'Quản lý hợp đồng thuê và trạng thái thanh toán',
+    en: 'Manage tenants, contracts and payment statuses',
+    vi: 'Quản lý người thuê, hợp đồng và trạng thái thanh toán',
   },
   'tenants.exportReport': {
     en: 'Export Report',
