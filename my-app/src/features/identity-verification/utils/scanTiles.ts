@@ -34,8 +34,7 @@ export function cropToCanvas(
   canvas.width = Math.round(region.width * scale);
   canvas.height = Math.round(region.height * scale);
 
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Không thể xử lý ảnh.');
+  const ctx = getCanvasContext(canvas);
 
   ctx.drawImage(
     source,
@@ -53,7 +52,10 @@ export function cropToCanvas(
 }
 
 export function getCanvasContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
-  const ctx = canvas.getContext('2d');
+  // willReadFrequently: canvas này sẽ được đọc lại nhiều lần qua getImageData
+  // (threshold, denoise, sharpen, rotate...) — báo trước cho trình duyệt để
+  // nó chọn backend CPU thay vì GPU, tránh chi phí readback mỗi lần rất lớn.
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) throw new Error('Không thể xử lý ảnh.');
   return ctx;
 }
