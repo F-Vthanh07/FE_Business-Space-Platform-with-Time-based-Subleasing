@@ -27,7 +27,6 @@ export const Footer: React.FC = () => {
           <div className="footer-column">
             <span className="footer-column-title">{language === 'en' ? 'Platform' : 'Nền tảng'}</span>
             <span className="footer-link" onClick={() => scrollToSection('hero')}>{language === 'en' ? 'SEARCH' : 'TÌM KIẾM'}</span>
-            <span className="footer-link" onClick={() => scrollToSection('features')}>{t('home.navFeatures').toUpperCase()}</span>
             <span className="footer-link" onClick={() => scrollToSection('how-it-works')}>{t('home.navHowItWorks').toUpperCase()}</span>
           </div>
 

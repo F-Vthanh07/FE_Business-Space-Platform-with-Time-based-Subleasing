@@ -6,8 +6,6 @@ import {
   FileText,
   Users,
   CalendarDays,
-  BarChart3,
-  Settings,
   Plus,
   Globe,
   LogOut,
@@ -37,32 +35,24 @@ const dashboardNavItems: NavItem[] = [
   { id: 'overview', icon: <LayoutDashboard size={16} /> },
 ];
 
-const renterRequestNavItems: NavItem[] = [
+const requestNavItems: NavItem[] = [
+  { id: 'booking-requests', icon: <Inbox size={16} /> },
   { id: 'my-booking-requests', icon: <Inbox size={16} /> },
 ];
 
 const spaceNavItems: NavItem[] = [
   { id: 'spaces', icon: <Building2 size={16} /> },
   { id: 'listings', icon: <FileText size={16} /> },
-  { id: 'booking-requests', icon: <Inbox size={16} /> },
   { id: 'contracts', icon: <FileText size={16} /> },
   { id: 'tenants', icon: <Users size={16} /> },
 ];
 
 const subleaseNavItems: NavItem[] = [
   { id: 'calendar', icon: <CalendarDays size={16} /> },
-  { id: 'sublease-listings', icon: <FileText size={16} /> },
-  { id: 'sub-tenants', icon: <Users size={16} /> },
-  { id: 'shared-spaces', icon: <Users size={16} /> },
 ];
 
 const walletNavItems: NavItem[] = [
   { id: 'wallet', icon: <Wallet size={16} /> },
-];
-
-const commonNavItems: NavItem[] = [
-  { id: 'analytics', icon: <BarChart3 size={16} /> },
-  { id: 'settings', icon: <Settings size={16} /> },
 ];
 
 const getPageLabels = (id: string, lang: string) => {
@@ -74,7 +64,7 @@ const getPageLabels = (id: string, lang: string) => {
     case 'booking-requests': return { title: isEn ? 'Booking Requests' : 'Yêu cầu chờ duyệt', sub: isEn ? 'Manage applications' : 'Duyệt đơn khách thuê' };
     case 'my-booking-requests': return { title: isEn ? 'My Requests' : 'Đơn thuê đã gửi', sub: isEn ? 'Track your requests' : 'Theo dõi yêu cầu thuê' };
     case 'contracts': return { title: isEn ? 'My Contracts' : 'Hợp đồng của bạn', sub: isEn ? 'View & sign' : 'Xem & ký hợp đồng' };    
-    case 'tenants': return { title: isEn ? 'Tenants' : 'Khách thuê', sub: isEn ? 'Manage contracts' : 'Quản lý hợp đồng' };
+    case 'tenants': return { title: isEn ? 'Contracts & Tenants' : 'Hợp đồng & Khách thuê', sub: isEn ? 'Manage contracts' : 'Quản lý hợp đồng' };
     case 'calendar': return { title: isEn ? 'Calendar' : 'Lịch cho thuê lại', sub: isEn ? 'Sublease slots' : 'Khung giờ cho thuê lại' };
     case 'sublease-listings': return { title: isEn ? 'Sublease Market' : 'Chợ cho thuê lại', sub: isEn ? 'Your sublease ads' : 'Tin cho thuê lại' };
     case 'sub-tenants': return { title: isEn ? 'Sub-tenants' : 'Khách thuê phụ', sub: isEn ? 'Secondary renters' : 'Người thuê lại' };
@@ -194,7 +184,11 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
 
       <nav className="user-sidebar-nav">
         {renderNavGroup(dashboardNavItems)}
-        {renderNavGroup(walletNavItems)}
+
+        <span className="user-sidebar-group-label">
+          {language === 'en' ? 'REQUESTS' : 'YÊU CẦU THUÊ'}
+        </span>
+        {renderNavGroup(requestNavItems)}
 
         <span className="user-sidebar-group-label">
           {language === 'en' ? 'MY SPACES' : 'MẶT BẰNG CỦA TÔI'}
@@ -202,17 +196,14 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
         {renderNavGroup(spaceNavItems)}
 
         <span className="user-sidebar-group-label">
-          {language === 'en' ? 'MY REQUESTS' : 'ĐƠN THUÊ CỦA TÔI'}
-        </span>
-        {renderNavGroup(renterRequestNavItems)}
-
-        <span className="user-sidebar-group-label">
           {language === 'en' ? 'SUBLEASING' : 'CHO THUÊ LẠI'}
         </span>
         {renderNavGroup(subleaseNavItems)}
 
-        <div className="user-sidebar-divider" />
-        {renderNavGroup(commonNavItems)}
+        <span className="user-sidebar-group-label">
+          {language === 'en' ? 'FINANCE' : 'TÀI CHÍNH'}
+        </span>
+        {renderNavGroup(walletNavItems)}
       </nav>
 
       <div className="user-sidebar-footer">
@@ -221,7 +212,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
           <Plus size={16} />
           {language === 'en' ? 'NEW SPACE' : 'THÊM MẶT BẰNG'}
         </button>
-        <button className="user-sidebar-cta-secondary" onClick={onNewSlotClick || (() => onNavigate('sublease-listings'))}>
+        <button className="user-sidebar-cta-secondary" onClick={onNewSlotClick || (() => onNavigate('calendar'))}>
           <Plus size={14} />
           {language === 'en' ? 'NEW SLOT' : 'THÊM KHUNG GIỜ'}
         </button>
