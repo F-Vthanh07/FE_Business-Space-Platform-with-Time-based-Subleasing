@@ -13,6 +13,9 @@ export const ListingDetail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // --- THÊM STATE LƯU TIN (FAVORITE) ---
+  const [isFavorite, setIsFavorite] = useState(false);
+
   // --- THÊM STATE CHO MODAL ĐẶT CHỖ ---
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,8 +34,7 @@ export const ListingDetail: React.FC = () => {
   useEffect(() => {
     const fetchDetail = async () => {
       try {
-        // BƯỚC 1: LẤY DANH SÁCH MẶT BẰNG (SPACE) ĐỂ LẤY area/address
-        // Listing/GetAll KHÔNG trả về area, field này chỉ có trong Space/GetAll
+        // BƯỚC 1: LẤY DANH SÁCH MẶT BẰNG
         const spaceResponse = await fetch('https://flexi-space-capstone-project.onrender.com/api/Space/GetAll', {
           headers: { 'accept': '*/*' }
         });
@@ -51,7 +53,7 @@ export const ListingDetail: React.FC = () => {
           
           const found = safeData.find((item: any) => (item.id?.toString() === id || item.Id?.toString() === id));
 
-          // BƯỚC 3: GHÉP area/address TỪ SPACE CHA VÀO LISTING TÌM ĐƯỢC
+          // BƯỚC 3: GHÉP area/address
           let foundWithSpaceInfo = found || null;
           if (found) {
             const parentSpace = spaces.find(s => (s.id || s.Id) === (found.spaceId || found.SpaceId));
@@ -64,12 +66,11 @@ export const ListingDetail: React.FC = () => {
           }
           setListing(foundWithSpaceInfo);
 
-          // Cập nhật giá mặc định cho form dựa trên giá bài đăng
           if (foundWithSpaceInfo && foundWithSpaceInfo.price) {
             setBookingData(prev => ({ ...prev, offeredPrice: foundWithSpaceInfo.price.toString() }));
           }
 
-          // BƯỚC 4: GHÉP area/address CHO CÁC BÀI ĐĂNG TƯƠNG TỰ (SIMILAR LISTINGS)
+          // BƯỚC 4: TÌM BÀI ĐĂNG TƯƠNG TỰ
           const others = safeData
             .filter((item: any) => (item.id?.toString() !== id && item.Id?.toString() !== id))
             .map((item: any) => {
@@ -82,6 +83,34 @@ export const ListingDetail: React.FC = () => {
             });
           setSimilarListings(others.slice(0, 3));
         }
+
+// BƯỚC 5: KIỂM TRA TRẠNG THÁI YÊU THÍCH
+        if (token && id) {
+          const favRes = await fetch('https://flexi-space-capstone-project.onrender.com/api/FavoriteList/FavoriteByUser', {
+            headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+          });
+          if (favRes.ok) {
+            const favData = await favRes.json();
+            
+            // In ra tab Console để bạn xem chính xác API trả về cái gì
+            console.log("Dữ liệu Yêu thích (Detail):", favData); 
+
+            // Cố gắng lấy mảng dữ liệu dù nó nằm ở đâu
+            const favArray = Array.isArray(favData) ? favData : (favData?.data || favData?.items || favData?.listingIds || []);
+            
+            // Xử lý đa dạng cấu trúc (mảng số, mảng chữ, object...)
+            const isFav = favArray.some((item: any) => {
+              if (typeof item === 'number' || typeof item === 'string') {
+                return item.toString() === id.toString();
+              }
+              const itemId = item?.listingId || item?.ListingId || item?.listing?.id || item?.id || item?.Id;
+              return itemId?.toString() === id.toString();
+            });
+            
+            setIsFavorite(isFav);
+          }
+        }
+
       } catch (error) {
         console.error("Lỗi tải chi tiết:", error);
       } finally {
@@ -89,9 +118,37 @@ export const ListingDetail: React.FC = () => {
       }
     };
     fetchDetail();
-  }, [id]);
+  }, [id, token]);
 
-  // --- HÀM XỬ LÝ GỬI YÊU CẦU THUÊ ---
+  // HÀM XỬ LÝ LƯU TIN (TOGGLE FAVORITE)
+  const handleToggleFavorite = async () => {
+    if (!token) {
+      alert("Vui lòng đăng nhập để lưu mặt bằng!");
+      navigate('/login');
+      return;
+    }
+    try {
+      const numericId = Number(id);
+      if (isFavorite) {
+        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/FavoriteList/listings/${numericId}`, {
+          method: 'DELETE', headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+        });
+        if (res.ok) setIsFavorite(false);
+      } else {
+        const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/FavoriteList/listings', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'accept': '*/*' },
+          body: JSON.stringify({ listingIds: [numericId] })
+        });
+        if (res.ok) setIsFavorite(true);
+      }
+    } catch (err) { 
+      console.error(err); 
+      alert("Có lỗi xảy ra khi cập nhật mục yêu thích."); 
+    }
+  };
+
+  // HÀM XỬ LÝ GỬI YÊU CẦU THUÊ
   const handleSubmitBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -103,7 +160,6 @@ export const ListingDetail: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Ép kiểu chuẩn Payload theo Swagger
       const payload = {
         listingId: Number(listing.id || listing.Id),
         offeredPrice: Number(bookingData.offeredPrice),
@@ -125,7 +181,7 @@ export const ListingDetail: React.FC = () => {
 
       if (response.ok) {
         alert("🎉 Gửi yêu cầu thuê thành công! Vui lòng chờ chủ nhà duyệt trong mục Quản lý.");
-        setIsBookingModalOpen(false); // Đóng modal
+        setIsBookingModalOpen(false); 
       } else {
         const err = await response.json().catch(() => ({}));
         alert(err.message || "Có lỗi xảy ra khi gửi yêu cầu.");
@@ -215,7 +271,13 @@ export const ListingDetail: React.FC = () => {
               </div>
               <div style={{ display: 'flex', gap: '16px' }}>
                 <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: '#555', fontWeight: 500 }}><Share2 size={18} /> Chia sẻ</button>
-                <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: '#555', fontWeight: 500 }}><Heart size={18} /> Lưu tin</button>
+                <button 
+                  onClick={handleToggleFavorite}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: isFavorite ? '#E02424' : '#555', fontWeight: 500 }}
+                >
+                  <Heart size={18} fill={isFavorite ? '#E02424' : 'none'} color={isFavorite ? '#E02424' : 'currentColor'} /> 
+                  {isFavorite ? 'Đã lưu' : 'Lưu tin'}
+                </button>
               </div>
             </div>
 
@@ -225,7 +287,7 @@ export const ListingDetail: React.FC = () => {
               {listing.description || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này. Vui lòng liên hệ trực tiếp để biết thêm thông tin về hợp đồng và cọc.'}
             </div>
 
-            {/* LỊCH SỬ GIÁ (MOCK UI) */}
+            {/* LỊCH SỬ GIÁ */}
             <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Lịch sử giá cho thuê</h3>
             <div style={{ border: '1px solid #E0E0E0', borderRadius: '8px', padding: '20px', marginBottom: '40px', display: 'flex', gap: '40px', backgroundColor: '#fff' }}>
                <div>
@@ -246,7 +308,7 @@ export const ListingDetail: React.FC = () => {
                </div>
             </div>
 
-            {/* BẢN ĐỒ (GOOGLE MAPS IFRAME) */}
+            {/* BẢN ĐỒ */}
             <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Xem trên bản đồ</h3>
             <div style={{ width: '100%', height: '350px', backgroundColor: '#e5e3df', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px', border: '1px solid #E0E0E0' }}>
                <iframe 
@@ -326,7 +388,7 @@ export const ListingDetail: React.FC = () => {
 
           </div>
 
-          {/* CỘT PHẢI: THẺ LIÊN HỆ STICKY (BÁM DÍNH) */}
+          {/* CỘT PHẢI: THẺ LIÊN HỆ STICKY */}
           <div style={{ position: 'sticky', top: '90px', height: 'fit-content' }}>
             <div style={{ backgroundColor: '#fff', padding: '24px 20px', borderRadius: '8px', border: '1px solid #E0E0E0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               
@@ -368,9 +430,7 @@ export const ListingDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* ================================================== */}
       {/* POPUP (MODAL) ĐIỀN FORM ĐẶT CHỖ */}
-      {/* ================================================== */}
       {isBookingModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ backgroundColor: '#fff', width: '450px', borderRadius: '12px', padding: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>

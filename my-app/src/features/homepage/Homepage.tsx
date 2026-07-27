@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/features/homepage/Homepage.tsx
 import React, { useState, useEffect, useRef } from 'react';
