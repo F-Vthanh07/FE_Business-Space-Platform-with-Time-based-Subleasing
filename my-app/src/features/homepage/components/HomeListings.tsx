@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import { Heart, ChevronLeft, ChevronRight, MessageCircle, Globe } from 'lucide-react'; 
+import { Heart, MessageCircle, Globe, ShieldCheck, Clock3, Camera, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface HomeListingsProps {
@@ -8,252 +8,347 @@ interface HomeListingsProps {
   selectedId: string;
 }
 
+// Ảnh mặc định duy nhất, chỉ dùng khi bài đăng KHÔNG có ảnh thật nào
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800';
+
+// Số tin tối đa hiện ở mỗi cột trên trang chủ
+const MAX_VISIBLE = 5;
+
+const getPicUrl = (pic: any): string => {
+  return typeof pic === 'string' ? pic : (pic?.imageUrl || pic?.url || '');
+};
+
+type RentalCategory = 'longterm' | 'hourly';
+
+const getRentalCategory = (item: any): RentalCategory => {
+  const listingType = (item.listingType || item.ListingType || '').toString();
+  if (listingType === 'SharedSpace') return 'hourly';
+  if (listingType === 'EntireSpace') return 'longterm';
+  if (item.isHourly === true) return 'hourly';
+
+  const raw = (
+    item.rentalType ||
+    item.leaseType ||
+    item.pricingType ||
+    item.mode ||
+    item.type ||
+    ''
+  ).toString().toLowerCase();
+
+  const hourlyKeywords = ['hour', 'gio', 'giờ', 'sublease', 'share', 'flexible'];
+  if (hourlyKeywords.some((kw) => raw.includes(kw))) return 'hourly';
+
+  return 'longterm';
+};
+
 export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [listings, setListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // STATE LƯU TIN TRANG CHỦ
+  const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
 
   const navigate = useNavigate();
-
-  const ITEMS_PER_PAGE = 4;
-  const [currentPage, setCurrentPage] = useState(1);
+  const token = localStorage.getItem('portal_token');
 
   // FETCH API KHI LOAD TRANG CHỦ
   useEffect(() => {
     const fetchPublicListings = async () => {
       try {
-        // BƯỚC 1: LẤY DANH SÁCH MẶT BẰNG ĐỂ LẤY ĐỊA CHỈ
-        const spaceResponse = await fetch('https://flexi-space-capstone-project.onrender.com/api/Space/GetAll', {
-          headers: { 'accept': '*/*' }
-        });
-        
-        let spaces: any[] = [];
-        if (spaceResponse.ok) {
-           const spaceData = await spaceResponse.json();
-           spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+// BƯỚC 1: Load danh sách lưu tin trước
+        if (token) {
+          fetch('https://flexi-space-capstone-project.onrender.com/api/FavoriteList/FavoriteByUser', {
+            headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+          })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => {
+              console.log("Dữ liệu Yêu thích (Home):", data);
+
+              const favData = Array.isArray(data) ? data : (data?.data || data?.items || data?.listingIds || []);
+              const favIds = new Set<number>();
+              
+              favData.forEach((item: any) => {
+                if (typeof item === 'number' || typeof item === 'string') {
+                  favIds.add(Number(item));
+                } else {
+                  const itemId = item?.listingId || item?.ListingId || item?.listing?.id || item?.id || item?.Id;
+                  if (itemId) favIds.add(Number(itemId));
+                }
+              });
+              
+              setFavoriteIds(favIds);
+            })
+            .catch(err => console.error('Lỗi tải danh sách yêu thích', err));
         }
 
-        // BƯỚC 2: LẤY DANH SÁCH BÀI ĐĂNG
-        const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', {
-          headers: { 'accept': '*/*' }
-        });
-        
+        // BƯỚC 2: LẤY DANH SÁCH MẶT BẰNG ĐỂ LẤY ĐỊA CHỈ
+        const spaceResponse = await fetch(
+          'https://flexi-space-capstone-project.onrender.com/api/Space/GetAll',
+          { headers: { accept: '*/*' } }
+        );
+
+        let spaces: any[] = [];
+        if (spaceResponse.ok) {
+          const spaceData = await spaceResponse.json();
+          spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+        }
+
+        // BƯỚC 3: LẤY DANH SÁCH BÀI ĐĂNG
+        const response = await fetch(
+          'https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll',
+          { headers: { accept: '*/*' } }
+        );
+
         if (response.ok) {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-          
-          // BƯỚC 3: GHÉP ĐỊA CHỈ TỪ MẶT BẰNG VÀO BÀI ĐĂNG
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+          // BƯỚC 4: GHÉP ĐỊA CHỈ TỪ MẶT BẰNG VÀO BÀI ĐĂNG
           const listingsWithAddress = safeData.map((l: any) => {
-             const parentSpace = spaces.find(s => (s.id || s.Id) === (l.spaceId || l.SpaceId));
-             return {
-                 ...l,
-                 address: l.location || l.address || parentSpace?.address || parentSpace?.location || '',
-                 // BỔ SUNG: area không có sẵn trong Listing, phải lấy từ Space cha
-                 area: l.area || parentSpace?.area || null,
-                 city: l.city || parentSpace?.city || ''
-             }
+            const parentSpace = spaces.find((s) => (s.id || s.Id) === (l.spaceId || l.SpaceId));
+            return {
+              ...l,
+              address: l.location || l.address || parentSpace?.address || parentSpace?.location || '',
+              area: l.area || parentSpace?.area || null,
+              city: l.city || parentSpace?.city || '',
+            };
           });
 
           setListings(listingsWithAddress);
         }
       } catch (error) {
-        console.error("Lỗi tải danh sách bài đăng trang chủ:", error);
+        console.error('Lỗi tải danh sách bài đăng trang chủ:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchPublicListings();
-  }, []);
+  }, [token]);
 
-  const totalPages = Math.max(1, Math.ceil(listings.length / ITEMS_PER_PAGE));
-  const currentItems = listings.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE, 
-    currentPage * ITEMS_PER_PAGE
-  );
+  // HÀM TOGGLE YÊU THÍCH CHO CARD TRANG CHỦ
+  const handleToggleFavorite = async (e: React.MouseEvent, listingIdStr: string | number) => {
+    e.stopPropagation();
+    if (!token) {
+      alert("Vui lòng đăng nhập để lưu mặt bằng!");
+      navigate('/login');
+      return;
+    }
+    const numericId = Number(listingIdStr);
+    const isFav = favoriteIds.has(numericId);
+    
+    try {
+      let res;
+      if (isFav) {
+        res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/FavoriteList/listings/${numericId}`, {
+          method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } else {
+        res = await fetch('https://flexi-space-capstone-project.onrender.com/api/FavoriteList/listings', {
+          method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listingIds: [numericId] })
+        });
+      }
 
-  // Ảnh mặc định duy nhất, chỉ dùng khi bài đăng KHÔNG có ảnh thật nào
-  const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800";
+      if (res?.ok) {
+        setFavoriteIds(prev => {
+          const next = new Set(prev);
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+          isFav ? next.delete(numericId) : next.add(numericId);
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-  const getPicUrl = (pic: any): string => {
-    return typeof pic === 'string' ? pic : (pic?.imageUrl || pic?.url || '');
+  const longTermListings = listings.filter((l) => getRentalCategory(l) === 'longterm');
+  const hourlyListings = listings.filter((l) => getRentalCategory(l) === 'hourly');
+
+  // ================= RENDER 1 CARD =================
+  const renderCard = (item: any, category: RentalCategory) => {
+    const itemId = item.id?.toString() || item.Id?.toString() || item.listingId?.toString();
+
+    const rawPictures = item.listingPictures || [];
+    const realImages: string[] = rawPictures.map(getPicUrl).filter((url: string) => !!url);
+    const imageCount = realImages.length;
+    const mainImage = imageCount > 0 ? realImages[0] : FALLBACK_IMAGE;
+
+    const isHourly = category === 'hourly';
+    const priceUnit = isHourly ? 'đ/giờ' : 'đ/tháng';
+    const typeLabel = isHourly ? 'Share theo giờ' : 'Mặt bằng kinh doanh';
+    const actionLabel = isHourly ? 'Đặt giờ' : 'Nhắn tin';
+    
+    const isSaved = favoriteIds.has(Number(itemId));
+
+    return (
+      <div
+        key={itemId}
+        className={`rental-card rental-card--${category} ${selectedId === itemId ? 'selected' : ''}`}
+        onClick={() => navigate(`/listing/${itemId}`)}
+      >
+        <div className="rental-card-img">
+          <img src={mainImage} alt={item.name || 'Ảnh mặt bằng'} />
+          {imageCount > 0 && (
+            <div className="rental-card-img-badge">
+              <Camera size={12} /> {imageCount}
+            </div>
+          )}
+        </div>
+
+        <div className="rental-card-info">
+          <div className="rental-card-title-row">
+            <h4 className="rental-card-title">
+              {item.name || item.description?.substring(0, 50) || 'Bài đăng cho thuê mặt bằng'}
+            </h4>
+            {item.tagLabel && (
+              <span className={`rental-card-tag rental-card-tag--${category}`}>{item.tagLabel}</span>
+            )}
+          </div>
+
+          <div className="rental-card-price-row">
+            <span className={`rental-card-price rental-card-price--${category}`}>
+              {item.price ? `${item.price.toLocaleString('vi-VN')} ${priceUnit}` : 'Thỏa thuận'}
+            </span>
+            <span className="dot-sep">•</span>
+            <span>{item.area ? `${item.area} m²` : 'N/A'}</span>
+            <span className="dot-sep">•</span>
+            <span>{typeLabel}</span>
+          </div>
+
+          <p className="rental-card-loc">📍 {item.location || item.address || 'Đang cập nhật địa chỉ'}</p>
+
+          <div className="rental-card-footer">
+            <div className="rental-card-agent">
+              <div className="rental-card-avatar">CN</div>
+              <div>
+                <div className="rental-card-agent-name">
+                  Chủ nhà {item.createdBy?.substring(0, 4) || 'Ẩn danh'}
+                </div>
+                <div className="rental-card-agent-time">Vừa cập nhật</div>
+              </div>
+            </div>
+
+            <div className="rental-card-actions">
+              <button
+                className={`rental-card-btn rental-card-btn--${category}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/listing/${itemId}`);
+                }}
+              >
+                <MessageCircle size={14} /> {actionLabel}
+              </button>
+              
+              {/* NÚT THẢ TIM TRÊN CARD */}
+              <button className="rental-card-heart" onClick={(e) => handleToggleFavorite(e, itemId)}>
+                <Heart size={16} fill={isSaved ? '#E02424' : 'none'} color={isSaved ? '#E02424' : '#6B7280'} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ================= RENDER 1 CỘT =================
+  const renderColumn = (
+    category: RentalCategory,
+    items: any[],
+    bannerIcon: React.ReactNode,
+    bannerLabel: string,
+    bannerTitle: string,
+    bannerDesc: string,
+    badgeText: string
+  ) => {
+    const visibleItems = items.slice(0, MAX_VISIBLE);
+    const hasMore = items.length > MAX_VISIBLE;
+
+    return (
+      <div className={`rental-column rental-column--${category}`}>
+        <div className={`rental-banner rental-banner--${category}`}>
+          <div className="rental-banner-top">
+            <span className="rental-banner-icon">{bannerIcon}</span>
+            <span className="rental-banner-label">{bannerLabel}</span>
+          </div>
+          <h3 className="rental-banner-title">{bannerTitle}</h3>
+          <p className="rental-banner-desc">{bannerDesc}</p>
+          <span className="rental-banner-badge">{badgeText}</span>
+        </div>
+
+        <div className="rental-list">
+          {isLoading ? (
+            <div className="rental-empty">Đang tải danh sách bài đăng...</div>
+          ) : visibleItems.length === 0 ? (
+            <div className="rental-empty">Hiện chưa có tin nào ở mục này.</div>
+          ) : (
+            visibleItems.map((item) => renderCard(item, category))
+          )}
+
+          {!isLoading && hasMore && (
+            <button className="rental-viewall-btn" onClick={() => navigate('/feed')}>
+              Xem tất cả {items.length} tin <ArrowRight size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
     <div className="listings-column">
-      <div className="listings-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        
+      <div
+        className="listings-header"
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <h3 style={{ margin: 0 }}>Cho Thuê Mặt Bằng, Kiot TP.HCM Giá Tốt Nhất</h3>
-          <button 
-              className="btn-primary" 
-              onClick={() => navigate('/feed')}
-              style={{ 
-                borderRadius: '20px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '6px', 
-                fontSize: '13px', 
-                padding: '8px 16px', 
-                border: 'none',
-                cursor: 'pointer' 
-              }}
-            >
-              <Globe size={14} /> Khám phá Feed
+          <button
+            className="btn-primary"
+            onClick={() => navigate('/feed')}
+            style={{
+              borderRadius: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              padding: '8px 16px',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <Globe size={14} /> Khám phá Feed
           </button>
         </div>
 
         <span className="sort-by">
-          Hiện có {listings.length} bài đăng. &nbsp;&nbsp;|&nbsp;&nbsp; Sắp xếp: <span className="active-sort">Mới nhất</span>
+          Hiện có {listings.length} bài đăng. &nbsp;&nbsp;|&nbsp;&nbsp; Sắp xếp:{' '}
+          <span className="active-sort">Mới nhất</span>
         </span>
       </div>
 
-      {isLoading ? (
-        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b7280' }}>
-          Đang tải danh sách bài đăng...
-        </div>
-      ) : listings.length === 0 ? (
-        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b7280' }}>
-          Hiện chưa có bài đăng nào trên hệ thống.
-        </div>
-      ) : (
-        currentItems.map((item) => {
-          // eslint-disable-next-line react-hooks/purity
-          const itemId = item.id?.toString() || item.Id?.toString() || Math.random().toString();
+      <div className="dual-rental-grid">
+        {renderColumn(
+          'longterm',
+          longTermListings,
+          <ShieldCheck size={16} />,
+          'THUÊ DÀI HẠN',
+          'Mặt bằng thuê theo tháng',
+          'Hợp đồng ổn định từ 12 tháng, có cọc và bàn giao nguyên trạng.',
+          `${longTermListings.length} tin`
+        )}
 
-          // Lọc ra danh sách ảnh thật, bỏ qua ảnh rỗng/lỗi
-          const rawPictures = item.listingPictures || [];
-          const realImages: string[] = rawPictures
-            .map(getPicUrl)
-            .filter((url: string) => !!url);
-
-          // Số ảnh thực tế sẽ quyết định layout hiển thị (KHÔNG ép cứng 3 ô nữa)
-          const imageCount = realImages.length;
-          const displayImages = imageCount > 0 ? realImages : [FALLBACK_IMAGE];
-          const hasRealImages = imageCount > 0;
-
-          return (
-            <div
-              key={itemId}
-              className={`listing-card-complex gsap-listing-card ${selectedId === itemId ? 'selected' : ''}`}
-              onClick={() => navigate(`/listing/${itemId}`)}
-            >
-              <div className={`complex-images-block img-count-${Math.min(displayImages.length, 3)}`}>
-                {/* Ảnh chính - luôn hiện */}
-                <div className="img-main">
-                  <img src={displayImages[0]} alt="Main" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  {hasRealImages && (
-                    <div className="img-count-badge">📸 {imageCount}</div>
-                  )}
-                </div>
-
-                {/* Chỉ hiện khối thumbs nếu có từ 2 ảnh trở lên */}
-                {displayImages.length > 1 && (
-                  <div
-                    className="img-thumbs"
-                    style={{
-                      // 1 thumb -> chiếm full chiều cao, 2 thumb -> chia đôi
-                      gridTemplateRows: displayImages.length - 1 === 1 ? '1fr' : '1fr 1fr'
-                    }}
-                  >
-                    {displayImages.slice(1, 3).map((url, idx) => (
-                      <img
-                        key={idx}
-                        src={url}
-                        alt={`Thumb ${idx + 1}`}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              <div className="complex-info-block">
-                <h4 className="complex-title">{item.name || item.description?.substring(0, 50) || 'Bài đăng cho thuê mặt bằng'}</h4>
-                
-                <div className="complex-price-row">
-                  <span className="price-text" style={{ color: 'var(--color-positive)', fontWeight: 'bold' }}>
-                    {item.price ? `${item.price.toLocaleString('vi-VN')} ₫/giờ` : 'Thỏa thuận'}
-                  </span>
-                  <span className="dot-sep">•</span>
-                  <span>{item.area ? `${item.area} m²` : 'N/A'}</span>
-                  <span className="dot-sep">•</span>
-                  <span>Mặt bằng kinh doanh</span>
-                </div>
-                
-                <p className="complex-loc">📍 {item.location || item.address || 'Đang cập nhật địa chỉ'}</p>
-                <p className="complex-desc" style={{ 
-                  display: '-webkit-box', 
-                  WebkitLineClamp: 2, 
-                  WebkitBoxOrient: 'vertical', 
-                  overflow: 'hidden' 
-                }}>
-                  {item.description || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này.'}
-                </p>
-                
-                <div className="complex-agent-footer">
-                  <div className="agent-info-left">
-                    <div className="agent-avatar-mini">CH</div>
-                    <div>
-                      <div className="agent-name-mini">Chủ nhà {item.createdBy?.substring(0, 4) || 'Ẩn danh'}</div>
-                      <div className="agent-time">Vừa cập nhật</div>
-                    </div>
-                  </div>
-                  <div className="agent-actions">
-                    <button className="btn-call" onClick={(e) => { 
-                      e.stopPropagation(); 
-                      navigate(`/listing/${itemId}`); 
-                    }}>
-                      <MessageCircle size={14}/> Nhắn tin
-                    </button>
-                    <button className="btn-heart" onClick={(e) => { e.stopPropagation(); }}>
-                      <Heart size={16} color="#6B7280" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        })
-      )}
-
-      {!isLoading && listings.length > 0 && (
-        <div className="pagination-container">
-          <button 
-            className="page-btn" 
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          
-          {[...Array(totalPages)].map((_, i) => (
-            <button 
-              key={i}
-              className={`page-btn ${currentPage === i + 1 ? 'active' : ''}`} 
-              onClick={() => setCurrentPage(i + 1)}
-            >
-              {i + 1}
-            </button>
-          ))}
-          
-          {totalPages > 5 && (
-            <>
-              <span className="page-dots">...</span>
-              <button className="page-btn" onClick={() => setCurrentPage(totalPages)}>{totalPages}</button>
-            </>
-          )}
-          
-          <button 
-            className="page-btn"
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      )}
+        {renderColumn(
+          'hourly',
+          hourlyListings,
+          <Clock3 size={16} />,
+          'SHARE THEO GIỜ',
+          'Chia sẻ mặt bằng linh hoạt',
+          'Đặt từng khung giờ cho pop-up, booth sự kiện hay bán hàng cuối tuần.',
+          `${hourlyListings.length} slot`
+        )}
+      </div>
     </div>
   );
 };

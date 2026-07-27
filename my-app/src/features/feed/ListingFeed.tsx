@@ -1,86 +1,208 @@
-import React, { useState, useEffect } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Eye, MapPin, MessageCircle, Bookmark, TrendingUp, ShieldCheck, Home, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Eye, MapPin, MessageCircle, Bookmark, TrendingUp, ShieldCheck, Home, X,
+  ChevronLeft, ChevronRight, Building2, Clock3, User, Camera, Heart
+} from 'lucide-react';
 import { Header } from '../../components/Header'; // Chỉnh lại đường dẫn cho đúng nha
 import { useNavigate } from 'react-router-dom';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyItem = any;
+
+type RentalCategory = 'all' | 'longterm' | 'hourly';
+
+// listingType chuẩn từ BE: EntireSpace (dài hạn) | SharedSpace (chia sẻ theo giờ)
+const getRentalCategory = (item: AnyItem): 'longterm' | 'hourly' => {
+  const listingType = (item.listingType || item.ListingType || '').toString();
+  if (listingType === 'SharedSpace') return 'hourly';
+  return 'longterm';
+};
+
 export const ListingFeed: React.FC = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [listings, setListings] = useState<any[]>([]);
+  const [listings, setListings] = useState<AnyItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // --- BỘ LỌC ---
+  const [categoryFilter, setCategoryFilter] = useState<RentalCategory>('all');
+  const [onlyMine, setOnlyMine] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [myListingKeys, setMyListingKeys] = useState<Set<string>>(new Set());
+  const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+
   // --- STATE QUẢN LÝ POPUP XEM ẢNH ---
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [viewingImages, setViewingImages] = useState<any[] | null>(null);
+  const [viewingImages, setViewingImages] = useState<AnyItem[] | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  const navigate = useNavigate();
+  const token = localStorage.getItem('portal_token');
+  const currentUserId = localStorage.getItem('current_user_id');
+
   useEffect(() => {
-    const fetchFeed = async () => {
+    const fetchFeedAndFavorites = async () => {
       try {
+        // 1. Lấy danh sách yêu thích nếu đã đăng nhập
+        if (token) {
+          fetch('https://flexi-space-capstone-project.onrender.com/api/FavoriteList/FavoriteByUser', {
+            headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+          })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => {
+              console.log("Dữ liệu Yêu thích (Feed):", data); // Xem log ở Console nha
+
+              const favData = Array.isArray(data) ? data : (data?.data || data?.items || data?.listingIds || []);
+              const favIds = new Set<number>();
+              
+              favData.forEach((item: any) => {
+                if (typeof item === 'number' || typeof item === 'string') {
+                  favIds.add(Number(item));
+                } else {
+                  const itemId = item?.listingId || item?.ListingId || item?.listing?.id || item?.id || item?.Id;
+                  if (itemId) favIds.add(Number(itemId));
+                }
+              });
+              
+              setFavoriteIds(favIds);
+            })
+            .catch(err => console.error('Lỗi lấy danh sách yêu thích:', err));
+        }
+
+        // 2. Lấy toàn bộ bài đăng
         const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', { headers: { 'accept': '*/*' } });
+        let safeData: AnyItem[] = [];
         if (response.ok) {
           const data = await response.json();
-          const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-          setListings(safeData.reverse());
+          safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
+          safeData = safeData.reverse();
+        }
+        setListings(safeData);
+
+        // 3. Lấy bài đăng của tôi
+        if (currentUserId) {
+          try {
+            const spaceRes = await fetch(
+              `https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(currentUserId)}`,
+              { headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' } }
+            );
+            let mySpaceIds: string[] = [];
+            if (spaceRes.ok) {
+              const spaceData = await spaceRes.json();
+              const mySpaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+              mySpaceIds = mySpaces.map((s: AnyItem) => s.id || s.Id);
+            }
+
+            const mineKeys = new Set<string>();
+            safeData.forEach((l: AnyItem) => {
+              const spaceId = l.spaceId || l.SpaceId;
+              const isMine = mySpaceIds.includes(spaceId) || l.ownerId === currentUserId || l.createdBy === currentUserId || l.creatorId === currentUserId;
+              if (isMine) mineKeys.add((l.id || l.Id)?.toString());
+            });
+            setMyListingKeys(mineKeys);
+          } catch (innerErr) {
+            console.error('Lỗi khi xác định bài đăng của tôi:', innerErr);
+          }
         }
       } catch (error) {
-        console.error("Lỗi:", error);
+        console.error('Lỗi:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchFeed();
-  }, []);
+    fetchFeedAndFavorites();
+  }, [currentUserId, token]);
 
-  const navigate = useNavigate();
+  // HÀM XỬ LÝ LƯU TIN (TOGGLE FAVORITE)
+  const handleToggleFavorite = async (e: React.MouseEvent, listingId: number) => {
+    e.stopPropagation();
+    if (!token) {
+      alert("Vui lòng đăng nhập để lưu mặt bằng!");
+      navigate('/login');
+      return;
+    }
 
-  // Hàm lấy URL an toàn
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getUrl = (img: any) => typeof img === 'string' ? img : (img.imageUrl || img.url);
+    const isFav = favoriteIds.has(listingId);
+    try {
+      let response;
+      if (isFav) {
+        response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/FavoriteList/listings/${listingId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+        });
+      } else {
+        response = await fetch('https://flexi-space-capstone-project.onrender.com/api/FavoriteList/listings', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'accept': '*/*' },
+          body: JSON.stringify({ listingIds: [listingId] })
+        });
+      }
 
-  // Xử lý khi click vào ảnh
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleImageClick = (images: any[], index: number) => {
+      if (response?.ok) {
+        setFavoriteIds(prev => {
+          const newSet = new Set(prev);
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+          isFav ? newSet.delete(listingId) : newSet.add(listingId);
+          return newSet;
+        });
+      } else {
+        alert("Có lỗi xảy ra khi cập nhật mục yêu thích.");
+      }
+    } catch (error) {
+      console.error("Lỗi API Favorite:", error);
+    }
+  };
+
+  const getUrl = (img: AnyItem) => (typeof img === 'string' ? img : (img.imageUrl || img.url));
+
+  const handleImageClick = (images: AnyItem[], index: number) => {
     setViewingImages(images);
     setCurrentImageIndex(index);
   };
 
-  // --- HÀM XỬ LÝ CHIA BỐ CỤC ẢNH (NHƯ FACEBOOK) ---
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const renderImages = (images: any[]) => {
+  const counts = useMemo(() => {
+    const longterm = listings.filter((l) => getRentalCategory(l) === 'longterm').length;
+    const hourly = listings.filter((l) => getRentalCategory(l) === 'hourly').length;
+    const mine = listings.filter((l) => myListingKeys.has((l.id || l.Id)?.toString())).length;
+    return { all: listings.length, longterm, hourly, mine };
+  }, [listings, myListingKeys]);
+
+  const filteredListings = useMemo(() => {
+    return listings.filter((item) => {
+      const matchCategory = categoryFilter === 'all' || getRentalCategory(item) === categoryFilter;
+      const matchMine = !onlyMine || myListingKeys.has((item.id || item.Id)?.toString());
+      const matchFav = !showFavoritesOnly || favoriteIds.has(Number(item.id || item.Id));
+      return matchCategory && matchMine && matchFav;
+    });
+  }, [listings, categoryFilter, onlyMine, myListingKeys, showFavoritesOnly, favoriteIds]);
+
+  const renderImages = (images: AnyItem[]) => {
     if (!images || images.length === 0) {
       return (
-        <div style={{ width: '100%', height: '300px', backgroundColor: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#65676B' }}>
-          Chưa có hình ảnh
+        <div style={{ width: '100%', height: '300px', backgroundColor: '#EFF1F4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9AA1AC', gap: '8px', fontSize: '14px' }}>
+          <Camera size={18} /> Chưa có hình ảnh
         </div>
       );
     }
-
-    // Bố cục 1 ảnh
     if (images.length === 1) {
-      return <img onClick={() => handleImageClick(images, 0)} src={getUrl(images[0])} alt="media" style={{ width: '100%', maxHeight: '600px', objectFit: 'cover', display: 'block', cursor: 'pointer' }} />;
+      return <img onClick={() => handleImageClick(images, 0)} src={getUrl(images[0])} alt="media" style={{ width: '100%', maxHeight: '580px', objectFit: 'cover', display: 'block', cursor: 'pointer' }} />;
     }
-    
-    // Bố cục 2 ảnh
     if (images.length === 2) {
       return (
-        <div style={{ display: 'flex', gap: '2px', height: '450px' }}>
+        <div style={{ display: 'flex', gap: '2px', height: '440px' }}>
           <img onClick={() => handleImageClick(images, 0)} src={getUrl(images[0])} alt="media1" style={{ width: '50%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} />
           <img onClick={() => handleImageClick(images, 1)} src={getUrl(images[1])} alt="media2" style={{ width: '50%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} />
         </div>
       );
     }
-
-    // Bố cục 3 ảnh trở lên
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', height: '550px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', height: '540px' }}>
         <img onClick={() => handleImageClick(images, 0)} src={getUrl(images[0])} alt="media1" style={{ width: '100%', height: '60%', objectFit: 'cover', cursor: 'pointer' }} />
         <div style={{ display: 'flex', gap: '2px', height: '40%' }}>
           <img onClick={() => handleImageClick(images, 1)} src={getUrl(images[1])} alt="media2" style={{ width: '50%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} />
           <div onClick={() => handleImageClick(images, 2)} style={{ width: '50%', height: '100%', position: 'relative', cursor: 'pointer' }}>
             <img src={getUrl(images[2])} alt="media3" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             {images.length > 3 && (
-              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '28px', fontWeight: 'bold' }}>
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '26px', fontWeight: 700 }}>
                 +{images.length - 3}
               </div>
             )}
@@ -90,89 +212,199 @@ export const ListingFeed: React.FC = () => {
     );
   };
 
+  const categoryTabs: { key: RentalCategory; label: string; icon: React.ReactNode; count: number }[] = [
+    { key: 'all', label: 'Tất cả', icon: <Home size={14} />, count: counts.all },
+    { key: 'longterm', label: 'Dài hạn', icon: <Building2 size={14} />, count: counts.longterm },
+    { key: 'hourly', label: 'Chia sẻ theo giờ', icon: <Clock3 size={14} />, count: counts.hourly },
+  ];
+
   return (
     <div style={{ backgroundColor: '#F0F2F5', minHeight: '100vh', color: '#050505', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <div style={{ position: 'sticky', top: 0, zIndex: 999 }}>
-        <Header /> 
+        <Header />
       </div>
 
-      {/* ĐÃ FIX: Giảm paddingTop từ 90px xuống 70px để kéo sát Header, Tăng cột giữa từ 680px lên 760px */}
       <div style={{ maxWidth: '1380px', margin: '0 auto', paddingTop: '30px', display: 'grid', gridTemplateColumns: '280px minmax(auto, 760px) 280px', gap: '24px', justifyContent: 'center', paddingBottom: '50px' }}>
-        
+
         {/* CỘT TRÁI */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '110px', height: 'fit-content' }}>
-          <div style={{ backgroundColor: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
             <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#050505' }}>Lối tắt của bạn</h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0', cursor: 'pointer', color: '#050505', fontWeight: 500 }}>
+            
+            <div
+              onClick={() => navigate('/owner/listings')}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 6px', borderRadius: '8px', cursor: 'pointer', color: '#050505', fontWeight: 500, transition: 'background-color .15s' }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F0F2F5')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Home size={18} color="var(--color-primary)" /></div>
               Mặt bằng của tôi
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0', cursor: 'pointer', color: '#050505', fontWeight: 500 }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Bookmark size={18} color="var(--color-gold)" /></div>
-              Đã lưu gần đây
+            
+            <div
+              onClick={() => { setOnlyMine(!onlyMine); setShowFavoritesOnly(false); }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '8px 6px', borderRadius: '8px', cursor: 'pointer', color: '#050505', fontWeight: 500, backgroundColor: onlyMine ? '#F0F2F5' : 'transparent' }}
+              onMouseEnter={(e) => { if(!onlyMine) e.currentTarget.style.backgroundColor = '#F0F2F5'; }}
+              onMouseLeave={(e) => { if(!onlyMine) e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={18} color="var(--color-gold, #D9A05B)" /></div>
+                Chỉ xem bài đăng của tôi
+              </div>
+              <div style={{
+                width: '38px', height: '22px', borderRadius: '999px', padding: '2px',
+                backgroundColor: onlyMine ? 'var(--color-primary)' : '#CED0D4',
+                display: 'flex', alignItems: 'center', justifyContent: onlyMine ? 'flex-end' : 'flex-start',
+                transition: 'background-color .2s'
+              }}>
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.3)' }} />
+              </div>
             </div>
+
+            <div 
+              onClick={() => { setShowFavoritesOnly(!showFavoritesOnly); setOnlyMine(false); }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '8px 6px', borderRadius: '8px', cursor: 'pointer', color: '#050505', fontWeight: 500, backgroundColor: showFavoritesOnly ? '#F0F2F5' : 'transparent', marginTop: '4px' }}
+              onMouseEnter={(e) => { if(!showFavoritesOnly) e.currentTarget.style.backgroundColor = '#F0F2F5'; }}
+              onMouseLeave={(e) => { if(!showFavoritesOnly) e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Bookmark size={18} color={showFavoritesOnly ? "#E02424" : "var(--color-gold, #D9A05B)"} /></div>
+                Đã lưu gần đây
+              </div>
+            </div>
+
           </div>
-          
+
           <div style={{ fontSize: '13px', color: '#65676B', padding: '0 8px' }}>
-            Quyền riêng tư · Điều khoản · Quảng cáo · Tùy chọn · <br/> EtherSpace © 2026
+            Quyền riêng tư · Điều khoản · Quảng cáo · Tùy chọn · <br /> EtherSpace © 2026
           </div>
         </div>
 
         {/* CỘT GIỮA: FEED BÀI ĐĂNG */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* THANH BỘ LỌC */}
+          <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {categoryTabs.map((tab) => {
+              const active = categoryFilter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setCategoryFilter(tab.key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
+                    borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 600,
+                    backgroundColor: active ? 'var(--color-primary)' : '#F0F2F5',
+                    color: active ? '#fff' : '#050505',
+                    transition: 'all .15s'
+                  }}
+                >
+                  {tab.icon} {tab.label}
+                  <span style={{
+                    fontSize: '11px', padding: '1px 6px', borderRadius: '10px',
+                    backgroundColor: active ? 'rgba(255,255,255,0.25)' : '#E4E6EB',
+                    color: active ? '#fff' : '#65676B'
+                  }}>{tab.count}</span>
+                </button>
+              );
+            })}
+            
+            {(onlyMine || showFavoritesOnly) && (
+              <button
+                onClick={() => { setOnlyMine(false); setShowFavoritesOnly(false); }}
+                style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '20px', border: '1px solid var(--color-primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, backgroundColor: '#fff', color: 'var(--color-primary)' }}
+              >
+                {onlyMine ? <User size={13} /> : <Bookmark size={13} />} 
+                {onlyMine ? `Bài đăng của tôi (${counts.mine})` : 'Đang xem tin đã lưu'} <X size={13} />
+              </button>
+            )}
+          </div>
+
           {isLoading ? (
-            <h3 style={{ textAlign: 'center', color: '#65676B' }}>Đang tải bảng tin...</h3>
+            <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '40px', textAlign: 'center', color: '#65676B' }}>Đang tải bảng tin...</div>
+          ) : filteredListings.length === 0 ? (
+            <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '40px', textAlign: 'center', color: '#65676B' }}>
+              {onlyMine ? 'Bạn chưa có bài đăng nào phù hợp với bộ lọc này.' : showFavoritesOnly ? 'Bạn chưa lưu bài đăng nào.' : 'Không có bài đăng nào phù hợp.'}
+            </div>
           ) : (
-            listings.map((item, index) => (
-              <div key={item.id || index} style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
-                
-                <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff' }}>
-                    {item.createdBy ? item.createdBy.substring(0, 2).toUpperCase() : 'CH'}
+            filteredListings.map((item, index) => {
+              const category = getRentalCategory(item);
+              const isHourly = category === 'hourly';
+              const isMine = myListingKeys.has((item.id || item.Id)?.toString());
+              const currentListingId = Number(item.id || item.Id);
+              const isSaved = favoriteIds.has(currentListingId);
+
+              return (
+                <div key={item.id || index} style={{ backgroundColor: '#FFFFFF', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+
+                  <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff', flexShrink: 0 }}>
+                      {item.createdBy ? item.createdBy.substring(0, 2).toUpperCase() : 'CH'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: '15px', color: '#050505', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        Chủ nhà {item.createdBy?.substring(0, 4) || 'Ẩn danh'}
+                        {isMine && (
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', backgroundColor: 'rgba(0,0,0,0.05)', padding: '1px 8px', borderRadius: '10px' }}>Bài của bạn</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#65676B', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                        Vừa cập nhật • <MapPin size={10} /> {item.location || item.address || 'Đang cập nhật'}
+                      </div>
+                    </div>
+                    <span style={{
+                      display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '12px', flexShrink: 0,
+                      backgroundColor: isHourly ? 'rgba(0,180,160,0.12)' : 'rgba(0,110,255,0.1)',
+                      color: isHourly ? '#00998A' : 'var(--color-primary)'
+                    }}>
+                      {isHourly ? <Clock3 size={11} /> : <Building2 size={11} />}
+                      {isHourly ? 'Theo giờ' : 'Dài hạn'}
+                    </span>
                   </div>
-                  <div>
-                    <div style={{ fontWeight: '600', fontSize: '15px', color: '#050505' }}>Chủ nhà {item.createdBy?.substring(0, 4) || 'Ẩn danh'}</div>
-                    <div style={{ fontSize: '12px', color: '#65676B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      Vừa cập nhật • <MapPin size={10} /> {item.location || item.address || 'Đang cập nhật'}
+
+                  <div style={{ padding: '4px 16px 12px 16px', fontSize: '15px', lineHeight: '1.5', color: '#050505' }}>
+                    <div style={{ fontWeight: 'bold', color: 'var(--color-positive, #2E7D32)', fontSize: '16px', marginBottom: '6px' }}>
+                      💰 {item.price ? `${item.price.toLocaleString('vi-VN')} ₫/giờ` : 'Thỏa thuận'} • {item.area ? `${item.area}m²` : 'N/A'}
+                    </div>
+                    {item.description || item.name || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này.'}
+                  </div>
+
+                  {/* KHU VỰC ẢNH */}
+                  <div style={{ width: '100%', backgroundColor: '#fff' }}>
+                    {renderImages(item.listingPictures)}
+                  </div>
+
+                  <div style={{ padding: '12px 16px', borderTop: '1px solid #CED0D4' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={(e) => handleToggleFavorite(e, currentListingId)} 
+                        style={{ flex: 1, padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontSize: '14px', backgroundColor: '#E4E6EB', color: isSaved ? '#E02424' : '#050505', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        <Heart size={16} fill={isSaved ? '#E02424' : 'none'} color={isSaved ? '#E02424' : 'currentColor'} /> 
+                        {isSaved ? 'Đã lưu' : 'Lưu tin'}
+                      </button>
+                      <button onClick={() => alert('Chuẩn bị tích hợp API Chat!')} style={{ flex: 1, padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontSize: '14px', backgroundColor: '#E4E6EB', color: '#050505', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}>
+                        <MessageCircle size={16} /> Nhắn tin
+                      </button>
+                      <button
+                        onClick={() => navigate(`/listing/${item.id || item.Id}`)}
+                        style={{ flex: 1, padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', backgroundColor: '#E4E6EB', color: '#050505', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                        <Eye size={16} /> Xem chi tiết
+                      </button>
                     </div>
                   </div>
-                </div>
 
-                <div style={{ padding: '4px 16px 12px 16px', fontSize: '15px', lineHeight: '1.5', color: '#050505' }}>
-                  <div style={{ fontWeight: 'bold', color: 'var(--color-positive)', fontSize: '16px', marginBottom: '6px' }}>
-                    💰 {item.price ? `${item.price.toLocaleString('vi-VN')} ₫/giờ` : 'Thỏa thuận'} • {item.area ? `${item.area}m²` : 'N/A'}
-                  </div>
-                  {item.description || item.name || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này.'}
                 </div>
-
-                {/* KHU VỰC ẢNH (Click được) */}
-                <div style={{ width: '100%', backgroundColor: '#fff' }}>
-                   {renderImages(item.listingPictures)}
-                </div>
-
-                <div style={{ padding: '12px 16px', borderTop: '1px solid #CED0D4' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => alert('Chuẩn bị tích hợp API Chat!')} style={{ flex: 1, padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontSize: '14px', backgroundColor: '#E4E6EB', color: '#050505', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}>
-                      <MessageCircle size={16} /> Nhắn tin
-                    </button>
-                    <button
-                        onClick={() => navigate(`/listing/${item.id || item.Id}`)} 
-                        style={{ flex: 1, padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', backgroundColor: '#E4E6EB', color: '#050505', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
-                      <Eye size={16} /> Xem chi tiết
-                    </button>
-                  </div>
-                </div>
-                
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
         {/* CỘT PHẢI */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '110px', height: 'fit-content' }}>
-          <div style={{ backgroundColor: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
             <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#050505', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TrendingUp size={18} color="var(--color-positive)"/> Đang thịnh hành
+              <TrendingUp size={18} color="var(--color-positive, #2E7D32)" /> Đang thịnh hành
             </h4>
             <div style={{ fontSize: '14px', color: '#050505', marginBottom: '12px', fontWeight: 500, cursor: 'pointer' }}>
               📍 Khu vực Quận 1 đang sốt giá
@@ -184,9 +416,9 @@ export const ListingFeed: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ backgroundColor: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
             <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#050505', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShieldCheck size={18} color="var(--color-primary)"/> Mẹo an toàn
+              <ShieldCheck size={18} color="var(--color-primary)" /> Mẹo an toàn
             </h4>
             <p style={{ margin: 0, fontSize: '13px', color: '#65676B', lineHeight: '1.5' }}>
               Luôn xác minh danh tính chủ nhà và ký hợp đồng rõ ràng trước khi đặt cọc bạn nhé.
@@ -196,53 +428,46 @@ export const ListingFeed: React.FC = () => {
 
       </div>
 
-      {/* ========================================== */}
-      {/* MODAL (POP-UP) XEM ẢNH FULL MÀN HÌNH */}
-      {/* ========================================== */}
+      {/* MODAL XEM ẢNH FULL MÀN HÌNH */}
       {viewingImages && createPortal(
-        <div 
+        <div
           style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 999999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setViewingImages(null)} // Click ra ngoài nền đen để đóng
+          onClick={() => setViewingImages(null)}
         >
-          {/* Nút Đóng (Góc trên phải) */}
-          <button 
+          <button
             onClick={() => setViewingImages(null)}
             style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
           >
             <X size={24} color="#fff" />
           </button>
 
-          {/* Nút lùi */}
           {viewingImages.length > 1 && (
-            <button 
-              onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev > 0 ? prev - 1 : viewingImages.length - 1); }}
+            <button
+              onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : viewingImages.length - 1)); }}
               style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
             >
               <ChevronLeft size={32} color="#fff" />
             </button>
           )}
 
-          {/* Khu vực hiển thị ảnh */}
           <div style={{ width: '90%', height: '90%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img 
-              src={getUrl(viewingImages[currentImageIndex])} 
-              alt="fullscreen view" 
+            <img
+              src={getUrl(viewingImages[currentImageIndex])}
+              alt="fullscreen view"
               style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-              onClick={(e) => e.stopPropagation()} // Tránh việc click vào ảnh làm đóng pop-up
+              onClick={(e) => e.stopPropagation()}
             />
           </div>
 
-          {/* Nút tới */}
           {viewingImages.length > 1 && (
-            <button 
-              onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev < viewingImages.length - 1 ? prev + 1 : 0); }}
+            <button
+              onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((prev) => (prev < viewingImages.length - 1 ? prev + 1 : 0)); }}
               style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
             >
               <ChevronRight size={32} color="#fff" />
             </button>
           )}
 
-          {/* Bộ đếm số ảnh */}
           {viewingImages.length > 1 && (
             <div style={{ position: 'absolute', bottom: '20px', color: '#fff', fontSize: '16px', fontWeight: 'bold' }}>
               {currentImageIndex + 1} / {viewingImages.length}
