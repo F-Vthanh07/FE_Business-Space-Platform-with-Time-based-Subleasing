@@ -1,8 +1,62 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Share2, Heart, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3, Send, X, ClipboardSignature } from 'lucide-react';
-import { Header } from '../../components/Header'; // Chỉnh đường dẫn cho đúng nếu cần
+import { Header } from '../../components/Header';
+import { Copy, Check, Mail } from "lucide-react";
+import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
+import { SiZalo } from "react-icons/si";
+
+// --- COMPONENT NÚT CHIA SẺ DÙNG LẠI (SHARE BUTTON) ---
+interface ShareButtonProps {
+  icon: React.ReactNode;
+  label: string;
+  url?: string;
+  onClick?: () => void;
+}
+
+const ShareButton: React.FC<ShareButtonProps> = ({ icon, label, url, onClick }) => {
+  const [hover, setHover] = useState(false);
+
+  const handleClick = () => {
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else if (onClick) {
+      onClick();
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        padding: '14px 8px',
+        borderRadius: '10px',
+        border: '1px solid #EAEAEA',
+        backgroundColor: hover ? '#F5F5F5' : '#fff',
+        cursor: 'pointer',
+        transform: hover ? 'translateY(-2px)' : 'translateY(0)',
+        transition: 'all 0.2s ease',
+        fontSize: '12px',
+        color: '#333',
+        fontWeight: 500
+      }}
+    >
+      <span style={{ fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {icon}
+      </span>
+      {label}
+    </button>
+  );
+};
 
 export const ListingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,10 +67,7 @@ export const ListingDetail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // --- THÊM STATE LƯU TIN (FAVORITE) ---
   const [isFavorite, setIsFavorite] = useState(false);
-
-  // --- THÊM STATE CHO MODAL ĐẶT CHỖ ---
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingData, setBookingData] = useState({
@@ -27,6 +78,10 @@ export const ListingDetail: React.FC = () => {
     note: '',
     expectedStartDate: new Date().toISOString().split('T')[0]
   });
+
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [shareModalAnimateIn, setShareModalAnimateIn] = useState(false);
 
   const currentUserId = localStorage.getItem('current_user_id'); 
   const token = localStorage.getItem('portal_token');
@@ -45,15 +100,18 @@ export const ListingDetail: React.FC = () => {
           spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
         }
 
-        // BƯỚC 2: LẤY DANH SÁCH BÀI ĐĂNG
-        const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', { headers: { 'accept': '*/*' } });
+        // BƯỚC 2: LẤY DANH SÁCH BÀI ĐĂNG (Thêm header)
+        const headers: any = { accept: '*/*' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', { headers });
         if (response.ok) {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
           
           const found = safeData.find((item: any) => (item.id?.toString() === id || item.Id?.toString() === id));
 
-          // BƯỚC 3: GHÉP area/address
+          // BƯỚC 3: GHÉP area/address (GIỮ NGUYÊN CODE BẠN CHỈ ĐỊNH)
           let foundWithSpaceInfo = found || null;
           if (found) {
             const parentSpace = spaces.find(s => (s.id || s.Id) === (found.spaceId || found.SpaceId));
@@ -84,21 +142,14 @@ export const ListingDetail: React.FC = () => {
           setSimilarListings(others.slice(0, 3));
         }
 
-// BƯỚC 5: KIỂM TRA TRẠNG THÁI YÊU THÍCH
+        // BƯỚC 5: KIỂM TRA TRẠNG THÁI YÊU THÍCH
         if (token && id) {
           const favRes = await fetch('https://flexi-space-capstone-project.onrender.com/api/FavoriteList/FavoriteByUser', {
             headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
           });
           if (favRes.ok) {
             const favData = await favRes.json();
-            
-            // In ra tab Console để bạn xem chính xác API trả về cái gì
-            console.log("Dữ liệu Yêu thích (Detail):", favData); 
-
-            // Cố gắng lấy mảng dữ liệu dù nó nằm ở đâu
             const favArray = Array.isArray(favData) ? favData : (favData?.data || favData?.items || favData?.listingIds || []);
-            
-            // Xử lý đa dạng cấu trúc (mảng số, mảng chữ, object...)
             const isFav = favArray.some((item: any) => {
               if (typeof item === 'number' || typeof item === 'string') {
                 return item.toString() === id.toString();
@@ -106,7 +157,6 @@ export const ListingDetail: React.FC = () => {
               const itemId = item?.listingId || item?.ListingId || item?.listing?.id || item?.id || item?.Id;
               return itemId?.toString() === id.toString();
             });
-            
             setIsFavorite(isFav);
           }
         }
@@ -120,7 +170,15 @@ export const ListingDetail: React.FC = () => {
     fetchDetail();
   }, [id, token]);
 
-  // HÀM XỬ LÝ LƯU TIN (TOGGLE FAVORITE)
+  useEffect(() => {
+    if (isShareModalOpen) {
+      const timer = setTimeout(() => setShareModalAnimateIn(true), 10);
+      return () => clearTimeout(timer);
+    } else {
+      setShareModalAnimateIn(false);
+    }
+  }, [isShareModalOpen]);
+
   const handleToggleFavorite = async () => {
     if (!token) {
       alert("Vui lòng đăng nhập để lưu mặt bằng!");
@@ -144,14 +202,11 @@ export const ListingDetail: React.FC = () => {
       }
     } catch (err) { 
       console.error(err); 
-      alert("Có lỗi xảy ra khi cập nhật mục yêu thích."); 
     }
   };
 
-  // HÀM XỬ LÝ GỬI YÊU CẦU THUÊ
   const handleSubmitBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!currentUserId || !token) {
       alert("Vui lòng đăng nhập để gửi yêu cầu thuê!");
       navigate('/login');
@@ -172,10 +227,7 @@ export const ListingDetail: React.FC = () => {
 
       const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/Create', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
 
@@ -188,9 +240,35 @@ export const ListingDetail: React.FC = () => {
       }
     } catch (error) {
       console.error("Lỗi API Booking:", error);
-      alert("Lỗi kết nối máy chủ!");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: listing?.name || 'Mặt bằng cho thuê',
+      text: listing?.description || '',
+      url: window.location.href
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        console.warn("navigator.share thất bại hoặc bị hủy:", err);
+      }
+    }
+    setIsShareModalOpen(true);
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Sao chép liên kết thất bại:", err);
     }
   };
 
@@ -225,14 +303,13 @@ export const ListingDetail: React.FC = () => {
           
           {/* CỘT TRÁI */}
           <div>
-            {/* THƯ VIỆN ẢNH */}
             <div style={{ backgroundColor: '#000', borderRadius: '8px', overflow: 'hidden', marginBottom: '12px', position: 'relative' }}>
               <img src={mainImage} alt="Main" style={{ width: '100%', height: '450px', objectFit: 'contain', display: 'block' }} />
               <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 12px', borderRadius: '16px', fontSize: '13px' }}>
                 {currentImageIndex + 1} / {realImages.length || 1}
               </div>
             </div>
-            {/* ẢNH THUMBNAIL */}
+            
             {realImages.length > 1 && (
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '24px' }}>
                 {realImages.map((img: any, idx: number) => (
@@ -248,10 +325,13 @@ export const ListingDetail: React.FC = () => {
               </div>
             )}
 
-            {/* TIÊU ĐỀ & GIÁ */}
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 12px 0', lineHeight: '1.4', color: '#2C2C2C' }}>
-              {listing.name || listing.description?.substring(0, 80) || 'Mặt bằng kinh doanh vị trí đắc địa, giá tốt nhất khu vực'}
-            </h1>
+            {/* SỬA GIỐNG OWNERLISTINGS: Chỉ render Name khi tồn tại */}
+            {listing.name && (
+              <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 12px 0', lineHeight: '1.4', color: '#2C2C2C' }}>
+                {listing.name}
+              </h1>
+            )}
+
             <p style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#505050', margin: '0 0 20px 0' }}>
               <MapPin size={16} /> {listing.location || listing.address || listing.spaceAddress || 'Đang cập nhật địa chỉ'}
             </p>
@@ -270,7 +350,7 @@ export const ListingDetail: React.FC = () => {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '16px' }}>
-                <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: '#555', fontWeight: 500 }}><Share2 size={18} /> Chia sẻ</button>
+                <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: '#555', fontWeight: 500 }}><Share2 size={18} /> Chia sẻ</button>
                 <button 
                   onClick={handleToggleFavorite}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: isFavorite ? '#E02424' : '#555', fontWeight: 500 }}
@@ -281,13 +361,11 @@ export const ListingDetail: React.FC = () => {
               </div>
             </div>
 
-            {/* THÔNG TIN MÔ TẢ */}
             <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Thông tin mô tả</h3>
             <div style={{ lineHeight: '1.7', color: '#444', whiteSpace: 'pre-wrap', marginBottom: '40px', fontSize: '15px' }}>
               {listing.description || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này. Vui lòng liên hệ trực tiếp để biết thêm thông tin về hợp đồng và cọc.'}
             </div>
 
-            {/* LỊCH SỬ GIÁ */}
             <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Lịch sử giá cho thuê</h3>
             <div style={{ border: '1px solid #E0E0E0', borderRadius: '8px', padding: '20px', marginBottom: '40px', display: 'flex', gap: '40px', backgroundColor: '#fff' }}>
                <div>
@@ -308,7 +386,6 @@ export const ListingDetail: React.FC = () => {
                </div>
             </div>
 
-            {/* BẢN ĐỒ */}
             <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Xem trên bản đồ</h3>
             <div style={{ width: '100%', height: '350px', backgroundColor: '#e5e3df', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px', border: '1px solid #E0E0E0' }}>
                <iframe 
@@ -317,7 +394,6 @@ export const ListingDetail: React.FC = () => {
                />
             </div>
 
-            {/* THÔNG TIN BÀI ĐĂNG (META DATA) */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', paddingBottom: '30px', borderBottom: '1px solid #E0E0E0', marginBottom: '40px' }}>
                <div>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#777', fontSize: '12px', marginBottom: '4px' }}><Calendar size={12}/> Ngày đăng</div>
@@ -343,7 +419,6 @@ export const ListingDetail: React.FC = () => {
                </div>
             </div>
 
-            {/* BẤT ĐỘNG SẢN DÀNH CHO BẠN (SIMILAR LISTINGS) */}
             {similarListings.length > 0 && (
               <>
                 <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Bất động sản dành cho bạn</h3>
@@ -369,9 +444,12 @@ export const ListingDetail: React.FC = () => {
                           </div>
                         </div>
                         <div style={{ padding: '12px' }}>
-                          <h4 style={{ fontSize: '13px', margin: '0 0 8px 0', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: '#2C2C2C' }}>
-                            {simItem.name || simItem.description || 'Mặt bằng cho thuê'}
-                          </h4>
+                          {/* TƯƠNG TỰ CÁCH XỬ LÝ NAME CHO CARD SIMILAR LISTING */}
+                          {simItem.name && (
+                            <h4 style={{ fontSize: '13px', margin: '0 0 8px 0', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: '#2C2C2C' }}>
+                              {simItem.name}
+                            </h4>
+                          )}
                           <div style={{ color: 'var(--color-positive)', fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
                             {simItem.price ? `${simItem.price.toLocaleString('vi-VN')} ₫/h` : 'Thỏa thuận'}
                           </div>
@@ -412,7 +490,6 @@ export const ListingDetail: React.FC = () => {
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16A34A', display: 'inline-block' }}></span> Đang hoạt động
                   </div>
 
-                  {/* NÚT MỞ FORM GỬI YÊU CẦU THUÊ */}
                   <button 
                     onClick={() => {
                       if(!currentUserId) { alert("Vui lòng đăng nhập!"); navigate('/login'); return; }
@@ -430,7 +507,6 @@ export const ListingDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* POPUP (MODAL) ĐIỀN FORM ĐẶT CHỖ */}
       {isBookingModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ backgroundColor: '#fff', width: '450px', borderRadius: '12px', padding: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
@@ -486,6 +562,94 @@ export const ListingDetail: React.FC = () => {
               </button>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {isShareModalOpen && (
+        <div
+          onClick={() => setIsShareModalOpen(false)}
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            opacity: shareModalAnimateIn ? 1 : 0,
+            transition: 'opacity 0.25s ease'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#fff', width: '440px', maxWidth: '90vw', borderRadius: '16px',
+              padding: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)',
+              transform: shareModalAnimateIn ? 'scale(1)' : 'scale(0.95)',
+              opacity: shareModalAnimateIn ? 1 : 0,
+              transition: 'all 0.25s ease'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1E293B', marginBottom: '4px' }}>Share Listing</div>
+                <div style={{ fontSize: '13px', color: '#777' }}>Anyone with this link can view this listing.</div>
+              </div>
+              <button onClick={() => setIsShareModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+              <input
+                type="text"
+                readOnly
+                value={window.location.href}
+                onFocus={(e) => e.target.select()}
+                style={{ flex: 1, minWidth: 0, padding: '10px 12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '13px', color: '#555', backgroundColor: '#F9F9F9' }}
+              />
+              <button
+                onClick={handleCopyLink}
+                style={{
+                  padding: '10px 16px', borderRadius: '8px', border: 'none',
+                  backgroundColor: copied ? '#16A34A' : '#1E293B', color: '#fff',
+                  fontWeight: 'bold', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap',
+                  display: 'flex', alignItems: 'center', gap: '6px', transition: 'background-color 0.2s'
+                }}
+              >
+                {copied ? (<><Check size={14} /> Copied</>) : (<><Copy size={14} /> Copy</>)}
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+              <ShareButton
+                icon={<FaFacebookMessenger color="#0084FF" />}
+                label="Messenger"
+                url={`https://www.facebook.com/dialog/send?link=${encodeURIComponent(window.location.href)}`}
+              />
+              <ShareButton
+                icon={<FaFacebook color="#1877F2" />}
+                label="Facebook"
+                url={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+              />
+              <ShareButton
+                icon={<FaTelegramPlane color="#229ED9" />}
+                label="Telegram"
+                url={`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}`}
+              />
+              <ShareButton
+                icon={<SiZalo color="#0068FF" />}
+                label="Zalo"
+                url={`https://zalo.me/share?url=${encodeURIComponent(window.location.href)}`}
+              />
+              <ShareButton
+                icon={<Mail color="#EA4335" />}
+                label="Email"
+                url={`mailto:?subject=${encodeURIComponent(listing.name || 'Mặt bằng cho thuê')}&body=${encodeURIComponent(window.location.href)}`}
+              />
+              <ShareButton
+                icon={<FaLink color="#555" />}
+                label="Copy Link"
+                onClick={handleCopyLink}
+              />
+            </div>
           </div>
         </div>
       )}

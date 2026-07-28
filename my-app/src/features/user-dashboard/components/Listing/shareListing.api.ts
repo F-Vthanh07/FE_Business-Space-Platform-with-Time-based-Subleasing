@@ -1,3 +1,5 @@
+import type { ShareListingPayload } from '../../types';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const BASE_URL = 'https://flexi-space-capstone-project.onrender.com/api';
 
@@ -10,37 +12,42 @@ const getAuthHeaders = () => {
   };
 };
 
-export interface ShareListingPayload {
-  spaceId: number;
-  allowedStartTime: string;
-  allowedEndTime: string;
-  description: string;
-  price: number;
-  shareSpaceDetailMaxSubRenter: number;
-  shareSpaceDetailIsOwner: boolean;
-  shareSpaceDetailIsLegalCommitted: boolean;
-  shareSpaceDetailShareSpaceAmenities: { amenityId: number; isIncluded: boolean; price: number }[];
-  shareSpaceDetailAvailabilitiesTimes: {
-    daysOfWeek: string[];
-    specificdate: string;
-    startTime: string;
-    endTime: string;
-    validFrom: string;
-    validTo: string;
-  }[];
-  shareSpaceDetailShareSpaceCategories: { bussinessCategoryId: number }[];
-}
+// --- Helper dùng chung: đọc response lỗi từ backend (kể cả ValidationProblemDetails của .NET) ---
+const parseErrorResponse = async (res: Response, fallback: string): Promise<string> => {
+  const rawText = await res.text().catch(() => '');
+
+  if (!rawText) return fallback;
+
+  // Thử parse JSON trước
+  try {
+    const errData = JSON.parse(rawText);
+
+    // .NET ValidationProblemDetails: { title, errors: { FieldName: ["msg1", "msg2"] } }
+    if (errData.errors && typeof errData.errors === 'object') {
+      const fieldMessages = Object.values(errData.errors)
+        .flat()
+        .filter(Boolean) as string[];
+      if (fieldMessages.length > 0) {
+        return fieldMessages.join(' | ');
+      }
+    }
+
+    return errData.detail || errData.message || errData.title || rawText;
+  } catch {
+    // Không phải JSON -> backend trả plain text, dùng luôn nội dung này
+    return rawText;
+  }
+};
 
 export const createShareListing = async (payload: ShareListingPayload) => {
   const res = await fetch(`${BASE_URL}/Listing/CreateShareListing`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify(payload) // BE nhận payload phẳng, KHÔNG bọc key ngoài
+    body: JSON.stringify(payload)
   });
 
   if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.title || errData.message || 'Lỗi tạo bài đăng chia sẻ');
+    throw new Error(await parseErrorResponse(res, 'Lỗi tạo bài đăng chia sẻ'));
   }
 
   const text = await res.text();
@@ -55,21 +62,17 @@ export const updateShareListing = async (id: number, payload: ShareListingPayloa
   const res = await fetch(`${BASE_URL}/Listing/UpdateShareListing/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(),
-    body: JSON.stringify(payload) // tương tự, không bọc
+    body: JSON.stringify(payload)
   });
 
   if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(errData.title || errData.message || 'Lỗi cập nhật bài đăng chia sẻ');
+    throw new Error(await parseErrorResponse(res, 'Lỗi cập nhật bài đăng chia sẻ'));
   }
 
-  return res.ok;
+  return true;
 };
 
-
 // --- LẤY DANH SÁCH BÀI SHARE CỦA CHÍNH MÌNH (B) ---
-// TODO: verify field name — hiện đang lọc theo shareSpaceDetail tồn tại.
-// Nếu backend trả field khác (vd `listingType: 'share'`), sửa lại điều kiện filter bên dưới.
 export const fetchMyShareListings = async () => {
   const token = localStorage.getItem('portal_token');
   const userId = localStorage.getItem('current_user_id');
@@ -89,7 +92,6 @@ export const fetchMyShareListings = async () => {
   );
 };
 
-// --- XÓA SHARE LISTING (dùng chung endpoint Listing/Delete vì cùng bảng Listing) ---
 export const deleteShareListing = async (id: number) => {
   const token = localStorage.getItem('portal_token');
   const res = await fetch(`${BASE_URL}/Listing/Delete/${id}`, {

@@ -20,6 +20,19 @@ const getRentalCategory = (item: AnyItem): 'longterm' | 'hourly' => {
   return 'longterm';
 };
 
+// Hiển thị thời gian tương đối dựa trên createdAt trả về từ BE
+const formatTimeAgo = (dateStr?: string) => {
+  if (!dateStr) return 'Vừa cập nhật';
+  const diffMin = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  if (diffMin < 1) return 'Vừa xong';
+  if (diffMin < 60) return `${diffMin} phút trước`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} giờ trước`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 30) return `${diffDay} ngày trước`;
+  return new Date(dateStr).toLocaleDateString('vi-VN');
+};
+
 export const ListingFeed: React.FC = () => {
   const [listings, setListings] = useState<AnyItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,7 +66,7 @@ export const ListingFeed: React.FC = () => {
 
               const favData = Array.isArray(data) ? data : (data?.data || data?.items || data?.listingIds || []);
               const favIds = new Set<number>();
-              
+
               favData.forEach((item: any) => {
                 if (typeof item === 'number' || typeof item === 'string') {
                   favIds.add(Number(item));
@@ -62,18 +75,36 @@ export const ListingFeed: React.FC = () => {
                   if (itemId) favIds.add(Number(itemId));
                 }
               });
-              
+
               setFavoriteIds(favIds);
             })
             .catch(err => console.error('Lỗi lấy danh sách yêu thích:', err));
         }
 
-        // 2. Lấy toàn bộ bài đăng
-        const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', { headers: { 'accept': '*/*' } });
+        // 2. Lấy toàn bộ bài đăng (fetch kèm Space để có area)
+        const [spaceRes, response] = await Promise.all([
+          fetch('https://flexi-space-capstone-project.onrender.com/api/Space/GetAll', { headers: { accept: '*/*' } }),
+          fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', { headers: { accept: '*/*' } })
+        ]);
+
+        let spaces: AnyItem[] = [];
+        if (spaceRes.ok) {
+          const spaceData = await spaceRes.json();
+          spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+        }
+
         let safeData: AnyItem[] = [];
         if (response.ok) {
           const data = await response.json();
           safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
+          safeData = safeData.map((item: AnyItem) => {
+            const parentSpace = spaces.find((s: AnyItem) => (s.id || s.Id) === (item.spaceId || item.SpaceId));
+            return {
+              ...item,
+              area: item.area || parentSpace?.area || null,
+              address: item.spaceAddress || item.location || item.address || parentSpace?.address || parentSpace?.location || ''
+            };
+          });
           safeData = safeData.reverse();
         }
         setListings(safeData);
@@ -81,14 +112,14 @@ export const ListingFeed: React.FC = () => {
         // 3. Lấy bài đăng của tôi
         if (currentUserId) {
           try {
-            const spaceRes = await fetch(
+            const spaceRes2 = await fetch(
               `https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(currentUserId)}`,
               { headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' } }
             );
             let mySpaceIds: string[] = [];
-            if (spaceRes.ok) {
-              const spaceData = await spaceRes.json();
-              const mySpaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+            if (spaceRes2.ok) {
+              const spaceData2 = await spaceRes2.json();
+              const mySpaces = Array.isArray(spaceData2) ? spaceData2 : (spaceData2?.data || spaceData2?.items || []);
               mySpaceIds = mySpaces.map((s: AnyItem) => s.id || s.Id);
             }
 
@@ -230,7 +261,7 @@ export const ListingFeed: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '110px', height: 'fit-content' }}>
           <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
             <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#050505' }}>Lối tắt của bạn</h4>
-            
+
             <div
               onClick={() => navigate('/owner/listings')}
               style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 6px', borderRadius: '8px', cursor: 'pointer', color: '#050505', fontWeight: 500, transition: 'background-color .15s' }}
@@ -240,7 +271,7 @@ export const ListingFeed: React.FC = () => {
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Home size={18} color="var(--color-primary)" /></div>
               Mặt bằng của tôi
             </div>
-            
+
             <div
               onClick={() => { setOnlyMine(!onlyMine); setShowFavoritesOnly(false); }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '8px 6px', borderRadius: '8px', cursor: 'pointer', color: '#050505', fontWeight: 500, backgroundColor: onlyMine ? '#F0F2F5' : 'transparent' }}
@@ -261,7 +292,7 @@ export const ListingFeed: React.FC = () => {
               </div>
             </div>
 
-            <div 
+            <div
               onClick={() => { setShowFavoritesOnly(!showFavoritesOnly); setOnlyMine(false); }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '8px 6px', borderRadius: '8px', cursor: 'pointer', color: '#050505', fontWeight: 500, backgroundColor: showFavoritesOnly ? '#F0F2F5' : 'transparent', marginTop: '4px' }}
               onMouseEnter={(e) => { if(!showFavoritesOnly) e.currentTarget.style.backgroundColor = '#F0F2F5'; }}
@@ -308,13 +339,13 @@ export const ListingFeed: React.FC = () => {
                 </button>
               );
             })}
-            
+
             {(onlyMine || showFavoritesOnly) && (
               <button
                 onClick={() => { setOnlyMine(false); setShowFavoritesOnly(false); }}
                 style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '20px', border: '1px solid var(--color-primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, backgroundColor: '#fff', color: 'var(--color-primary)' }}
               >
-                {onlyMine ? <User size={13} /> : <Bookmark size={13} />} 
+                {onlyMine ? <User size={13} /> : <Bookmark size={13} />}
                 {onlyMine ? `Bài đăng của tôi (${counts.mine})` : 'Đang xem tin đã lưu'} <X size={13} />
               </button>
             )}
@@ -339,17 +370,17 @@ export const ListingFeed: React.FC = () => {
 
                   <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff', flexShrink: 0 }}>
-                      {item.createdBy ? item.createdBy.substring(0, 2).toUpperCase() : 'CH'}
+                      {(item.lessorName || 'CH').substring(0, 2).toUpperCase()}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: '15px', color: '#050505', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        Chủ nhà {item.createdBy?.substring(0, 4) || 'Ẩn danh'}
+                        Chủ nhà {item.lessorName || 'Ẩn danh'}
                         {isMine && (
                           <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', backgroundColor: 'rgba(0,0,0,0.05)', padding: '1px 8px', borderRadius: '10px' }}>Bài của bạn</span>
                         )}
                       </div>
                       <div style={{ fontSize: '12px', color: '#65676B', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                        Vừa cập nhật • <MapPin size={10} /> {item.location || item.address || 'Đang cập nhật'}
+                        {formatTimeAgo(item.createdAt)} • <MapPin size={10} /> {item.address || 'Đang cập nhật'}
                       </div>
                     </div>
                     <span style={{
@@ -363,10 +394,15 @@ export const ListingFeed: React.FC = () => {
                   </div>
 
                   <div style={{ padding: '4px 16px 12px 16px', fontSize: '15px', lineHeight: '1.5', color: '#050505' }}>
+                    {item.name && (
+                      <div style={{ fontWeight: 700, fontSize: '16px', color: '#050505', marginBottom: '4px' }}>
+                        {item.name}
+                      </div>
+                    )}
                     <div style={{ fontWeight: 'bold', color: 'var(--color-positive, #2E7D32)', fontSize: '16px', marginBottom: '6px' }}>
                       💰 {item.price ? `${item.price.toLocaleString('vi-VN')} ₫/giờ` : 'Thỏa thuận'} • {item.area ? `${item.area}m²` : 'N/A'}
                     </div>
-                    {item.description || item.name || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này.'}
+                    {item.description || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này.'}
                   </div>
 
                   {/* KHU VỰC ẢNH */}
@@ -376,11 +412,11 @@ export const ListingFeed: React.FC = () => {
 
                   <div style={{ padding: '12px 16px', borderTop: '1px solid #CED0D4' }}>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        onClick={(e) => handleToggleFavorite(e, currentListingId)} 
+                      <button
+                        onClick={(e) => handleToggleFavorite(e, currentListingId)}
                         style={{ flex: 1, padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontSize: '14px', backgroundColor: '#E4E6EB', color: isSaved ? '#E02424' : '#050505', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}
                       >
-                        <Heart size={16} fill={isSaved ? '#E02424' : 'none'} color={isSaved ? '#E02424' : 'currentColor'} /> 
+                        <Heart size={16} fill={isSaved ? '#E02424' : 'none'} color={isSaved ? '#E02424' : 'currentColor'} />
                         {isSaved ? 'Đã lưu' : 'Lưu tin'}
                       </button>
                       <button onClick={() => alert('Chuẩn bị tích hợp API Chat!')} style={{ flex: 1, padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontSize: '14px', backgroundColor: '#E4E6EB', color: '#050505', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}>

@@ -18,6 +18,19 @@ const getPicUrl = (pic: any): string => {
   return typeof pic === 'string' ? pic : (pic?.imageUrl || pic?.url || '');
 };
 
+// Hiển thị thời gian tương đối dựa trên createdAt trả về từ BE
+const formatTimeAgo = (dateStr?: string) => {
+  if (!dateStr) return 'Vừa cập nhật';
+  const diffMin = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  if (diffMin < 1) return 'Vừa xong';
+  if (diffMin < 60) return `${diffMin} phút trước`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} giờ trước`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 30) return `${diffDay} ngày trước`;
+  return new Date(dateStr).toLocaleDateString('vi-VN');
+};
+
 type RentalCategory = 'longterm' | 'hourly';
 
 const getRentalCategory = (item: any): RentalCategory => {
@@ -44,7 +57,7 @@ const getRentalCategory = (item: any): RentalCategory => {
 export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
   const [listings, setListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // STATE LƯU TIN TRANG CHỦ
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
 
@@ -55,18 +68,16 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
   useEffect(() => {
     const fetchPublicListings = async () => {
       try {
-// BƯỚC 1: Load danh sách lưu tin trước
+        // BƯỚC 1: Load danh sách lưu tin trước
         if (token) {
           fetch('https://flexi-space-capstone-project.onrender.com/api/FavoriteList/FavoriteByUser', {
             headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
           })
             .then(res => res.ok ? res.json() : [])
             .then(data => {
-              console.log("Dữ liệu Yêu thích (Home):", data);
-
               const favData = Array.isArray(data) ? data : (data?.data || data?.items || data?.listingIds || []);
               const favIds = new Set<number>();
-              
+
               favData.forEach((item: any) => {
                 if (typeof item === 'number' || typeof item === 'string') {
                   favIds.add(Number(item));
@@ -75,7 +86,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
                   if (itemId) favIds.add(Number(itemId));
                 }
               });
-              
+
               setFavoriteIds(favIds);
             })
             .catch(err => console.error('Lỗi tải danh sách yêu thích', err));
@@ -93,10 +104,15 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
           spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
         }
 
-        // BƯỚC 3: LẤY DANH SÁCH BÀI ĐĂNG
+        // BƯỚC 3: LẤY DANH SÁCH BÀI ĐĂNG (Thêm header giống bên OwnerListings)
+        const headers: any = { accept: '*/*' };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
         const response = await fetch(
           'https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll',
-          { headers: { accept: '*/*' } }
+          { headers }
         );
 
         if (response.ok) {
@@ -108,7 +124,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
             const parentSpace = spaces.find((s) => (s.id || s.Id) === (l.spaceId || l.SpaceId));
             return {
               ...l,
-              address: l.location || l.address || parentSpace?.address || parentSpace?.location || '',
+              address: l.spaceAddress || l.location || l.address || parentSpace?.address || parentSpace?.location || '',
               area: l.area || parentSpace?.area || null,
               city: l.city || parentSpace?.city || '',
             };
@@ -136,7 +152,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
     }
     const numericId = Number(listingIdStr);
     const isFav = favoriteIds.has(numericId);
-    
+
     try {
       let res;
       if (isFav) {
@@ -166,6 +182,8 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
   const longTermListings = listings.filter((l) => getRentalCategory(l) === 'longterm');
   const hourlyListings = listings.filter((l) => getRentalCategory(l) === 'hourly');
 
+  const hasMoreOverall = longTermListings.length > MAX_VISIBLE || hourlyListings.length > MAX_VISIBLE;
+
   // ================= RENDER 1 CARD =================
   const renderCard = (item: any, category: RentalCategory) => {
     const itemId = item.id?.toString() || item.Id?.toString() || item.listingId?.toString();
@@ -179,7 +197,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
     const priceUnit = isHourly ? 'đ/giờ' : 'đ/tháng';
     const typeLabel = isHourly ? 'Share theo giờ' : 'Mặt bằng kinh doanh';
     const actionLabel = isHourly ? 'Đặt giờ' : 'Nhắn tin';
-    
+
     const isSaved = favoriteIds.has(Number(itemId));
 
     return (
@@ -199,9 +217,12 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
 
         <div className="rental-card-info">
           <div className="rental-card-title-row">
-            <h4 className="rental-card-title">
-              {item.name || item.description?.substring(0, 50) || 'Bài đăng cho thuê mặt bằng'}
-            </h4>
+            {/* SỬA GIỐNG OWNERLISTINGS: Dùng item.name thuần túy, xóa fallback text */}
+            {item.name && (
+              <h4 className="rental-card-title">
+                {item.name}
+              </h4>
+            )}
             {item.tagLabel && (
               <span className={`rental-card-tag rental-card-tag--${category}`}>{item.tagLabel}</span>
             )}
@@ -221,12 +242,14 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
 
           <div className="rental-card-footer">
             <div className="rental-card-agent">
-              <div className="rental-card-avatar">CN</div>
+              <div className="rental-card-avatar">
+                {(item.lessorName || 'CH').substring(0, 2).toUpperCase()}
+              </div>
               <div>
                 <div className="rental-card-agent-name">
-                  Chủ nhà {item.createdBy?.substring(0, 4) || 'Ẩn danh'}
+                  Chủ nhà {item.lessorName || 'Ẩn danh'}
                 </div>
-                <div className="rental-card-agent-time">Vừa cập nhật</div>
+                <div className="rental-card-agent-time">{formatTimeAgo(item.createdAt)}</div>
               </div>
             </div>
 
@@ -240,8 +263,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
               >
                 <MessageCircle size={14} /> {actionLabel}
               </button>
-              
-              {/* NÚT THẢ TIM TRÊN CARD */}
+
               <button className="rental-card-heart" onClick={(e) => handleToggleFavorite(e, itemId)}>
                 <Heart size={16} fill={isSaved ? '#E02424' : 'none'} color={isSaved ? '#E02424' : '#6B7280'} />
               </button>
@@ -263,7 +285,6 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
     badgeText: string
   ) => {
     const visibleItems = items.slice(0, MAX_VISIBLE);
-    const hasMore = items.length > MAX_VISIBLE;
 
     return (
       <div className={`rental-column rental-column--${category}`}>
@@ -284,12 +305,6 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
             <div className="rental-empty">Hiện chưa có tin nào ở mục này.</div>
           ) : (
             visibleItems.map((item) => renderCard(item, category))
-          )}
-
-          {!isLoading && hasMore && (
-            <button className="rental-viewall-btn" onClick={() => navigate('/feed')}>
-              Xem tất cả {items.length} tin <ArrowRight size={14} />
-            </button>
           )}
         </div>
       </div>
@@ -349,6 +364,14 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
           `${hourlyListings.length} slot`
         )}
       </div>
+
+      {!isLoading && hasMoreOverall && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+          <button className="rental-viewall-btn" onClick={() => navigate('/feed')}>
+            Xem tất cả <ArrowRight size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
