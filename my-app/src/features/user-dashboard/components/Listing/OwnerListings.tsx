@@ -109,11 +109,14 @@ export const OwnerListings: React.FC = () => {
 
   // Tìm kiếm theo địa chỉ (đã được bốc từ Space sang)
   const filtered = listings.filter((l) => {
-    const safeLocation = l?.location || l?.address || '';
-    const matchSearch = safeLocation.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === 'all' || l?.status === filterStatus;
-    const matchType = filterType === 'all' || l?.listingType === filterType;
-    return matchSearch && matchStatus && matchType;
+  const safeLocation = l?.location || l?.address || '';
+  const safeName = l?.name || '';
+  const matchSearch =
+    safeLocation.toLowerCase().includes(search.toLowerCase()) ||
+    safeName.toLowerCase().includes(search.toLowerCase());
+  const matchStatus = filterStatus === 'all' || l?.status === filterStatus;
+  const matchType = filterType === 'all' || l?.listingType === filterType;
+  return matchSearch && matchStatus && matchType;
   });
 
   // Hiệu ứng GSAP mượt mà
@@ -293,6 +296,11 @@ export const OwnerListings: React.FC = () => {
               </div>
 
               <div className="listing-card-body">
+                {listing.name && (
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                    {listing.name}
+                  </h4>
+                )}
                 <p className="listing-location">
                   <MapPin size={12} />
                   {listing.location || listing.address || 'Chưa cập nhật địa chỉ'}

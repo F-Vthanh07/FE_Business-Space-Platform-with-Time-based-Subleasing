@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -50,13 +51,13 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const [error, setError] = useState('');
   const { isVerified } = useIdentityVerification();
 
-  // --- Loại tin: dài hạn hay chia sẻ ---
-  // Nếu đang sửa 1 tin có shareSpaceDetail -> mặc định mở lại ở chế độ 'share'
-  const initialMode: ListingMode = initialData?.shareSpaceDetailMaxSubRenter !== undefined ? 'share' : 'longterm';
+  // Đã sửa: Dựa vào listingType thật từ API để quyết định form
+  const initialMode: ListingMode = initialData?.listingType === 'SharedSpace' ? 'share' : 'longterm';
   const [mode, setMode] = useState<ListingMode>(initialMode);
 
   const [spaceId, setSpaceId] = useState<number | ''>(initialData?.spaceId || '');
   const [price, setPrice] = useState<number>(initialData?.price || 0);
+  const [name, setName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -70,7 +71,6 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     return getSafeDateString(nextMonth);
   });
 
-  // --- Field riêng cho chế độ "share" ---
   const [maxSubRenter, setMaxSubRenter] = useState<number>(initialData?.shareSpaceDetailMaxSubRenter || 1);
   const [isLegalCommitted, setIsLegalCommitted] = useState<boolean>(initialData?.shareSpaceDetailIsLegalCommitted ?? false);
   const [availabilities, setAvailabilities] = useState<any[]>(
@@ -124,7 +124,6 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     });
   };
 
-  // --- Helper cho khung giờ share ---
   const toggleDayInSlot = (slotIndex: number, day: string) => {
     setAvailabilities(prev => prev.map((slot, i) => {
       if (i !== slotIndex) return slot;
@@ -159,6 +158,11 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       return;
     }
 
+    if (!name.trim()) {
+      setError('Vui lòng nhập tên bài đăng!');
+      return;
+    }
+
     if (!description.trim()) {
       setError('Vui lòng nhập mô tả!');
       return;
@@ -166,6 +170,14 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
     if (!price || price <= 0) {
       setError('Đơn giá phải lớn hơn 0!');
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); 
+    const startDate = new Date(allowedStartTime);
+    if (!initialData && startDate < today) {
+      setError('Thời gian bắt đầu không thể nằm trong quá khứ!');
       return;
     }
 
@@ -191,12 +203,12 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         const vFrom = new Date(slot.validFrom);
         const vTo = new Date(slot.validTo);
         return vTo > allowedEnd || vFrom < allowedStart || vFrom > vTo;
-     });
+      });
       if (badSlot) {
         setError(
           `Khung giờ "Áp dụng từ ${badSlot.validFrom} đến ${badSlot.validTo}" phải nằm trong khoảng thời gian hiệu lực bài đăng (${allowedStartTime.substring(0,10)} → ${allowedEndTime.substring(0,10)})!`
         );
-       return;
+        return;
       }
 
       const badTimeSlot = availabilities.find(slot => slot.startTime >= slot.endTime);
@@ -219,6 +231,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         spaceId: Number(spaceId),
         allowedStartTime: allowedStartTime.substring(0, 10),
         allowedEndTime: allowedEndTime.substring(0, 10),
+        name,   
         description,
         price: Number(price),
         shareSpaceDetailMaxSubRenter: Number(maxSubRenter),
@@ -265,14 +278,20 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
         onSuccess();
       } catch (err: any) {
-        setError(err.message || 'Lỗi tạo bài đăng chia sẻ');
+        // Bắt text lỗi chuẩn xác
+        let errorMsg = err.message || 'Lỗi xử lý hệ thống';
+        try {
+            const parsed = JSON.parse(errorMsg);
+            errorMsg = parsed.message || parsed.title || parsed.detail || errorMsg;
+        } catch(e) { /* empty */ }
+        setError(errorMsg);
       } finally {
         setIsLoading(false);
       }
       return;
     }
 
-    // ===== NHÁNH 2: CHO THUÊ DÀI HẠN (logic cũ) =====
+    // ===== NHÁNH 2: CHO THUÊ DÀI HẠN =====
     const token = localStorage.getItem('portal_token');
     const ownerId = localStorage.getItem('current_user_id');
 
@@ -293,6 +312,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         spaceId: Number(spaceId),
         allowedStartTime: allowedStartTime.substring(0, 10),
         allowedEndTime: allowedEndTime.substring(0, 10),
+        name,   
         description: description,
         price: Number(price),
         listingPictures: []
@@ -309,8 +329,14 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       });
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        setError(`Lỗi tạo bài đăng: ${errData.title || 'Kiểm tra Console log'}`);
+        // Xử lý đọc lỗi API (Text hoặc JSON)
+        const errText = await res.text();
+        let parsedMsg = errText;
+        try {
+           const errObj = JSON.parse(errText);
+           parsedMsg = errObj.message || errObj.title || errObj.detail || errText;
+        } catch(e) { /* empty */ }
+        setError(parsedMsg || 'Lỗi xử lý hệ thống');
         setIsLoading(false);
         return;
       }
@@ -359,6 +385,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   };
 
   return createPortal(
+    // Đã xóa style background trắng bóc đi
     <div className="modal-backdrop">
       <div className="modal-shell modal-shell--wide">
 
@@ -475,7 +502,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
           <div className="form-section">
               <h3 className="form-section-title">Hình ảnh bài đăng (Tùy chọn)</h3>
-              <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '16px' }}>
+              <div style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '16px' }}>
                 <div className="form-group" style={{ gap: '10px' }}>
                   <label className="form-label"><Camera size={14} /> Chọn ảnh từ máy</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -554,7 +581,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 <Clock size={14} /> Khung giờ chia sẻ
               </h3>
               {availabilities.map((slot, idx) => (
-                <div key={idx} style={{ background: 'rgba(0,0,0,0.2)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '14px', marginBottom: '10px' }}>
+                <div key={idx} style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '14px', marginBottom: '10px' }}>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
                     {DAYS_OF_WEEK.map(day => (
                       <button
@@ -608,6 +635,19 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
           <div className="form-section">
             <h3 className="form-section-title">Tiêu đề / Mô tả</h3>
+            <div className="form-group">
+              <label className="form-label">
+                Tên bài đăng <span className="required-mark">*</span>
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+            </div>
             <div className="form-group">
               <label className="form-label">
                 Nội dung mô tả <span className="required-mark">*</span>

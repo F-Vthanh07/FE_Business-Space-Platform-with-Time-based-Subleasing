@@ -56,20 +56,30 @@ export interface ShareAvailabilityTime {
 
 export interface ShareSpaceCategory {
   bussinessCategoryId: number;
+  note: string;
 }
 
 export interface ShareListingPayload {
-  spaceId: number;
-  allowedStartTime: string;
-  allowedEndTime: string;
-  description: string;
-  price: number;
-  shareSpaceDetailMaxSubRenter: number;
-  shareSpaceDetailIsOwner: boolean;
-  shareSpaceDetailIsLegalCommitted: boolean;
-  shareSpaceDetailShareSpaceAmenities: ShareSpaceAmenity[];
-  shareSpaceDetailAvailabilitiesTimes: ShareAvailabilityTime[];
-  shareSpaceDetailShareSpaceCategories: ShareSpaceCategory[];
+    spaceId: number;
+    allowedStartTime: string;
+    allowedEndTime: string;
+    name: string;
+    description: string;
+    price: number;
+
+    shareSpaceDetailMaxSubRenter: number;
+    shareSpaceDetailIsOwner: boolean;
+    shareSpaceDetailIsLegalCommitted: boolean;
+
+    shareSpaceDetailShareSpaceAmenities: {
+        amenityId: number;
+        isIncluded: boolean;
+        price: number;
+    }[];
+
+    shareSpaceDetailAvailabilitiesTimes: any[];
+
+    shareSpaceDetailShareSpaceCategories: ShareSpaceCategory[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

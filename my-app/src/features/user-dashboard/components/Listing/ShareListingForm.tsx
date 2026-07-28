@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, DollarSign, Users, ShieldCheck, ShieldAlert, Plus, Trash2, Clock } from 'lucide-react';
+import { X, DollarSign, Users, ShieldCheck, ShieldAlert, Plus, Trash2, Clock, Type } from 'lucide-react';
 import "../../../shared/ModalShell.css";
-import type { ShareListingPayload } from '../../types';
 import { createShareListing, updateShareListing } from './shareListing.api';
+import type { ShareListingPayload } from '../../types';
 
 interface SpaceOption {
   id: number;
@@ -15,7 +15,7 @@ interface ShareListingFormProps {
   onClose: () => void;
   onSuccess: () => void;
   initialData?: any;
-  spaceOptions: SpaceOption[]; // Danh sách mặt bằng B đang thuê (lấy từ hợp đồng đang active)
+  spaceOptions: SpaceOption[]; 
   apiCategories: { id: number; name: string }[];
   apiAmenities: { id: number; name: string }[];
 }
@@ -44,10 +44,14 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
   const [error, setError] = useState('');
 
   const [spaceId, setSpaceId] = useState<number | ''>(initialData?.spaceId || '');
+  const [name, setName] = useState(initialData?.name || '');
   const [price, setPrice] = useState<number>(initialData?.price || 0);
   const [description, setDescription] = useState(initialData?.description || '');
   const [maxSubRenter, setMaxSubRenter] = useState<number>(initialData?.shareSpaceDetailMaxSubRenter || 1);
   const [isLegalCommitted, setIsLegalCommitted] = useState<boolean>(initialData?.shareSpaceDetailIsLegalCommitted ?? false);
+
+  // Ngày hôm nay (dùng làm mốc so sánh + làm min cho input date)
+  const todayStr = getSafeDateString(null);
 
   const [allowedStartTime, setAllowedStartTime] = useState(() => getSafeDateString(initialData?.allowedStartTime));
   const [allowedEndTime, setAllowedEndTime] = useState(() => {
@@ -56,6 +60,11 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     return getSafeDateString(nextMonth);
   });
+
+  // Giá trị gốc của allowedStartTime khi mở form (dùng để biết user có thay đổi ngày bắt đầu hay không khi edit)
+  const originalStartTime = initialData?.allowedStartTime
+    ? getSafeDateString(initialData.allowedStartTime)
+    : null;
 
   const [selectedAmenities, setSelectedAmenities] = useState<Record<number, { included: boolean; price: number }>>(
     () => {
@@ -67,8 +76,14 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
     }
   );
 
-  const [selectedCategories, setSelectedCategories] = useState<number[]>(
-    (initialData?.shareSpaceDetailShareSpaceCategories || []).map((c: any) => c.bussinessCategoryId)
+  const [selectedCategories, setSelectedCategories] = useState<Record<number, { included: boolean; note: string }>>(
+    () => {
+      const init: Record<number, { included: boolean; note: string }> = {};
+      (initialData?.shareSpaceDetailShareSpaceCategories || []).forEach((c: any) => {
+        init[c.bussinessCategoryId] = { included: true, note: c.note || '' };
+      });
+      return init;
+    }
   );
 
   const [availabilities, setAvailabilities] = useState<any[]>(
@@ -91,9 +106,16 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
   };
 
   const toggleCategory = (catId: number) => {
-    setSelectedCategories(prev =>
-      prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
-    );
+    setSelectedCategories(prev => ({
+      ...prev,
+      [catId]: prev[catId]?.included
+        ? { ...prev[catId], included: false }
+        : { included: true, note: prev[catId]?.note || '' }
+    }));
+  };
+
+  const setCategoryNote = (catId: number, value: string) => {
+    setSelectedCategories(prev => ({ ...prev, [catId]: { ...prev[catId], note: value } }));
   };
 
   const toggleDayInSlot = (slotIndex: number, day: string) => {
@@ -129,8 +151,62 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       setError('Vui lòng chọn mặt bằng đang thuê để chia sẻ!');
       return;
     }
+
+    if (!name.trim()) {
+      setError('Vui lòng nhập tên bài đăng!');
+      return;
+    }
+
+    if (!description.trim()) {
+      setError('Vui lòng nhập mô tả!');
+      return;
+    }
+
+    if (!price || price <= 0) {
+      setError('Đơn giá phải lớn hơn 0!');
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(allowedStartTime);
+
+    // Chỉ chặn khi: đang tạo mới, HOẶC đang edit nhưng người dùng đã đổi ngày bắt đầu sang một giá trị khác
+    const startTimeChanged = originalStartTime !== allowedStartTime;
+    if ((!initialData || startTimeChanged) && startDate < today) {
+      setError('Thời gian bắt đầu không thể nằm trong quá khứ!');
+      return;
+    }
+
+    if (new Date(allowedEndTime) <= new Date(allowedStartTime)) {
+      setError('Thời gian kết thúc phải sau thời gian bắt đầu!');
+      return;
+    }
+
+    if (!maxSubRenter || maxSubRenter < 1) {
+      setError('Số người thuê chung tối đa phải từ 1 trở lên!');
+      return;
+    }
+
     if (availabilities.some(slot => slot.daysOfWeek.length === 0 && !slot.specificdate)) {
       setError('Vui lòng chọn ít nhất 1 ngày hoặc ngày cụ thể cho mỗi khung giờ chia sẻ!');
+      return;
+    }
+
+    const badTimeSlot = availabilities.find(slot => slot.startTime >= slot.endTime);
+    if (badTimeSlot) {
+      setError('Giờ kết thúc khung giờ chia sẻ phải sau giờ bắt đầu!');
+      return;
+    }
+
+    const badRangeSlot = availabilities.find(slot => new Date(slot.validFrom) > new Date(slot.validTo));
+    if (badRangeSlot) {
+      setError('"Áp dụng từ" phải trước hoặc bằng "Áp dụng đến"!');
+      return;
+    }
+
+    if (!isLegalCommitted) {
+      setError('Vui lòng tích "Cam kết pháp lý" để xác nhận thỏa thuận!');
       return;
     }
 
@@ -138,12 +214,13 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
 
     const payload: ShareListingPayload = {
       spaceId: Number(spaceId),
+      name,
       allowedStartTime,
       allowedEndTime,
       description,
       price: Number(price),
       shareSpaceDetailMaxSubRenter: Number(maxSubRenter),
-      shareSpaceDetailIsOwner: false, // B không phải chủ gốc, đang chia sẻ lại phần đang thuê
+      shareSpaceDetailIsOwner: false, 
       shareSpaceDetailIsLegalCommitted: isLegalCommitted,
       shareSpaceDetailShareSpaceAmenities: Object.entries(selectedAmenities)
         .filter(([, v]) => v.included)
@@ -151,8 +228,10 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => ({
         ...slot,
         specificdate: slot.specificdate || null
-        })),
-      shareSpaceDetailShareSpaceCategories: selectedCategories.map(id => ({ bussinessCategoryId: id }))
+      })),
+      shareSpaceDetailShareSpaceCategories: Object.entries(selectedCategories)
+        .filter(([, v]) => v.included)
+        .map(([catId, v]) => ({ bussinessCategoryId: Number(catId), note: v.note || '' }))
     };
 
     try {
@@ -163,13 +242,20 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       }
       onSuccess();
     } catch (err: any) {
-      setError(err.message || 'Lỗi kết nối máy chủ');
+        let errorMsg = err.message || 'Lỗi xử lý hệ thống';
+        try {
+            const parsed = JSON.parse(errorMsg);
+            errorMsg = parsed.message || parsed.title || parsed.detail || errorMsg;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch(e) { /* empty */ }
+        setError(errorMsg);
     } finally {
       setIsLoading(false);
     }
   };
 
   return createPortal(
+    // Đã xóa inline styles
     <div className="modal-backdrop">
       <div className="modal-shell modal-shell--wide">
 
@@ -192,6 +278,21 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
 
           <div className="form-section">
             <h3 className="form-section-title">Thông tin cơ bản</h3>
+
+            <div className="form-group">
+              <label className="form-label">
+                <Type size={14} /> Tên bài đăng <span className="required-mark">*</span>
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                disabled={isLoading}
+                required
+              />
+            </div>
+
             <div className="form-grid-2">
               <div className="form-group">
                 <label className="form-label">
@@ -218,9 +319,13 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                 <div className="input-with-icon">
                   <DollarSign size={14} className="input-icon" />
                   <input
-                    type="number" min="0" className="form-input"
-                    value={price} onChange={e => setPrice(Number(e.target.value))}
-                    disabled={isLoading} required
+                    type="number"
+                    min="0"
+                    className="form-input"
+                    value={price}
+                    onChange={e => setPrice(Number(e.target.value))}
+                    disabled={isLoading}
+                    required
                   />
                 </div>
               </div>
@@ -230,8 +335,11 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
               <div className="form-group">
                 <label className="form-label"><Users size={14} /> Số người được thuê chung tối đa</label>
                 <input
-                  type="number" min="1" className="form-input"
-                  value={maxSubRenter} onChange={e => setMaxSubRenter(Number(e.target.value))}
+                  type="number"
+                  min="1"
+                  className="form-input"
+                  value={maxSubRenter}
+                  onChange={e => setMaxSubRenter(Number(e.target.value))}
                   disabled={isLoading}
                 />
               </div>
@@ -244,7 +352,7 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                     onChange={e => setIsLegalCommitted(e.target.checked)}
                     disabled={isLoading}
                   />
-                  <ShieldCheck size={14} /> Cam kết pháp lý (có hợp đồng ràng buộc)
+                  <ShieldCheck size={14} /> Cam kết pháp lý (có hợp đồng ràng buộc) <span className="required-mark">*</span>
                 </label>
               </div>
             </div>
@@ -256,17 +364,23 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
               <div className="form-group">
                 <label className="form-label">Bắt đầu</label>
                 <input
-                  type="date" className="form-input"
-                  value={allowedStartTime} onChange={e => setAllowedStartTime(e.target.value)}
+                  type="date"
+                  className="form-input"
+                  value={allowedStartTime}
+                  onChange={e => setAllowedStartTime(e.target.value)}
                   disabled={isLoading}
+                  min={!initialData ? todayStr : undefined}
                 />
               </div>
               <div className="form-group">
                 <label className="form-label">Kết thúc</label>
                 <input
-                  type="date" className="form-input"
-                  value={allowedEndTime} onChange={e => setAllowedEndTime(e.target.value)}
+                  type="date"
+                  className="form-input"
+                  value={allowedEndTime}
+                  onChange={e => setAllowedEndTime(e.target.value)}
                   disabled={isLoading}
+                  min={allowedStartTime || todayStr}
                 />
               </div>
             </div>
@@ -277,7 +391,7 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
               <Clock size={14} /> Khung giờ chia sẻ
             </h3>
             {availabilities.map((slot, idx) => (
-              <div key={idx} style={{ background: 'rgba(0,0,0,0.2)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '14px', marginBottom: '10px' }}>
+              <div key={idx} style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '14px', marginBottom: '10px' }}>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
                   {DAYS_OF_WEEK.map(day => (
                     <button
@@ -290,6 +404,19 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                     </button>
                   ))}
                 </div>
+
+                <div className="form-group">
+                  <label className="form-label">Ngày cụ thể (tùy chọn)</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={slot.specificdate || ''}
+                    onChange={e => updateSlotField(idx, 'specificdate', e.target.value)}
+                    disabled={isLoading}
+                    min={!initialData ? todayStr : undefined}
+                  />
+                </div>
+
                 <div className="form-grid-2">
                   <div className="form-group">
                     <label className="form-label">Giờ bắt đầu</label>
@@ -306,12 +433,14 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                   <div className="form-group">
                     <label className="form-label">Áp dụng từ</label>
                     <input type="date" className="form-input" value={slot.validFrom}
-                      onChange={e => updateSlotField(idx, 'validFrom', e.target.value)} disabled={isLoading} />
+                      onChange={e => updateSlotField(idx, 'validFrom', e.target.value)} disabled={isLoading}
+                      min={!initialData ? todayStr : undefined} />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Áp dụng đến</label>
                     <input type="date" className="form-input" value={slot.validTo}
-                      onChange={e => updateSlotField(idx, 'validTo', e.target.value)} disabled={isLoading} />
+                      onChange={e => updateSlotField(idx, 'validTo', e.target.value)} disabled={isLoading}
+                      min={slot.validFrom || todayStr} />
                   </div>
                 </div>
                 {availabilities.length > 1 && (
@@ -341,7 +470,10 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                     <span style={{ flex: 1 }}>{a.name}</span>
                     {selectedAmenities[a.id]?.included && (
                       <input
-                        type="number" min="0" className="form-input" style={{ width: 120 }}
+                        type="number"
+                        min="0"
+                        className="form-input"
+                        style={{ width: 120 }}
                         placeholder="Phụ phí"
                         value={selectedAmenities[a.id]?.price || 0}
                         onChange={e => setAmenityPrice(a.id, Number(e.target.value))}
@@ -357,16 +489,28 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
           {apiCategories.length > 0 && (
             <div className="form-section">
               <h3 className="form-section-title">Ngành nghề được phép thuê chung</h3>
-              <div className="meta-badges">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {apiCategories.map(c => (
-                  <button
-                    type="button" key={c.id}
-                    className={`badge badge-sm ${selectedCategories.includes(c.id) ? 'badge--accent' : 'badge--neutral'}`}
-                    onClick={() => toggleCategory(c.id)}
-                    disabled={isLoading}
-                  >
-                    {c.name}
-                  </button>
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input
+                      type="checkbox"
+                      checked={!!selectedCategories[c.id]?.included}
+                      onChange={() => toggleCategory(c.id)}
+                      disabled={isLoading}
+                    />
+                    <span style={{ flex: 1 }}>{c.name}</span>
+                    {selectedCategories[c.id]?.included && (
+                      <input
+                        type="text"
+                        className="form-input"
+                        style={{ width: 200 }}
+                        placeholder="Ghi chú (tùy chọn)"
+                        value={selectedCategories[c.id]?.note || ''}
+                        onChange={e => setCategoryNote(c.id, e.target.value)}
+                        disabled={isLoading}
+                      />
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -380,8 +524,10 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
               </label>
               <textarea
                 className="form-textarea form-textarea--flat"
-                value={description} onChange={e => setDescription(e.target.value)}
-                disabled={isLoading} required
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                disabled={isLoading}
+                required
               />
             </div>
           </div>
