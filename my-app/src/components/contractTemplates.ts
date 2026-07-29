@@ -1,8 +1,8 @@
 // contractTemplates.ts
 // 3 mẫu hợp đồng thuê mặt bằng — đã cập nhật căn cứ pháp lý hiện hành (2026)
 // và gắn sẵn các "merge field" dạng {{TEN_BIEN}} để hệ thống cho thuê mặt bằng
-// online tự động đổ dữ liệu (địa chỉ, giá, cọc, thời hạn, mã yêu cầu thuê...)
-// vào chỗ trống thay vì để dấu "......" như bản gốc.
+// online tự động đổ dữ liệu (địa chỉ, giá, cọc, thời hạn, mã yêu cầu thuê,
+// lịch hoạt động...) vào chỗ trống thay vì để dấu "......" như bản gốc.
 //
 // CĂN CỨ PHÁP LÝ ĐÃ CẬP NHẬT (thay cho các căn cứ cũ trong file .doc gốc):
 // - Bộ luật Dân sự số 91/2015/QH13 (24/11/2015) — vẫn là luật gốc điều chỉnh
@@ -26,6 +26,12 @@ export interface ContractTemplate {
   label: string;
   shortDesc: string;
   content: string;
+}
+
+export interface ContractSchedule {
+  dayOfWeek: string; // 'Monday' | 'Tuesday' | ... | 'Sunday'
+  startTime: string; // 'HH:mm'
+  endTime: string; // 'HH:mm'
 }
 
 const HEADER_LINE_QUOC_HIEU = 'CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM';
@@ -63,10 +69,58 @@ export function splitContractHeaderBody(description: string): { header: string; 
 }
 
 // -----------------------------------------------------------------------
+// LỊCH HOẠT ĐỘNG (contractSchedules) -> chuỗi hiển thị trong hợp đồng
+// -----------------------------------------------------------------------
+
+const DAY_LABELS_VI: Record<string, string> = {
+  Monday: 'Thứ Hai',
+  Tuesday: 'Thứ Ba',
+  Wednesday: 'Thứ Tư',
+  Thursday: 'Thứ Năm',
+  Friday: 'Thứ Sáu',
+  Saturday: 'Thứ Bảy',
+  Sunday: 'Chủ Nhật',
+};
+
+// Thứ tự chuẩn trong tuần, dùng để sắp xếp lại danh sách ngày cho đẹp
+// (tránh trường hợp người dùng tick CN trước, T2 sau mà hiển thị lộn xộn).
+const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+/**
+ * Gom các ngày có CÙNG khung giờ (startTime-endTime) lại thành 1 nhóm để
+ * hiển thị gọn, ví dụ:
+ *   [T2 08:00-22:00, T4 08:00-22:00, CN 10:00-18:00]
+ *   -> "Thứ Hai, Thứ Tư (08:00 - 22:00); Chủ Nhật (10:00 - 18:00)"
+ * Nếu không có ngày nào (mảng rỗng/undefined) -> trả về chuỗi rỗng, để
+ * renderMergeValue() tự hiện placeholder [...Lịch hoạt động...].
+ */
+export function formatSchedule(schedules?: ContractSchedule[]): string {
+  if (!schedules || schedules.length === 0) return '';
+
+  const groups: Record<string, string[]> = {};
+  schedules.forEach((s) => {
+    if (!s.dayOfWeek || !s.startTime || !s.endTime) return;
+    const key = `${s.startTime}-${s.endTime}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(s.dayOfWeek);
+  });
+
+  const parts = Object.entries(groups).map(([time, days]) => {
+    const sortedDays = [...days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
+    const dayLabels = sortedDays.map((d) => DAY_LABELS_VI[d] || d).join(', ');
+    const [start, end] = time.split('-');
+    return `${dayLabels} (${start} - ${end})`;
+  });
+
+  return parts.join('; ');
+}
+
+// -----------------------------------------------------------------------
 // DANH SÁCH MERGE FIELD DÙNG CHUNG CHO CẢ 3 MẪU
 // Đặt tên khớp với các trường đã thấy trong màn hình "Chi Tiết Hợp Đồng"
 // (Mặt bằng, Mã yêu cầu đặt thuê, Giá thuê, Tiền cọc, Thời hạn, Ngày bắt đầu,
-// Diện tích, Mục đích kinh doanh...) để map 1-1 với dữ liệu trong DB của bạn.
+// Diện tích, Mục đích kinh doanh, Lịch hoạt động...) để map 1-1 với dữ liệu
+// trong DB của bạn.
 // -----------------------------------------------------------------------
 export interface ContractMergeData {
   // Liên kết / hệ thống
@@ -80,6 +134,7 @@ export interface ContractMergeData {
   DIA_CHI_MAT_BANG?: string;
   DIEN_TICH?: string;            // vd "12 m2"
   MUC_DICH_KINH_DOANH?: string;
+  LICH_HOAT_DONG?: string;       // vd "Thứ Hai, Thứ Tư (08:00 - 22:00); Chủ Nhật (10:00 - 18:00)"
 
   // Tài chính
   GIA_THUE?: string;             // vd "4.600.000 VNĐ/tháng"
@@ -128,6 +183,7 @@ const FIELD_LABELS: Record<string, string> = {
   DIA_CHI_MAT_BANG: 'Địa chỉ mặt bằng',
   DIEN_TICH: 'Diện tích',
   MUC_DICH_KINH_DOANH: 'Mục đích kinh doanh',
+  LICH_HOAT_DONG: 'Lịch hoạt động',
   GIA_THUE: 'Giá thuê',
   GIA_THUE_BANG_CHU: 'Giá thuê bằng chữ',
   TIEN_COC: 'Tiền cọc',
@@ -247,7 +303,7 @@ Thời điểm ký kết hợp đồng này thì bên cho thuê không được 
 - Bên B chỉ được sử dụng phần diện tích mặt bằng thuê vào việc kinh doanh mà bên B đã đăng ký.
 - Bên B được phép trang trí, sửa chữa phần nội thất bên trong, ngoại thất bên ngoài mặt bằng để phù hợp với ngành nghề kinh doanh của bên B.
 - Bên B được trang trí và treo bảng hiệu ở mặt tiền để phục vụ cho việc quảng bá và giới thiệu công việc kinh doanh của bên B, đảm bảo tuân thủ quy định về quảng cáo ngoài trời hiện hành.
-- Do tính chất công việc, bên B được phép hoạt động 24/24 kể cả ngày Lễ, Tết và Chủ Nhật, trừ trường hợp pháp luật địa phương có quy định hạn chế khác.
+- Bên B được phép hoạt động kinh doanh theo lịch sau: {{LICH_HOAT_DONG}}, trừ trường hợp pháp luật địa phương có quy định hạn chế khác.
 - Bên B có thể tiến hành khảo sát, thiết kế mặt bằng ngay trong tháng ...., thời hạn giao mặt bằng trễ nhất là ................. . Thời điểm bắt đầu tính phí thuê mặt bằng là ngày {{NGAY_BAT_DAU}}.
 Để sửa chữa và dỡ bỏ các hạng mục này Bên B đồng ý thanh toán cho bên A số tiền là ..................... đồng. Số tiền này được thanh toán ngay khi chấm dứt hợp đồng này.
 
@@ -321,6 +377,7 @@ Hai bên thoả thuận ký kết hợp đồng thuê mặt bằng với nội d
 Với diện tích là {{DIEN_TICH}}.
 
 1.2 - Mục đích thuê: {{MUC_DICH_KINH_DOANH}}.
+Lịch hoạt động: {{LICH_HOAT_DONG}}.
 
 ĐIỀU 2: Thời hạn hợp đồng
 2.1 - Thời hạn thuê mặt bằng là: {{THOI_HAN_THUE}}, được tính từ ngày: {{NGAY_BAT_DAU}} đến hết ngày: {{NGAY_KET_THUC}}.
@@ -390,6 +447,7 @@ Hai bên thoả thuận ký kết hợp đồng thuê mặt bằng với nội d
 - Bên A đồng ý cho bên B thuê mặt bằng: {{TEN_MAT_BANG}}, tại {{DIA_CHI_MAT_BANG}}.
 Với diện tích là: {{DIEN_TICH}}.
 - Mục đích thuê: {{MUC_DICH_KINH_DOANH}}.
+- Lịch hoạt động: {{LICH_HOAT_DONG}}.
 
 ĐIỀU 2: Thời hạn hợp đồng
 - Thời hạn thuê mặt bằng là: {{THOI_HAN_THUE}}.

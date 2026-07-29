@@ -1,7 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { X, Printer, Briefcase, Wallet, CalendarDays, Edit3, FileText, Building2 } from 'lucide-react';
-import { CONTRACT_TEMPLATES, getTemplateById, fillContractTemplate, renderMergeValue, type ContractMergeData, splitContractHeaderBody, } from '../contractTemplates';
+import {
+  CONTRACT_TEMPLATES,
+  getTemplateById,
+  fillContractTemplate,
+  renderMergeValue,
+  formatSchedule,
+  type ContractMergeData,
+  type ContractSchedule,
+  splitContractHeaderBody,
+} from '../contractTemplates';
 
 interface ContractCreateModalProps {
   isOpen: boolean;
@@ -15,6 +24,29 @@ interface ContractCreateModalProps {
 }
 
 const API_BASE = 'https://flexi-space-capstone-project.onrender.com';
+
+// Danh sách các ngày trong tuần dùng để hiển thị checkbox chọn lịch hoạt động.
+// value khớp với DayOfWeek mà backend mong đợi ('Monday'...'Sunday').
+const DAYS_OF_WEEK: { value: string; label: string }[] = [
+  { value: 'Monday', label: 'Thứ 2' },
+  { value: 'Tuesday', label: 'Thứ 3' },
+  { value: 'Wednesday', label: 'Thứ 4' },
+  { value: 'Thursday', label: 'Thứ 5' },
+  { value: 'Friday', label: 'Thứ 6' },
+  { value: 'Saturday', label: 'Thứ 7' },
+  { value: 'Sunday', label: 'Chủ Nhật' },
+];
+
+// Đơn vị thời hạn hợp đồng - PHẢI khớp đủ 4 giá trị với enum numeric của
+// Snapshot bên ContractViewModal (0=Days,1=Weeks,2=Months,3=Years). Trước đây
+// form chỉ có 3 option (thiếu Weeks) nên khi chọn "Tuần" ở nơi khác (hoặc BE
+// trả về Weeks) sẽ không hiển thị đúng.
+const DURATION_UNITS: { value: string; label: string }[] = [
+  { value: 'Days', label: 'Ngày' },
+  { value: 'Weeks', label: 'Tuần' },
+  { value: 'Months', label: 'Tháng' },
+  { value: 'Years', label: 'Năm' },
+];
 
 export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   isOpen,
@@ -37,7 +69,19 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
 
   const isEditMode = !!existingContract?.id;
 
-  const [contractData, setContractData] = useState({
+  const [contractData, setContractData] = useState<{
+    spaceId: string;
+    primaryBookingRequestId: number;
+    durationUnit: string;
+    duration: number;
+    startDate: string;
+    acreage: number;
+    price: number;
+    depositAmount: number;
+    description: string;
+    businessPurpose: string;
+    contractSchedules: ContractSchedule[];
+  }>({
     spaceId: '',
     primaryBookingRequestId: 0,
     durationUnit: 'Days',
@@ -48,7 +92,9 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
     depositAmount: 0,
     description: '',
     businessPurpose: '',
-    contractSchedules: [{ dayOfWeek: 'Monday', startTime: '08:00', endTime: '22:00' }],
+    // Để trống mặc định — không phải hợp đồng nào cũng có lịch hoạt động
+    // cố định trong tuần, người dùng tick ngày nào cần thì thêm ngày đó.
+    contractSchedules: [],
   });
 
   const lessorId = activeChat?.lessorId || activeChat?.LessorId;
@@ -79,7 +125,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         contractSchedules:
           existingContract.contractSchedules && existingContract.contractSchedules.length > 0
             ? existingContract.contractSchedules
-            : [{ dayOfWeek: 'Monday', startTime: '08:00', endTime: '22:00' }],
+            : [],
       });
     } else {
       // --- CHẾ ĐỘ TẠO MỚI: reset trắng như cũ ---
@@ -97,6 +143,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         depositAmount: 0,
         description: '',
         businessPurpose: '',
+        contractSchedules: [],
       }));
     }
   }, [isOpen, existingContract, activeChat?.id, activeChat?.conversationId]);
@@ -182,25 +229,57 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
     fetchMatchedRequests();
   }, [isOpen, token, activeChat, lessorId, lesseeId, existingContract]);
 
-  // Ngày kết thúc = ngày bắt đầu + thời lượng (tính theo đơn vị Ngày/Tháng/Năm)
+  // Ngày kết thúc = ngày bắt đầu + thời lượng (tính theo đơn vị Ngày/Tuần/Tháng/Năm)
   const computeEndDate = (startDate: string, duration: number, unit: string): string => {
     if (!startDate || !duration) return '';
     const d = new Date(startDate);
     if (Number.isNaN(d.getTime())) return '';
     if (unit === 'Days') d.setDate(d.getDate() + duration);
+    else if (unit === 'Weeks') d.setDate(d.getDate() + duration * 7);
     else if (unit === 'Months') d.setMonth(d.getMonth() + duration);
     else if (unit === 'Years') d.setFullYear(d.getFullYear() + duration);
     return d.toLocaleDateString('vi-VN');
   };
 
   const formatDurationLabel = (duration: number, unit: string) => {
-    const unitLabel = unit === 'Days' ? 'ngày' : unit === 'Months' ? 'tháng' : 'năm';
+    const unitLabel =
+      unit === 'Days' ? 'ngày' : unit === 'Weeks' ? 'tuần' : unit === 'Months' ? 'tháng' : 'năm';
     return duration ? `${duration} ${unitLabel}` : '';
   };
 
-  // Gom toàn bộ dữ liệu đang nhập ở form (giá, cọc, diện tích, ngày...) thành
-  // merge data để đổ trực tiếp vào nội dung mẫu hợp đồng - đây là chỗ đảm bảo
-  // thông tin ở phần "Ghi chú điều khoản" luôn khớp với các ô nhập bên trên.
+  // Bật/tắt 1 ngày trong lịch hoạt động. Khi bật -> thêm với khung giờ mặc
+  // định 08:00-22:00 (có thể sửa lại). Khi tắt -> xóa hẳn khỏi mảng.
+  const toggleScheduleDay = (day: string) => {
+    setContractData((prev) => {
+      const exists = prev.contractSchedules.find((s) => s.dayOfWeek === day);
+      if (exists) {
+        return {
+          ...prev,
+          contractSchedules: prev.contractSchedules.filter((s) => s.dayOfWeek !== day),
+        };
+      }
+      return {
+        ...prev,
+        contractSchedules: [...prev.contractSchedules, { dayOfWeek: day, startTime: '08:00', endTime: '22:00' }],
+      };
+    });
+  };
+
+  // Sửa giờ bắt đầu/kết thúc riêng cho 1 ngày cụ thể (mỗi ngày có thể có
+  // khung giờ khác nhau, vd Chủ Nhật mở trễ hơn ngày thường).
+  const updateScheduleTime = (day: string, field: 'startTime' | 'endTime', value: string) => {
+    setContractData((prev) => ({
+      ...prev,
+      contractSchedules: prev.contractSchedules.map((s) =>
+        s.dayOfWeek === day ? { ...s, [field]: value } : s
+      ),
+    }));
+  };
+
+  // Gom toàn bộ dữ liệu đang nhập ở form (giá, cọc, diện tích, ngày, lịch
+  // hoạt động...) thành merge data để đổ trực tiếp vào nội dung mẫu hợp đồng
+  // - đây là chỗ đảm bảo thông tin ở phần "Ghi chú điều khoản" luôn khớp với
+  // các ô nhập bên trên.
   const buildMergeData = (): ContractMergeData => {
     const selectedSpace = mySpaces.find((s) => String(s.id || s.Id) === String(contractData.spaceId));
 
@@ -212,6 +291,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
       DIA_CHI_MAT_BANG: selectedSpace?.address || selectedSpace?.location || selectedSpace?.name || '',
       DIEN_TICH: contractData.acreage ? `${contractData.acreage} m2` : '',
       MUC_DICH_KINH_DOANH: contractData.businessPurpose || '',
+      LICH_HOAT_DONG: formatSchedule(contractData.contractSchedules),
 
       GIA_THUE: contractData.price ? `${contractData.price.toLocaleString('vi-VN')} VNĐ/tháng` : '',
       TIEN_COC: contractData.depositAmount ? `${contractData.depositAmount.toLocaleString('vi-VN')} VNĐ` : '',
@@ -288,6 +368,9 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
     contractData.businessPurpose,
     contractData.spaceId,
     contractData.primaryBookingRequestId,
+    // Lịch hoạt động là mảng object nên phải so sánh theo nội dung (JSON) chứ
+    // không phải theo reference, nếu không effect sẽ không bao giờ chạy lại.
+    JSON.stringify(contractData.contractSchedules),
     mySpaces,
   ]);
 
@@ -337,6 +420,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
       depositAmount: Number(contractData.depositAmount),
       description: contractData.description,
       businessPurpose: contractData.businessPurpose,
+      // Có thể là mảng rỗng nếu không chọn ngày nào -> BE nhận null/[] đều ok
       contractSchedules: contractData.contractSchedules,
     };
 
@@ -429,6 +513,12 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
           }
           .cc-template-option:hover { border-color: #94A3B8; }
           .cc-template-option.active { border-color: #10B981; background-color: #ECFDF5; }
+          .cc-schedule-row {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+          }
+          .cc-schedule-time {
+            padding: 5px 8px; font-size: 12.5px;
+          }
         `}
       </style>
 
@@ -572,9 +662,11 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                     value={contractData.durationUnit}
                     onChange={(e) => setContractData({ ...contractData, durationUnit: e.target.value })}
                   >
-                    <option value="Days">Ngày</option>
-                    <option value="Months">Tháng</option>
-                    <option value="Years">Năm</option>
+                    {DURATION_UNITS.map((u) => (
+                      <option key={u.value} value={u.value}>
+                        {u.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -588,6 +680,54 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                   onChange={(e) => setContractData({ ...contractData, startDate: e.target.value })}
                 />
               </div>
+            </div>
+
+            {/* LỊCH HOẠT ĐỘNG TRONG TUẦN - chọn nhiều ngày, mỗi ngày 1 khung giờ riêng */}
+            <div className="cc-card">
+              <div className="cc-card-header">
+                <CalendarDays size={14} color="#64748B" /> Lịch hoạt động trong tuần
+              </div>
+              {DAYS_OF_WEEK.map((d) => {
+                const schedule = contractData.contractSchedules.find((s) => s.dayOfWeek === d.value);
+                const checked = !!schedule;
+                return (
+                  <div key={d.value} className="cc-schedule-row">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleScheduleDay(d.value)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ width: '64px', fontSize: '12.5px', color: '#334155', fontWeight: 600 }}>
+                      {d.label}
+                    </span>
+                    {checked && (
+                      <>
+                        <input
+                          type="time"
+                          className="cc-input cc-schedule-time"
+                          style={{ width: 'auto' }}
+                          value={schedule!.startTime}
+                          onChange={(e) => updateScheduleTime(d.value, 'startTime', e.target.value)}
+                        />
+                        <span style={{ color: '#94A3B8' }}>-</span>
+                        <input
+                          type="time"
+                          className="cc-input cc-schedule-time"
+                          style={{ width: 'auto' }}
+                          value={schedule!.endTime}
+                          onChange={(e) => updateScheduleTime(d.value, 'endTime', e.target.value)}
+                        />
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+              {contractData.contractSchedules.length === 0 && (
+                <span style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px', display: 'block' }}>
+                  Chưa chọn ngày nào — có thể để trống nếu mặt bằng không có lịch hoạt động cố định.
+                </span>
+              )}
             </div>
 
             <div className="cc-card">
@@ -648,10 +788,10 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                 placeholder="Chọn 1 mẫu ở trên để đổ nội dung, hoặc tự nhập ghi chú..."
               />
               <span style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px', display: 'block' }}>
-                Giá thuê, tiền cọc, diện tích, ngày thuê, mục đích kinh doanh... bên trên sẽ tự động cập nhật đúng
-                vào chỗ tương ứng trong nội dung bên dưới. Nếu bạn xóa 1 đoạn nào đó đi, đoạn đó sẽ không tự hiện lại
-                cho tới khi bạn bấm "Tạo lại từ đầu". Tên, CCCD các bên tạm hiện dạng [...Nhãn...] do chưa có API lấy
-                thông tin định danh.
+                Giá thuê, tiền cọc, diện tích, ngày thuê, mục đích kinh doanh, lịch hoạt động... bên trên sẽ tự động
+                cập nhật đúng vào chỗ tương ứng trong nội dung bên dưới. Nếu bạn xóa 1 đoạn nào đó đi, đoạn đó sẽ
+                không tự hiện lại cho tới khi bạn bấm "Tạo lại từ đầu". Tên, CCCD các bên tạm hiện dạng [...Nhãn...]
+                do chưa có API lấy thông tin định danh.
               </span>
 
               <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
@@ -770,7 +910,8 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                 <strong>Tiền cọc:</strong> {contractData.depositAmount ? contractData.depositAmount.toLocaleString('vi-VN') : '...'} VNĐ
               </p>
               <p style={{ margin: 0 }}>
-                <strong>Thời hạn:</strong> {contractData.duration} {contractData.durationUnit === 'Days' ? 'ngày' : contractData.durationUnit === 'Months' ? 'tháng' : 'năm'}
+                <strong>Thời hạn:</strong> {contractData.duration}{' '}
+                {DURATION_UNITS.find((u) => u.value === contractData.durationUnit)?.label.toLowerCase() || ''}
               </p>
               <p style={{ margin: 0 }}>
                 <strong>Ngày bắt đầu:</strong> {contractData.startDate ? new Date(contractData.startDate).toLocaleDateString('vi-VN') : '...'}
@@ -784,6 +925,9 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
               <p style={{ margin: 0 }}>
                 <strong>Mặt bằng:</strong>{' '}
                 {mySpaces.find((s) => String(s.id || s.Id) === String(contractData.spaceId))?.name || '...'}
+              </p>
+              <p style={{ margin: 0 }}>
+                <strong>Lịch hoạt động:</strong> {formatSchedule(contractData.contractSchedules) || '...'}
               </p>
             </div>
 
