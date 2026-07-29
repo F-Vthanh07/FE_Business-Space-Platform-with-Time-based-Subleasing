@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Share2, Heart, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3, Send, X, ClipboardSignature } from 'lucide-react';
+import { MapPin, Share2, Heart, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Clock, Tag } from 'lucide-react';
 import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
@@ -58,6 +58,33 @@ const ShareButton: React.FC<ShareButtonProps> = ({ icon, label, url, onClick }) 
   );
 };
 
+// --- MAP TÊN TIỆN ÍCH -> ICON + NHÃN TIẾNG VIỆT ---
+const AMENITY_MAP: Record<string, { label: string; icon: React.ReactNode }> = {
+  wifi: { label: 'Wifi', icon: <Wifi size={16} /> },
+  ac: { label: 'Điều hòa', icon: <Snowflake size={16} /> },
+  aircon: { label: 'Điều hòa', icon: <Snowflake size={16} /> },
+  parking: { label: 'Chỗ đậu xe', icon: <Car size={16} /> },
+};
+
+const getAmenityInfo = (name: string) => {
+  const key = (name || '').toLowerCase();
+  return AMENITY_MAP[key] || { label: name, icon: <Sparkles size={16} /> };
+};
+
+// --- MAP DAYOFWEEK (.NET: 0=Chủ Nhật ... 6=Thứ 7) -> NHÃN TIẾNG VIỆT, SẮP THỨ TỰ THỨ 2 -> CN ---
+const DAY_LABELS: Record<number, string> = {
+  0: 'Chủ Nhật',
+  1: 'Thứ 2',
+  2: 'Thứ 3',
+  3: 'Thứ 4',
+  4: 'Thứ 5',
+  5: 'Thứ 6',
+  6: 'Thứ 7',
+};
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+const formatTime = (t: string) => (t ? t.substring(0, 5) : '');
+
 export const ListingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -111,7 +138,7 @@ export const ListingDetail: React.FC = () => {
           
           const found = safeData.find((item: any) => (item.id?.toString() === id || item.Id?.toString() === id));
 
-          // BƯỚC 3: GHÉP area/address (GIỮ NGUYÊN CODE BẠN CHỈ ĐỊNH)
+          // BƯỚC 3: GHÉP area/address/amenities/operatingHours/allowedCategories (TỪ SPACE CHA)
           let foundWithSpaceInfo = found || null;
           if (found) {
             const parentSpace = spaces.find(s => (s.id || s.Id) === (found.spaceId || found.SpaceId));
@@ -119,7 +146,10 @@ export const ListingDetail: React.FC = () => {
               ...found,
               area: found.area || parentSpace?.area || null,
               address: found.location || found.address || parentSpace?.address || parentSpace?.location || '',
-              city: found.city || parentSpace?.city || ''
+              city: found.city || parentSpace?.city || '',
+              amenities: found.amenities || parentSpace?.amenities || [],
+              operatingHours: found.operatingHours || parentSpace?.operatingHours || [],
+              allowedCategories: found.spaceAllowedCategories || parentSpace?.spaceAllowedCategories || []
             };
           }
           setListing(foundWithSpaceInfo);
@@ -282,6 +312,11 @@ export const ListingDetail: React.FC = () => {
   const isOwner = currentUserId && (currentUserId === listing.creatorId);
   const ownerName = listing.lessorName || 'Ẩn danh';
 
+  const amenities: any[] = listing.amenities || [];
+  const activeAmenities = amenities.filter((a: any) => a.isActive !== false);
+  const operatingHours: any[] = listing.operatingHours || [];
+  const allowedCategories: any[] = listing.allowedCategories || [];
+
   return (
     <div style={{ backgroundColor: '#F9F9F9', minHeight: '100vh', color: '#333', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ position: 'sticky', top: 0, zIndex: 99 }}><Header /></div>
@@ -365,6 +400,91 @@ export const ListingDetail: React.FC = () => {
             <div style={{ lineHeight: '1.7', color: '#444', whiteSpace: 'pre-wrap', marginBottom: '40px', fontSize: '15px' }}>
               {listing.description || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này. Vui lòng liên hệ trực tiếp để biết thêm thông tin về hợp đồng và cọc.'}
             </div>
+
+            {/* TIỆN ÍCH */}
+            {activeAmenities.length > 0 && (
+              <>
+                <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Tiện ích</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '40px' }}>
+                  {activeAmenities.map((a: any, idx: number) => {
+                    const info = getAmenityInfo(a.name);
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          padding: '10px 16px', borderRadius: '8px',
+                          border: '1px solid #E0E0E0', backgroundColor: '#fff',
+                          fontSize: '14px', color: '#333'
+                        }}
+                      >
+                        <span style={{ color: 'var(--color-primary)', display: 'flex' }}>{info.icon}</span>
+                        {info.label}
+                        {a.quantity > 1 && <span style={{ color: '#999' }}>× {a.quantity}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* MỤC ĐÍCH SỬ DỤNG PHÙ HỢP */}
+            {allowedCategories.length > 0 && (
+              <>
+                <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Mục đích sử dụng phù hợp</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '40px' }}>
+                  {allowedCategories.map((cat: any, idx: number) => {
+                    const label = typeof cat === 'string' ? cat : (cat.name || cat.categoryName || cat.title || '');
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          padding: '8px 14px', borderRadius: '20px',
+                          backgroundColor: '#EEF2F7', color: '#1E293B',
+                          fontSize: '13px', fontWeight: 500
+                        }}
+                      >
+                        <Tag size={13} /> {label}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* GIỜ HOẠT ĐỘNG */}
+            {operatingHours.length > 0 && (
+              <>
+                <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Clock size={18} /> Giờ hoạt động
+                </h3>
+                <div style={{ border: '1px solid #E0E0E0', borderRadius: '8px', backgroundColor: '#fff', marginBottom: '40px', overflow: 'hidden' }}>
+                  {DAY_ORDER.map((day, idx) => {
+                    const entry = operatingHours.find((h: any) => h.dayOfWeek === day);
+                    return (
+                      <div
+                        key={day}
+                        style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '12px 20px',
+                          borderBottom: idx !== DAY_ORDER.length - 1 ? '1px solid #F0F0F0' : 'none'
+                        }}
+                      >
+                        <span style={{ fontSize: '14px', color: '#333', fontWeight: 500 }}>{DAY_LABELS[day]}</span>
+                        {entry ? (
+                          <span style={{ fontSize: '14px', color: '#16A34A', fontWeight: 500 }}>
+                            {formatTime(entry.openTime)} - {formatTime(entry.closeTime)}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '14px', color: '#999' }}>Đóng cửa</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
             <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Lịch sử giá cho thuê</h3>
             <div style={{ border: '1px solid #E0E0E0', borderRadius: '8px', padding: '20px', marginBottom: '40px', display: 'flex', gap: '40px', backgroundColor: '#fff' }}>

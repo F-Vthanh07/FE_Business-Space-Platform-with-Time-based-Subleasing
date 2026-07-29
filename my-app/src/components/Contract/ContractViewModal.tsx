@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { X, Printer, FileText, Wallet, CalendarDays, Building2, Briefcase, CheckCircle, Edit3, Trash2 } from 'lucide-react';
-import { splitContractHeaderBody } from '../contractTemplates';
+import { splitContractHeaderBody, formatSchedule, type ContractSchedule } from '../contractTemplates';
 import { createPortal } from 'react-dom';
 
 interface ContractViewModalProps {
@@ -22,14 +22,18 @@ const formatCurrency = (value?: number) =>
 const formatDate = (value?: string) =>
   value ? new Date(value).toLocaleDateString('vi-VN') : '...';
 
+// Đơn vị thời hạn của hợp đồng "sống" (từ form tạo/sửa) là chuỗi enum của BE:
+// 'Days' | 'Weeks' | 'Months' | 'Years'. Phải khớp đủ 4 giá trị với
+// formatSnapshotDurationUnit bên dưới (0-3), nếu thiếu 'Weeks' sẽ hiện rỗng.
 const formatDurationUnit = (unit?: string) => {
   if (unit === 'Days') return 'ngày';
+  if (unit === 'Weeks') return 'tuần';
   if (unit === 'Months') return 'tháng';
   if (unit === 'Years') return 'năm';
   return unit || '...';
 };
 
-// DurationUnit trong Snapshot là số (khác bản sống là chuỗi 'Days'/'Months'/'Years').
+// DurationUnit trong Snapshot là số (khác bản sống là chuỗi 'Days'/'Weeks'/'Months'/'Years').
 // Suy ra từ dữ liệu quan sát được: Duration=12 + DurationUnit=2 => hiển thị "12 tháng".
 // CHƯA có tài liệu chính thức từ BE cho enum này - nếu gặp hợp đồng đơn vị khác
 // (ngày/tuần/năm) mà hiển thị sai, cần đối chiếu lại theo response thật từ GetSnapshotById.
@@ -69,6 +73,16 @@ const getSignFlags = (contract: any) => {
   );
   return { lessorSigned, lesseeSigned };
 };
+
+// Chuẩn hoá mảng lịch hoạt động từ nhiều khả năng viết hoa/thường khác nhau
+// của BE (camelCase ở contract sống, PascalCase ở Snapshot) về 1 dạng chung
+// để đưa thẳng vào formatSchedule().
+const normalizeSchedule = (raw: any[] | undefined | null): ContractSchedule[] =>
+  (raw || []).map((s) => ({
+    dayOfWeek: s.dayOfWeek ?? s.DayOfWeek,
+    startTime: s.startTime ?? s.StartTime,
+    endTime: s.endTime ?? s.EndTime,
+  }));
 
 export const ContractViewModal: React.FC<ContractViewModalProps> = ({
   contract,
@@ -141,7 +155,18 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
 
   if (!contract) return null;
 
-  const spaceName = contract.spaceName || contract.space?.name || '...';
+  // Mặt bằng: ưu tiên Snapshot, sau đó dữ liệu sống với nhiều khả năng đặt tên
+  // field khác nhau của BE (camelCase / PascalCase / object lồng nhau).
+  const spaceName =
+    snapshot?.SpaceName ||
+    snapshot?.Space?.Name ||
+    snapshot?.SpaceInfo?.Name ||
+    contract.spaceName ||
+    contract.space?.name ||
+    contract.Space?.Name ||
+    contract.Space?.name ||
+    contract.SpaceName ||
+    '...';
 
   // Ưu tiên dữ liệu Snapshot (đã đóng băng, đúng tại thời điểm ký) nếu có,
   // fallback về dữ liệu sống khi hợp đồng chưa ký xong hoặc snapshot chưa tải xong.
@@ -155,8 +180,31 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
   const displayAcreage = snapshot?.Acreage ?? contract.acreage;
   const displayBusinessPurpose = snapshot?.BusinessPurpose || contract.businessPurpose;
   const displayStartDate = snapshot?.StartDate || contract.startDate;
-  const displayLessorName = snapshot?.LessorName || lessorName;
-  const displayLesseeName = snapshot?.LesseeName || lesseeName;
+
+  // Tên các bên: ưu tiên Snapshot -> tên truyền từ ngoài vào (props) -> các khả
+  // năng đặt tên field khác nhau ngay trên chính object contract (phòng khi cha
+  // component chưa truyền lessorName/lesseeName vào).
+  const displayLessorName =
+    snapshot?.LessorName ||
+    lessorName ||
+    contract.lessorName ||
+    contract.LessorName ||
+    contract.lessor?.name ||
+    contract.Lessor?.Name ||
+    contract.Lessor?.name;
+  const displayLesseeName =
+    snapshot?.LesseeName ||
+    lesseeName ||
+    contract.lesseeName ||
+    contract.LesseeName ||
+    contract.lessee?.name ||
+    contract.Lessee?.Name ||
+    contract.Lessee?.name;
+
+  // Lịch hoạt động trong tuần: ưu tiên Snapshot, fallback dữ liệu sống.
+  const displaySchedules = normalizeSchedule(
+    snapshot?.ContractSchedules ?? contract.contractSchedules ?? contract.ContractSchedules
+  );
 
   const verification = snapshot?.ContractVerification;
   const lessorSignedFinal = verification ? verification.IsLessorAgreed : lessorSigned;
@@ -419,6 +467,20 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
               <p><strong>Mục đích kinh doanh:</strong> {displayBusinessPurpose || '...'}</p>
             </div>
           </div>
+
+          {/* Lịch hoạt động trong tuần - chỉ hiện khi có ít nhất 1 ngày được chọn */}
+          {displaySchedules.length > 0 && (
+            <div className="cv-card">
+              <div className="cv-card-header">
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <CalendarDays size={14} color="#64748B" /> Lịch hoạt động trong tuần
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: '13px', color: '#334155' }}>
+                {formatSchedule(displaySchedules)}
+              </p>
+            </div>
+          )}
 
           {/* Nội dung điều khoản */}
           <div className="cv-card">
