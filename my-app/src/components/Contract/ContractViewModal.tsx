@@ -166,7 +166,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
     contract.Space?.Name ||
     contract.Space?.name ||
     contract.SpaceName ||
-    '...';
+    (contract.spaceId != null ? `Mặt bằng #${contract.spaceId}` : '...');
 
   // Ưu tiên dữ liệu Snapshot (đã đóng băng, đúng tại thời điểm ký) nếu có,
   // fallback về dữ liệu sống khi hợp đồng chưa ký xong hoặc snapshot chưa tải xong.
@@ -187,6 +187,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
   const displayLessorName =
     snapshot?.LessorName ||
     lessorName ||
+    contract.lessorNickName ||
     contract.lessorName ||
     contract.LessorName ||
     contract.lessor?.name ||
@@ -195,6 +196,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
   const displayLesseeName =
     snapshot?.LesseeName ||
     lesseeName ||
+    contract.lesseeNickName ||
     contract.lesseeName ||
     contract.LesseeName ||
     contract.lessee?.name ||
@@ -410,6 +412,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
             </div>
             <div className="cv-row">
               <p><strong>Mặt bằng:</strong> {spaceName}</p>
+              <p><strong>Mã mặt bằng:</strong> #{contract.spaceId ?? '...'}</p>
               <p><strong>Mã yêu cầu đặt thuê:</strong> #{contract.primaryBookingRequestId || '...'}</p>
             </div>
           </div>
