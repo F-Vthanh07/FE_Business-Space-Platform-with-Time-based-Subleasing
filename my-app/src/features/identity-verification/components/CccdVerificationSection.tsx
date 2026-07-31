@@ -76,7 +76,11 @@ export const CccdVerificationSection: React.FC<CccdVerificationSectionProps> = (
               : 'Quét mã QR trên CCCD để tự động điền thông tin định danh của bạn.'}
           </p>
         </div>
-        <span className="label-caps cccd-verification-status">{statusLabel(isVerified, isEn)}</span>
+        <span
+          className={`label-caps cccd-verification-status ${isVerified ? 'cccd-verification-status--verified' : ''}`}
+        >
+          {statusLabel(isVerified, isEn)}
+        </span>
       </div>
 
       {isVerified ? (

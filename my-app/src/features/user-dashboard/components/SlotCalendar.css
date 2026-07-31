@@ -64,7 +64,7 @@
   padding: 6px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
-  background: var(--color-bg-elevated, #1a1d24);
+  background: var(--color-bg-card-deep);
   backdrop-filter: blur(24px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 }
