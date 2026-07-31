@@ -5,6 +5,45 @@
   align-items: start;
 }
 
+/* ---- Chế độ Phóng to lịch: ẩn Day Detail Panel, lịch chiếm toàn bộ chiều rộng ---- */
+.slot-calendar-wrapper--expanded {
+  grid-template-columns: 1fr;
+}
+
+.slot-calendar-wrapper--expanded .day-detail-panel {
+  display: none;
+}
+
+.slot-calendar-wrapper--expanded .cal-day {
+  min-height: 96px;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.slot-calendar-wrapper--expanded .cal-day-num {
+  align-self: flex-start;
+}
+
+.cal-day-contract-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.cal-day-contract-chip {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 /* ---- Space Selector Dropdown (custom, thay cho native <select>) ---- */
 .space-selector-dropdown {
   position: relative;
@@ -112,6 +151,7 @@
   font-weight: 700;
   text-transform: capitalize;
   letter-spacing: -0.2px;
+  color: var(--color-text-primary);
 }
 
 .calendar-legend {

@@ -671,6 +671,14 @@ const translations: Translations = {
     en: 'Pending',
     vi: 'Chờ duyệt',
   },
+  'renter.contractStatus': {
+    en: 'Contract',
+    vi: 'Hợp đồng',
+  },
+  'renter.loadingContracts': {
+    en: 'Loading contract calendar...',
+    vi: 'Đang tải lịch hợp đồng...',
+  },
   'renter.subleaseRevenueShort': {
     en: 'Est. Revenue',
     vi: 'Doanh thu dự kiến',

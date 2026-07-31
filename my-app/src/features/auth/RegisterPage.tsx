@@ -4,7 +4,23 @@ import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { gsap } from 'gsap';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { ROUTES } from '../../routes/routes';
+import { fetchUserProfile } from './api/auth.api';
 import './AuthPage.css';
+
+// HÀM GIẢI MÃ JWT TOKEN ĐỂ LẤY THÔNG TIN
+const parseJwt = (token: string) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (e) {
+    return null;
+  }
+};
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -146,6 +162,44 @@ export const RegisterPage: React.FC = () => {
       }
 
       setSuccessMsg(language === 'en' ? 'Account verified! Let\'s complete your profile.' : 'Tài khoản đã xác thực! Hãy hoàn tất hồ sơ của bạn.');
+
+      // Tự đăng nhập ngay sau khi verify OTP để onboarding (xác thực CCCD) có token + userId,
+      // giống hệt luồng LoginPage — nếu không, bước verify CCCD ở onboarding sẽ luôn thất bại
+      // vì thiếu portal_token/current_user_id trong localStorage.
+      try {
+        const loginResponse = await fetch('https://flexi-space-capstone-project.onrender.com/api/Auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'accept': '*/*' },
+          body: JSON.stringify({ email, password, turnstileToken })
+        });
+        const loginData = await loginResponse.json().catch(() => ({}));
+
+        if (loginResponse.ok && loginData.accessToken) {
+          localStorage.setItem('portal_token', loginData.accessToken);
+
+          const decodedToken = parseJwt(loginData.accessToken);
+          localStorage.setItem('current_user_name', decodedToken?.name || name || 'Người dùng');
+
+          const message = loginData.message || '';
+          const idMatch = message.match(/ID:\s*([A-Za-z0-9]+)/i);
+          const roleMatch = message.match(/Role:\s*([A-Za-z0-9_]+)/i);
+          const userId = idMatch ? idMatch[1] : null;
+          const parsedRole = roleMatch ? roleMatch[1].toLowerCase() : null;
+
+          localStorage.setItem('portal_role', parsedRole === 'admin' ? 'admin' : 'user');
+
+          if (userId) {
+            localStorage.setItem('current_user_id', userId);
+            try {
+              await fetchUserProfile(userId, loginData.accessToken);
+            } catch (profileErr) {
+              console.error('Lỗi lấy userprofile:', profileErr);
+            }
+          }
+        }
+      } catch (autoLoginErr) {
+        console.error('Auto-login sau đăng ký thất bại:', autoLoginErr);
+      }
 
       setTimeout(() => {
         navigate(ROUTES.ONBOARDING, { state: { name, phoneNumber, email } });
