@@ -1,9 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, FileText, Globe, LogOut, User, CheckCircle2, Sun, Moon } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
 import { useIdentityVerification } from '../features/identity-verification';
+import { clearLocalStorageForLogout } from '../utils/preserveLocalStorage';
 import './Header.css';
 import { Shuffle } from '../components/Shuffle';
 
@@ -18,10 +19,11 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const { language, setLanguage, theme, toggleTheme } = useThemeLanguage();
   const { isVerified } = useIdentityVerification();
 
-  const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | null => {
+  const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | 'ai' | null => {
     if (pathname === '/') return 'home';
     if (pathname.startsWith('/user/spaces')) return 'spaces';
     if (pathname === '/feed') return 'feed';
+    if (pathname === '/ai-image-editor') return 'ai';
     return null;
   };
   const activeTab = getActiveTab(location.pathname);
@@ -29,17 +31,17 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const [showNotif, setShowNotif] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
 
-  // SỐ ĐƠN "YÊU CẦU CHỜ DUYỆT" CHƯA XEM (BADGE ĐỎ)
+  // Số đơn "Yêu cầu chờ duyệt" chưa xem.
   const [pendingBookingCount, setPendingBookingCount] = useState(0);
 
-  // STATE CHO TOAST THÔNG BÁO NỔI
+  // State cho toast thông báo nổi.
   const [toastNotif, setToastNotif] = useState<{ show: boolean, title: string, message: string } | null>(null);
 
   const token = localStorage.getItem('portal_token');
   const role = localStorage.getItem('portal_role');
   const currentUserId = localStorage.getItem('current_user_id');
   
-  // LẤY TÊN TỪ LOCAL STORAGE RA ĐỂ HIỂN THỊ
+  // Lấy tên từ localStorage để hiển thị.
   const storedName = localStorage.getItem('current_user_name') || userName || 'Khách';
   const displayInitials = userInitials || storedName.substring(0, 2).toUpperCase();
   const isLoggedIn = !!token;
@@ -59,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // LẮNG NGHE SỰ KIỆN TỪ FLOATING CHAT BẮN LÊN ĐỂ MỞ TOAST
+  // Lắng nghe sự kiện từ floating chat để mở toast.
   useEffect(() => {
     const handleNewNotif = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -73,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
         message: notifData.message
       });
 
-      // Tự động tắt sau 4 giây
+      // Tự động tắt sau 4 giây.
       setTimeout(() => {
         setToastNotif(null);
       }, 4000);
@@ -83,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     return () => window.removeEventListener('new-notification', handleNewNotif);
   }, []);
 
-  // LẤY SET CÁC ID ĐƠN ĐÃ XEM TỪ LOCALSTORAGE
+  // Lấy set các ID đơn đã xem từ localStorage.
   const getSeenBookingIds = (): Set<string | number> => {
     try {
       const raw = localStorage.getItem('seen_booking_request_ids');
@@ -93,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     }
   };
 
-  // KIỂM TRA SỐ ĐƠN "CHỜ DUYỆT" CHƯA XEM ĐỂ HIỆN BADGE ĐỎ
+  // Kiểm tra số đơn chờ duyệt chưa xem để hiện badge đỏ.
   const checkPendingBookingRequests = async () => {
     if (role !== 'user' || !token || !currentUserId) return;
     try {
@@ -120,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     checkPendingBookingRequests();
     const interval = setInterval(checkPendingBookingRequests, 15000);
 
-    // Khi trang "Yêu cầu chờ duyệt" báo đã xem xong -> cập nhật badge ngay
+    // Khi trang yêu cầu chờ duyệt báo đã xem xong thì cập nhật badge ngay.
     const handleSeen = () => checkPendingBookingRequests();
     window.addEventListener('booking-request-seen', handleSeen);
 
@@ -132,11 +134,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   }, [isLoggedIn]);
 
   const handleLogout = () => {
-    const keepKeys = ['app-language', 'app-theme'];
-    const saved: Record<string, string> = {};
-    keepKeys.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
-    localStorage.clear();
-    Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
+    clearLocalStorageForLogout();
     navigate('/');
     window.location.reload();
   };
@@ -146,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     const event = new CustomEvent('open-ether-chat', {
       detail: { 
         conversationId: notif.conversationId, 
-        name: notif.senderName || 'Người dùng' 
+        name: notif.senderName || 'Người dùng'
       }
     });
     window.dispatchEvent(event);
@@ -176,6 +174,9 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
             <button className={`header-nav-item ${activeTab === 'feed' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/feed')}>
               {language === 'en' ? 'DISCOVER' : 'KHÁM PHÁ'}
             </button>
+            <button className={`header-nav-item ${activeTab === 'ai' ? 'header-nav-item--active' : ''}`} onClick={() => navigate(isLoggedIn ? '/ai-image-editor' : '/login')}>
+              {language === 'en' ? 'AI EDITOR' : 'AI CHỈNH ẢNH'}
+            </button>
           </nav>
         </div>
 
@@ -199,7 +200,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
 
           {isLoggedIn ? (
             <>
-              {/* KHU VỰC CHUÔNG THÔNG BÁO */}
+              {/* Khu vực chuông thông báo */}
               <div style={{ position: 'relative' }} ref={notifRef}>
                 <button className="header-icon-btn" title="Notifications" onClick={() => setShowNotif(!showNotif)}>
                   <Bell size={15} />
@@ -208,7 +209,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                   )}
                 </button>
 
-                {/* BOX XỔ XUỐNG KHI BẤM CHUÔNG */}
+                {/* Box xổ xuống khi bấm chuông */}
                 {showNotif && (
                   <div className="header-dropdown-menu notif-dropdown animate-in" style={{ width: '320px', right: '-40px', padding: 0, overflow: 'hidden' }}>
                     <div className="notif-dropdown-header">
@@ -242,7 +243,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                 )}
               </div>
               
-              {/* BOOKING REQUESTS: chỉ hiện cho role user, có badge số đơn chưa xem */}
+              {/* Booking requests: chỉ hiện cho role user, có badge số đơn chưa xem */}
               {role === 'user' && (
                 <button
                   className="header-icon-btn"
@@ -275,7 +276,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                 </button>
               )}
 
-              {/* AVATAR: bấm để đi thẳng đến trang Profile */}
+              {/* Avatar: bấm để đi thẳng đến trang Profile */}
               <div
                 className="header-avatar"
                 onClick={() => navigate('/user/profile')}
@@ -310,7 +311,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
         </div>
       </header>
 
-      {/* TOAST NOTIFICATION (NẰM Ở LỚP CAO NHẤT) */}
+      {/* Toast notification */}
       {toastNotif && toastNotif.show && (
         <div 
           className="toast-notification animate-in" 
@@ -356,3 +357,4 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     </>
   );
 };
+

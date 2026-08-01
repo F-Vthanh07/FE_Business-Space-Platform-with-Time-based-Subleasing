@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   IdCard,
   Wallet,
@@ -11,6 +11,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { clearLocalStorageForLogout } from '../../../../utils/preserveLocalStorage';
 import '../layout/UserSidebar.css';
 import type { UserPage } from '../../types';
 
@@ -117,11 +118,7 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ activePage, onNa
               if (onLogout) {
                 onLogout();
               } else {
-                const keepKeys = ['app-language', 'app-theme'];
-                const saved: Record<string, string> = {};
-                keepKeys.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
-                localStorage.clear();
-                Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
+                clearLocalStorageForLogout();
                 window.location.reload();
               }
             }}
@@ -133,3 +130,4 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ activePage, onNa
     </aside>
   );
 };
+

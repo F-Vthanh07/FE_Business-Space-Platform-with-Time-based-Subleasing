@@ -1,7 +1,8 @@
-import React from 'react';
+﻿import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, ArrowLeft, LogOut } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
+import { clearLocalStorageForLogout } from '../utils/preserveLocalStorage';
 import './AccessDeniedPage.css';
 
 export const AccessDeniedPage: React.FC = () => {
@@ -9,12 +10,7 @@ export const AccessDeniedPage: React.FC = () => {
   const { language } = useThemeLanguage();
 
   const handleLogout = () => {
-    // Clear localStorage and go to login
-    const keepKeys = ['app-language', 'app-theme'];
-    const saved: Record<string, string> = {};
-    keepKeys.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
-    localStorage.clear();
-    Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
+    clearLocalStorageForLogout();
     window.location.href = '/login';
   };
 
@@ -53,3 +49,4 @@ export const AccessDeniedPage: React.FC = () => {
     </div>
   );
 };
+

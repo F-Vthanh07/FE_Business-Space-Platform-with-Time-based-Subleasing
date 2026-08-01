@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { MeshBackground } from './components/MeshBackground';
+import { Header } from './components/Header';
 import { UserDashboardPage } from './features/user-dashboard/UserDashboardPage';
 import { AdminDashboardPage } from './features/admin-dashboard/AdminDashboardPage';
 import { AccessDeniedPage } from './components/AccessDeniedPage';
@@ -11,6 +12,7 @@ import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import { PaymentSuccess, PaymentFailed } from './features/wallet';
 import { OnboardingProfilePage } from './features/onboarding';
+import { AiImageEditorPage } from './features/ai-image-editor/AiImageEditorPage';
 import ClickSpark from './components/ClickSpark'; 
 import './App.css';
 
@@ -18,6 +20,7 @@ import { FloatingChat } from './components/FloatingChat';
 
 import { ROUTES, type PortalRole } from './routes/routes';
 import { ProtectedRoute } from './routes/ProtectedRoute';
+import { clearLocalStorageForLogout } from './utils/preserveLocalStorage';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -28,19 +31,14 @@ const App: React.FC = () => {
   });
 
   const handleLogout = () => {
-    // Giữ lại preference của người dùng, xóa hết các key còn lại
-    const keepKeys = ['app-language', 'app-theme'];
-    const saved: Record<string, string> = {};
-    keepKeys.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
-    localStorage.clear();
-    Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
+    clearLocalStorageForLogout();
     setRole(null);
     navigate(ROUTES.LOGIN);
   };
 
   return (
     <>
-      {/* HIỆU ỨNG CLICK TOÀN MÀN HÌNH */}
+      {/* Hiệu ứng click toàn màn hình */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'none' }}>
         <ClickSpark
           sparkColor="#00D4A0" /* Xanh neon đồng bộ với hệ thống */
@@ -65,6 +63,22 @@ const App: React.FC = () => {
         />
 
         <Route path="/listing/:id" element={<ListingDetail />} />
+
+        <Route
+          path="/ai-image-editor"
+          element={
+            <ProtectedRoute allowedRoles={['user']} currentRole={role}>
+              <MeshBackground>
+                <div className="app-shell">
+                  <Header />
+                  <main className="main-content ai-editor-standalone">
+                    <AiImageEditorPage />
+                  </main>
+                </div>
+              </MeshBackground>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Login Page */}
         <Route 
@@ -142,3 +156,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

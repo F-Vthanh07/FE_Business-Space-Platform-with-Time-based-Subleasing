@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
@@ -12,14 +12,15 @@ import {
   Sun,
   Moon,
   Wallet,
-  Inbox // <-- THÊM ICON INBOX VÀO ĐÂY
+  Inbox,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { clearLocalStorageForLogout } from '../../../../utils/preserveLocalStorage';
 import './UserSidebar.css';
 import type { UserPage } from '../../types';
 
 interface UserSidebarProps {
-  activePage: UserPage | string; // Nới lỏng type một chút để khỏi báo lỗi
+  activePage: UserPage | string;
   onNavigate: (page: UserPage | string) => void;
   onNewSpaceClick?: () => void;
   onNewSlotClick?: () => void;
@@ -27,7 +28,7 @@ interface UserSidebarProps {
 }
 
 interface NavItem {
-  id: UserPage | string; // Nới lỏng type
+  id: UserPage | string;
   icon: React.ReactNode;
 }
 
@@ -63,7 +64,7 @@ const getPageLabels = (id: string, lang: string) => {
     case 'listings': return { title: isEn ? 'My Listings' : 'Quản lý Tin đăng', sub: isEn ? 'Public market ads' : 'Bài đăng cho thuê' };
     case 'booking-requests': return { title: isEn ? 'Booking Requests' : 'Yêu cầu chờ duyệt', sub: isEn ? 'Manage applications' : 'Duyệt đơn khách thuê' };
     case 'my-booking-requests': return { title: isEn ? 'My Requests' : 'Đơn thuê đã gửi', sub: isEn ? 'Track your requests' : 'Theo dõi yêu cầu thuê' };
-    case 'contracts': return { title: isEn ? 'My Contracts' : 'Hợp đồng của bạn', sub: isEn ? 'View & sign' : 'Xem & ký hợp đồng' };    
+    case 'contracts': return { title: isEn ? 'My Contracts' : 'Hợp đồng của bạn', sub: isEn ? 'View & sign' : 'Xem & ký hợp đồng' };
     case 'tenants': return { title: isEn ? 'Contracts & Tenants' : 'Hợp đồng & Khách thuê', sub: isEn ? 'Manage contracts' : 'Quản lý hợp đồng' };
     case 'calendar': return { title: isEn ? 'Calendar' : 'Lịch cho thuê lại', sub: isEn ? 'Sublease slots' : 'Khung giờ cho thuê lại' };
     case 'sublease-listings': return { title: isEn ? 'Sublease Market' : 'Chợ cho thuê lại', sub: isEn ? 'Your sublease ads' : 'Tin cho thuê lại' };
@@ -79,8 +80,6 @@ const getPageLabels = (id: string, lang: string) => {
 
 export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate, onNewSpaceClick, onNewSlotClick, onLogout }) => {
   const { t, language, setLanguage, theme, toggleTheme } = useThemeLanguage();
-
-  // SỐ ĐƠN "YÊU CẦU CHỜ DUYỆT" CHƯA XEM (BADGE ĐỎ)
   const [pendingBookingCount, setPendingBookingCount] = useState(0);
 
   const getSeenBookingIds = (): Set<string | number> => {
@@ -100,7 +99,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
 
     try {
       const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll?status=Pending', {
-        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+        headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -111,7 +110,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
       const unseen = myRequests.filter((r: any) => !seenIds.has(r.id ?? r.Id));
       setPendingBookingCount(unseen.length);
     } catch (err) {
-      console.error('Lỗi kiểm tra booking request:', err);
+      console.error('Lá»—i kiá»ƒm tra booking request:', err);
     }
   };
 
@@ -120,7 +119,6 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
     checkPendingBookingRequests();
     const interval = setInterval(checkPendingBookingRequests, 15000);
 
-    // Khi trang "Yêu cầu chờ duyệt" báo đã xem xong (hoặc Header check xong) -> cập nhật badge ngay
     const handleSeen = () => checkPendingBookingRequests();
     window.addEventListener('booking-request-seen', handleSeen);
 
@@ -159,7 +157,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
                 height: '16px',
                 lineHeight: '16px',
                 textAlign: 'center',
-                border: '1.5px solid var(--bg-primary, #fff)'
+                border: '1.5px solid var(--bg-primary, #fff)',
               }}>
                 {pendingBookingCount > 9 ? '9+' : pendingBookingCount}
               </span>
@@ -242,11 +240,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
               if (onLogout) {
                 onLogout();
               } else {
-                const keepKeys = ['app-language', 'app-theme'];
-                const saved: Record<string, string> = {};
-                keepKeys.forEach((k) => { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
-                localStorage.clear();
-                Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
+                clearLocalStorageForLogout();
                 window.location.reload();
               }
             }}
@@ -258,3 +252,4 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
     </aside>
   );
 };
+
