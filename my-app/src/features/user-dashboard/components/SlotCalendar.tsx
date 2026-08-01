@@ -10,6 +10,9 @@ import {
   XCircle,
   AlertCircle,
   Info,
+  FileText,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import {
   format,
@@ -27,6 +30,7 @@ import {
 import { vi, enUS } from 'date-fns/locale';
 import { SubleaseSlotForm } from './Space/SubleaseSlotForm';
 import { SubBookingForm } from './Space/SubBookingForm';
+import { ContractDetailModal } from './ContractDetailModal';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { API_BASE_URL } from '../../../config/api';
 import './SlotCalendar.css';
@@ -38,6 +42,16 @@ interface OwnedSpace {
   address: string;
 }
 
+interface ContractCalendarEntry {
+  effectiveDate: string;
+  startDateTime: string;
+  endDateTime: string;
+  contractId: number;
+  tenantName: string;
+  businessDescription: string;
+  displayLabel: string;
+}
+
 const slotStatusConfig = {
   booked: { color: '#4A72FF', bgColor: 'rgba(74, 114, 255, 0.15)', icon: <CheckCircle2 size={11} /> },
   available: { color: '#2EEA82', bgColor: 'rgba(46, 234, 130, 0.12)', icon: <Plus size={11} /> },
@@ -45,8 +59,30 @@ const slotStatusConfig = {
   pending: { color: '#D9A05B', bgColor: 'rgba(217, 160, 91, 0.15)', icon: <AlertCircle size={11} /> },
 };
 
+const contractStatusColor = '#D46EF2';
+
+// Bảng màu để phân biệt trực quan từng hợp đồng khác nhau trên cùng một ngày.
+// Không dùng contractId % length (dễ đụng màu, vd 4 và 14 cùng dư 4 nếu length=10) —
+// thay vào đó gán màu theo THỨ TỰ hợp đồng xuất hiện trong danh sách hiện có,
+// đảm bảo các hợp đồng đang hiển thị cùng lúc luôn nhận màu khác nhau.
+const CONTRACT_COLOR_PALETTE = [
+  '#D46EF2', '#4A72FF', '#2EEA82', '#FF9F45', '#FF4D6D',
+  '#22D3EE', '#F5D90A', '#A78BFA', '#F472B6', '#34D399',
+];
+
 const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const WEEKDAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const formatTime = (isoDateTime: string) => (isoDateTime ? isoDateTime.substring(11, 16) : '');
+
+const getInitials = (name: string) =>
+  (name || '')
+    .trim()
+    .split(/\s+/)
+    .slice(-2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
 
 interface SlotCalendarProps {
   slots: SubSlot[];
@@ -55,27 +91,37 @@ interface SlotCalendarProps {
 }
 
 export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot, onCreateSlot }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 4, 1)); // May 2025
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date(2025, 4, 26));
+  const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => new Date());
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
 
   // Trạng thái điều khiển form modal
   const [isNewSlotOpen, setIsNewSlotOpen] = useState(false);
   const [bookingSlot, setBookingSlot] = useState<SubSlot | null>(null);
+  const [selectedContractId, setSelectedContractId] = useState<number | null>(null);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const monthPickerRef = useRef<HTMLDivElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const [ownedSpaces, setOwnedSpaces] = useState<OwnedSpace[]>([]);
   const [isSpacesLoading, setIsSpacesLoading] = useState(true);
   const [isSpaceDropdownOpen, setIsSpaceDropdownOpen] = useState(false);
   const spaceDropdownRef = useRef<HTMLDivElement>(null);
 
+  const [contractEntries, setContractEntries] = useState<ContractCalendarEntry[]>([]);
+  const [isContractCalendarLoading, setIsContractCalendarLoading] = useState(false);
+
   const { t, language } = useThemeLanguage();
   const dateLocale = language === 'en' ? enUS : vi;
 
-  // Đóng dropdown khi click ra ngoài khu vực chọn mặt bằng
+  // Đóng dropdown khi click ra ngoài khu vực chọn mặt bằng / chọn tháng-năm
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (spaceDropdownRef.current && !spaceDropdownRef.current.contains(e.target as Node)) {
         setIsSpaceDropdownOpen(false);
+      }
+      if (monthPickerRef.current && !monthPickerRef.current.contains(e.target as Node)) {
+        setIsMonthPickerOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -118,6 +164,51 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
     fetchOwnedSpaces();
   }, [fetchOwnedSpaces]);
 
+  // Lấy lịch hợp đồng (contract calendar) của mặt bằng đang chọn trong khoảng tháng đang xem
+  const fetchContractCalendar = useCallback(async (spaceId: string, monthDate: Date) => {
+    if (!spaceId) {
+      setContractEntries([]);
+      return;
+    }
+    setIsContractCalendarLoading(true);
+    try {
+      const token = localStorage.getItem('portal_token');
+      const from = format(startOfWeek(startOfMonth(monthDate)), "yyyy-MM-dd'T'00:00:00");
+      const to = format(endOfWeek(endOfMonth(monthDate)), "yyyy-MM-dd'T'23:59:59");
+      const url = `${API_BASE_URL}/api/Contract/calendar/space/${spaceId}?from=${from}&to=${to}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accept: '*/*',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const safeData: ContractCalendarEntry[] = Array.isArray(data) ? data : (data?.data || data?.items || []);
+        setContractEntries(safeData);
+      } else {
+        setContractEntries([]);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải lịch hợp đồng:', error);
+      setContractEntries([]);
+    } finally {
+      setIsContractCalendarLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchContractCalendar(selectedSpaceId, currentMonth);
+  }, [fetchContractCalendar, selectedSpaceId, currentMonth]);
+
+  const getContractEntriesForDate = useCallback(
+    (date: Date) => contractEntries.filter((entry) => isSameDay(new Date(entry.effectiveDate), date)),
+    [contractEntries]
+  );
+
   const getStatusLabel = (status: 'booked' | 'available' | 'conflict' | 'pending') => {
     switch (status) {
       case 'booked': return t('renter.bookedStatus');
@@ -137,6 +228,19 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
     slots.filter((s) => s.date === format(date, 'yyyy-MM-dd') && s.spaceId === selectedSpaceId);
 
   const selectedSlots = selectedDate ? getSlotsForDate(selectedDate) : [];
+  const selectedContracts = selectedDate ? getContractEntriesForDate(selectedDate) : [];
+
+  // Danh sách hợp đồng duy nhất đang hiển thị trong tháng, dùng để render chú thích màu
+  const visibleContracts = Array.from(
+    new Map(contractEntries.map((c) => [c.contractId, c])).values()
+  );
+
+  // Gán màu theo VỊ TRÍ của hợp đồng trong danh sách đang hiển thị (không theo contractId % length),
+  // để tránh 2 hợp đồng khác nhau (vd #4 và #14) vô tình trùng màu do phép chia dư.
+  const contractColorMap = new Map<number, string>(
+    visibleContracts.map((c, i) => [c.contractId, CONTRACT_COLOR_PALETTE[i % CONTRACT_COLOR_PALETTE.length]])
+  );
+  const getContractColor = (contractId: number) => contractColorMap.get(contractId) || contractStatusColor;
 
   const handleCreateSlotSubmit = (newSlotData: any) => {
     onCreateSlot(newSlotData);
@@ -148,16 +252,16 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
     setBookingSlot(null);
   };
 
-  const filteredSlotsForStats = slots.filter(s => s.spaceId === selectedSpaceId);
   const weekDaysHeader = language === 'en' ? WEEKDAYS_EN : WEEKDAYS;
 
   return (
-    <div className="slot-calendar-wrapper">
+    <div className={`slot-calendar-wrapper ${isExpanded ? 'slot-calendar-wrapper--expanded' : ''}`}>
       {/* Calendar Panel */}
       <div className="glass-card calendar-panel">
-        
-        {/* Bộ chọn Mặt bằng (Space Selector Dropdown) — custom, đồng bộ theme dark glass */}
-        <div className="space-selector-dropdown" ref={spaceDropdownRef}>
+
+        {/* Bộ chọn Mặt bằng + Nút phóng to lịch */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="space-selector-dropdown" style={{ flex: 1 }} ref={spaceDropdownRef}>
           <button
             type="button"
             className="space-selector-trigger"
@@ -192,6 +296,21 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
               ))}
             </div>
           )}
+          </div>
+
+          <button
+            type="button"
+            className="btn-icon"
+            title={isExpanded
+              ? (language === 'en' ? 'Collapse' : 'Thu gọn')
+              : (language === 'en' ? 'Expand' : 'Phóng to')}
+            onClick={() => {
+              setIsExpanded((prev) => !prev);
+              if (!isExpanded) setSelectedContractId(null);
+            }}
+          >
+            {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
         </div>
 
         {/* Month Navigation */}
@@ -199,22 +318,62 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
           <button className="btn-icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
             <ChevronLeft size={16} />
           </button>
-          <h2 className="calendar-month-title">
-            {format(currentMonth, 'MMMM yyyy', { locale: dateLocale })}
-          </h2>
+
+          <div className="space-selector-dropdown" ref={monthPickerRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="calendar-month-title"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              onClick={() => setIsMonthPickerOpen((prev) => !prev)}
+            >
+              {format(currentMonth, 'MMMM yyyy', { locale: dateLocale })}
+              <ChevronDown size={14} className={`space-selector-chevron ${isMonthPickerOpen ? 'space-selector-chevron--open' : ''}`} />
+            </button>
+
+            {isMonthPickerOpen && (
+              <div className="space-selector-menu" style={{ display: 'flex', gap: 8, padding: 10, width: 220 }}>
+                <select
+                  value={currentMonth.getMonth()}
+                  onChange={(e) => {
+                    const month = Number(e.target.value);
+                    setCurrentMonth((prev) => new Date(prev.getFullYear(), month, 1));
+                  }}
+                  style={{
+                    flex: 1, padding: '6px 8px', borderRadius: 6,
+                    border: '1px solid var(--color-border)', background: 'var(--color-bg-card-deep)',
+                    color: 'var(--color-text-primary)', fontSize: 13,
+                  }}
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i} value={i}>
+                      {format(new Date(2000, i, 1), 'MMMM', { locale: dateLocale })}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={currentMonth.getFullYear()}
+                  onChange={(e) => {
+                    const year = Number(e.target.value);
+                    setCurrentMonth((prev) => new Date(year, prev.getMonth(), 1));
+                  }}
+                  style={{
+                    width: 90, padding: '6px 8px', borderRadius: 6,
+                    border: '1px solid var(--color-border)', background: 'var(--color-bg-card-deep)',
+                    color: 'var(--color-text-primary)', fontSize: 13,
+                  }}
+                >
+                  {Array.from({ length: 21 }, (_, i) => {
+                    const year = new Date().getFullYear() - 10 + i;
+                    return <option key={year} value={year}>{year}</option>;
+                  })}
+                </select>
+              </div>
+            )}
+          </div>
+
           <button className="btn-icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
             <ChevronRight size={16} />
           </button>
-        </div>
-
-        {/* Legend */}
-        <div className="calendar-legend">
-          {Object.entries(slotStatusConfig).map(([key, cfg]) => (
-            <div key={key} className="legend-item">
-              <div className="legend-dot" style={{ background: cfg.color }} />
-              <span>{getStatusLabel(key as any)}</span>
-            </div>
-          ))}
         </div>
 
         {/* Weekday Labels */}
@@ -226,60 +385,66 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
           {/* Day Cells */}
           {calDays.map((day) => {
             const daySlots = getSlotsForDate(day);
+            const dayContracts = getContractEntriesForDate(day);
             const isSelected = selectedDate ? isSameDay(day, selectedDate) : false;
             const isCurrentMonth = isSameMonth(day, currentMonth);
             const todayDay = isToday(day);
+            const totalCount = daySlots.length + dayContracts.length;
 
             return (
-              <button
+              <div
                 key={day.toISOString()}
+                role="button"
+                tabIndex={0}
                 className={`cal-day ${!isCurrentMonth ? 'cal-day--other' : ''} ${isSelected ? 'cal-day--selected' : ''} ${todayDay ? 'cal-day--today' : ''}`}
                 onClick={() => setSelectedDate(day)}
               >
                 <span className="cal-day-num">{format(day, 'd')}</span>
-                {daySlots.length > 0 && (
-                  <div className="cal-day-dots">
-                    {daySlots.slice(0, 3).map((s, i) => (
-                      <div key={i} className="cal-dot" style={{ background: slotStatusConfig[s.status].color }} />
-                    ))}
-                    {daySlots.length > 3 && <span className="cal-dot-more">+{daySlots.length - 3}</span>}
-                  </div>
+
+                {isExpanded ? (
+                  dayContracts.length > 0 && (
+                    <div className="cal-day-contract-chips">
+                      {dayContracts.map((c) => {
+                        const color = getContractColor(c.contractId);
+                        return (
+                          <span
+                            key={`chip-${c.contractId}`}
+                            className="cal-day-contract-chip"
+                            style={{ background: `${color}26`, color }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedContractId(c.contractId);
+                            }}
+                          >
+                            {formatTime(c.startDateTime)}–{formatTime(c.endDateTime)} {c.tenantName}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : (
+                  <>
+                    {(daySlots.length > 0 || dayContracts.length > 0) && (
+                      <div className="cal-day-dots">
+                        {dayContracts.slice(0, 3).map((c) => (
+                          <div key={`c-${c.contractId}`} className="cal-dot" style={{ background: getContractColor(c.contractId) }} />
+                        ))}
+                        {daySlots.slice(0, 3 - Math.min(dayContracts.length, 3)).map((s, i) => (
+                          <div key={i} className="cal-dot" style={{ background: slotStatusConfig[s.status].color }} />
+                        ))}
+                        {totalCount > 3 && <span className="cal-dot-more">+{totalCount - 3}</span>}
+                      </div>
+                    )}
+                    {totalCount > 0 && (
+                      <div className="cal-slot-count">{totalCount}</div>
+                    )}
+                  </>
                 )}
-                {daySlots.length > 0 && (
-                  <div className="cal-slot-count">{daySlots.length}</div>
-                )}
-              </button>
+              </div>
             );
           })}
         </div>
 
-        {/* Quick Stats */}
-        <div className="calendar-stats">
-          <div className="cal-stat-item">
-            <span className="cal-stat-value" style={{ color: '#4A72FF' }}>
-              {filteredSlotsForStats.filter(s => s.status === 'booked').length}
-            </span>
-            <span className="label-caps">{t('renter.bookedStatus')}</span>
-          </div>
-          <div className="cal-stat-item">
-            <span className="cal-stat-value" style={{ color: '#2EEA82' }}>
-              {filteredSlotsForStats.filter(s => s.status === 'available').length}
-            </span>
-            <span className="label-caps">{t('renter.availableStatus')}</span>
-          </div>
-          <div className="cal-stat-item">
-            <span className="cal-stat-value" style={{ color: '#D9A05B' }}>
-              {filteredSlotsForStats.filter(s => s.status === 'pending').length}
-            </span>
-            <span className="label-caps">{t('renter.pendingStatus')}</span>
-          </div>
-          <div className="cal-stat-item">
-            <span className="cal-stat-value" style={{ color: '#FF4D6D' }}>
-              {filteredSlotsForStats.filter(s => s.status === 'conflict').length}
-            </span>
-            <span className="label-caps">{t('renter.conflictStatus')}</span>
-          </div>
-        </div>
       </div>
 
 
@@ -295,17 +460,9 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
                   : (language === 'en' ? 'Select a day' : 'Chọn một ngày')}
               </h3>
             </div>
-            <button 
-              className="btn-primary" 
-              style={{ fontSize: 12, padding: '8px 14px' }}
-              onClick={() => selectedDate && setIsNewSlotOpen(true)}
-            >
-              <Plus size={14} />
-              {t('renter.addSlot')}
-            </button>
           </div>
 
-          {selectedSlots.length === 0 ? (
+          {selectedContracts.length === 0 && selectedSlots.length === 0 ? (
             <div className="day-detail-empty">
               <Info size={28} style={{ color: 'var(--color-text-secondary)', opacity: 0.5 }} />
               <p className="text-secondary" style={{ fontSize: 14, marginTop: 10 }}>{t('renter.noSlotThisDay')}</p>
@@ -313,6 +470,47 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
             </div>
           ) : (
             <div className="slot-list">
+              {isContractCalendarLoading && (
+                <div className="slot-item" style={{ borderLeftColor: contractStatusColor }}>
+                  <span className="text-secondary" style={{ fontSize: 12 }}>{t('renter.loadingContracts')}</span>
+                </div>
+              )}
+              {selectedContracts.map((contract) => {
+                const color = getContractColor(contract.contractId);
+                return (
+                  <div
+                    key={`contract-${contract.contractId}`}
+                    className="slot-item"
+                    style={{ borderLeftColor: color, cursor: 'pointer' }}
+                    onClick={() => setSelectedContractId(contract.contractId)}
+                  >
+                    <div className="slot-item-top">
+                      <div className="slot-time">
+                        <Clock size={13} style={{ color }} />
+                        <span>{formatTime(contract.startDateTime)} – {formatTime(contract.endDateTime)}</span>
+                      </div>
+                      <span
+                        className="badge"
+                        style={{ background: `${color}26`, color, border: `1px solid ${color}30` }}
+                      >
+                        <FileText size={11} />
+                        {t('renter.contractStatus')} #{contract.contractId}
+                      </span>
+                    </div>
+                    <div className="slot-tenant">
+                      <div className="avatar avatar--sm" style={{ background: color }}>
+                        {getInitials(contract.tenantName)}
+                      </div>
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 600 }}>{contract.tenantName}</p>
+                        <p className="text-secondary" style={{ fontSize: 11 }}>
+                          {contract.businessDescription}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
               {selectedSlots.map((slot) => {
                 const cfg = slotStatusConfig[slot.status];
                 return (
@@ -387,6 +585,14 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
           slot={bookingSlot}
           onClose={() => setBookingSlot(null)}
           onSubmit={handleBookingSubmit}
+        />
+      )}
+
+      {selectedContractId != null && (
+        <ContractDetailModal
+          contractId={selectedContractId}
+          color={getContractColor(selectedContractId)}
+          onClose={() => setSelectedContractId(null)}
         />
       )}
     </div>
