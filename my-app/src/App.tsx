@@ -16,6 +16,8 @@ import { AiImageEditorPage } from './features/ai-image-editor/AiImageEditorPage'
 import ClickSpark from './components/ClickSpark'; 
 import './App.css';
 
+import { NotFoundPage } from './components/NotFoundPage'; // Chỉnh đường dẫn nếu cần
+
 import { FloatingChat } from './components/FloatingChat'; 
 
 import { ROUTES, type PortalRole } from './routes/routes';
@@ -146,8 +148,8 @@ const App: React.FC = () => {
           element={<AccessDeniedPage />}
         />
 
-        {/* Fallback Catch All */}
-        <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+        {/* Fallback Catch All (404 Page) */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
       <FloatingChat />
