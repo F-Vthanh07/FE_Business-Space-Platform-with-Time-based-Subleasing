@@ -34,6 +34,7 @@ export interface ContractSchedule {
   endTime: string; // 'HH:mm'
 }
 
+
 const HEADER_LINE_QUOC_HIEU = 'CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM';
 const HEADER_LINE_TIEU_NGU = 'Độc lập - Tự do - Hạnh Phúc';
 const HEADER_LINE_TITLE = 'HỢP ĐỒNG THUÊ MẶT BẰNG';

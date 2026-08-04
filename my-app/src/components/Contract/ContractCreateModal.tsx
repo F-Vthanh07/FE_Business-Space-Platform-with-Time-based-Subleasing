@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { X, Printer, Briefcase, Wallet, CalendarDays, Edit3, FileText, Building2 } from 'lucide-react';
@@ -21,6 +22,13 @@ interface ContractCreateModalProps {
   onCreated: (chatMessage: string) => Promise<void> | void;
   // Nếu có giá trị -> modal chạy ở chế độ SỬA hợp đồng đã tồn tại
   existingContract?: any;
+}
+
+interface UserProfile {
+  userId: string;
+  fullName: string;
+  citizenIDNumber: string;
+  dateOfIssue: string; // "2022-01-09"
 }
 
 const API_BASE = 'https://flexi-space-capstone-project.onrender.com';
@@ -61,6 +69,10 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   const [isLoadingBookingRequests, setIsLoadingBookingRequests] = useState(false);
   const [isCreatingContract, setIsCreatingContract] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+
+  const [lessorProfile, setLessorProfile] = useState<UserProfile | null>(null);
+  const [lesseeProfile, setLesseeProfile] = useState<UserProfile | null>(null);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   // Nhớ chuỗi đã render lần trước cho từng field (vd DIEN_TICH -> "90 m2")
   // để lần sau dữ liệu đổi, chỉ cần tìm đúng chuỗi cũ đó trong nội dung và
   // thay bằng chuỗi mới -> không đụng tới các phần bạn đã tự sửa tay.
@@ -167,6 +179,43 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
     };
     fetchMySpaces();
   }, [isOpen, token]);
+
+  useEffect(() => {
+  if (!isOpen || !token) return;
+  if (!lessorId && !lesseeId) return;
+
+  const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
+    try {
+      const res = await fetch(`${API_BASE}/api/Profile/user/${userId}`, {
+        headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return {
+        userId: data.userId,
+        fullName: data.fullName || '',
+        citizenIDNumber: data.citizenIDNumber || data.identityCardNumber || '',
+        dateOfIssue: data.dateOfIssue || '',
+      };
+    } catch (err) {
+      console.error('Fetch profile failed:', userId, err);
+      return null;
+    }
+  };
+
+  const run = async () => {
+    setIsLoadingProfiles(true);
+    const [lessor, lessee] = await Promise.all([
+      lessorId ? fetchProfile(String(lessorId)) : Promise.resolve(null),
+      lesseeId ? fetchProfile(String(lesseeId)) : Promise.resolve(null),
+    ]);
+    setLessorProfile(lessor);
+    setLesseeProfile(lessee);
+    setIsLoadingProfiles(false);
+  };
+
+  run();
+  }, [isOpen, token, lessorId, lesseeId]);
 
   // Lấy các yêu cầu đặt thuê đã match giữa 2 bên
   useEffect(() => {
@@ -300,8 +349,16 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
       NGAY_BAT_DAU: contractData.startDate ? new Date(contractData.startDate).toLocaleDateString('vi-VN') : '',
       NGAY_KET_THUC: computeEndDate(contractData.startDate, contractData.duration, contractData.durationUnit),
 
-      BEN_A_HO_TEN: activeChat?.lessorName || activeChat?.LessorName || '',
-      BEN_B_HO_TEN: activeChat?.lesseeName || activeChat?.LesseeName || '',
+      BEN_A_HO_TEN: lessorProfile?.fullName || activeChat?.lessorName || activeChat?.LessorName || '',
+      BEN_B_HO_TEN: lesseeProfile?.fullName || activeChat?.lesseeName || activeChat?.LesseeName || '',
+      BEN_A_CCCD: lessorProfile?.citizenIDNumber || '',
+      BEN_B_CCCD: lesseeProfile?.citizenIDNumber || '',
+      BEN_A_CCCD_NGAY_CAP: lessorProfile?.dateOfIssue
+        ? new Date(lessorProfile.dateOfIssue).toLocaleDateString('vi-VN')
+        : '',
+      BEN_B_CCCD_NGAY_CAP: lesseeProfile?.dateOfIssue
+        ? new Date(lesseeProfile.dateOfIssue).toLocaleDateString('vi-VN')
+        : '',
     };
   };
 
@@ -353,6 +410,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
 
   // Mỗi khi các trường tài chính/lịch trình/mặt bằng thay đổi -> tự dò và thay
   // đúng chỗ trong nội dung điều khoản, không đụng tới phần bạn đã tự sửa tay.
+
   useEffect(() => {
     if (!selectedTemplateId) return;
     applyMergeDataDiff(buildMergeData());
@@ -368,10 +426,10 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
     contractData.businessPurpose,
     contractData.spaceId,
     contractData.primaryBookingRequestId,
-    // Lịch hoạt động là mảng object nên phải so sánh theo nội dung (JSON) chứ
-    // không phải theo reference, nếu không effect sẽ không bao giờ chạy lại.
     JSON.stringify(contractData.contractSchedules),
     mySpaces,
+    lessorProfile,   // thêm
+    lesseeProfile,   // thêm
   ]);
 
   const handlePrintTemplate = () => {
@@ -562,6 +620,31 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
             className="cc-scrollbar"
             style={{ width: '48%', overflowY: 'auto', padding: '20px', borderRight: '1px solid #E2E8F0' }}
           >
+            <div className="cc-card">
+              <div className="cc-card-header">
+                <Building2 size={14} color="#64748B" /> Thông tin định danh 2 bên
+              </div>
+              {isLoadingProfiles ? (
+                <span style={{ fontSize: '12px', color: '#94A3B8' }}>Đang tải thông tin định danh...</span>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12.5px', color: '#334155' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, marginBottom: 4, color: '#1E293B' }}>Bên A (chủ mặt bằng)</div>
+                    <div>{lessorProfile?.fullName || <span style={{ color: '#CBD5E1' }}>Chưa lấy được</span>}</div>
+                    <div style={{ color: '#64748B', marginTop: 2 }}>
+                      CCCD: {lessorProfile?.citizenIDNumber || '—'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, marginBottom: 4, color: '#1E293B' }}>Bên B (người thuê)</div>
+                    <div>{lesseeProfile?.fullName || <span style={{ color: '#CBD5E1' }}>Chưa lấy được</span>}</div>
+                    <div style={{ color: '#64748B', marginTop: 2 }}>
+                      CCCD: {lesseeProfile?.citizenIDNumber || '—'}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="cc-card">
               <div className="cc-card-header">
                 <Briefcase size={14} color="#64748B" /> Liên kết yêu cầu
