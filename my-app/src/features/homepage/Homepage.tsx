@@ -1,5 +1,6 @@
 /* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/features/homepage/Homepage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
@@ -22,8 +23,7 @@ interface HomepageProps {
   onLaunch: () => void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
+export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
   const { t } = useThemeLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
 
