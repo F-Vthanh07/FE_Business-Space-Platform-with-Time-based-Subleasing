@@ -87,7 +87,6 @@ interface UserAiImageHistoryApiItem {
   outputImageUrl?: string;
   outputImage?: string;
   maskUrl?: string;
-  base64Mask?: string;
 }
 
 const MAX_IMAGE_SIZE = 4096;
@@ -107,17 +106,22 @@ const tourSteps: Step[] = [
   {
     target: '[data-tour="workspace"]',
     title: 'Khu vực ảnh',
-    content: 'Upload ảnh tại đây. Sau khi có ảnh, vùng này dùng để xem ảnh, vẽ mask và pan khi zoom lớn.',
+    content: 'Upload ảnh tại đây. Sau khi có ảnh, vùng này dùng để xem ảnh, tô xanh lá neon vùng cần chỉnh và pan khi zoom lớn.',
   },
   {
     target: '[data-tour="tools"]',
-    title: 'Công cụ mask',
-    content: 'Brush để tô vùng cần chỉnh, eraser để xóa mask, pan để kéo ảnh khi zoom. Undo, redo và clear mask nằm cùng nhóm này.',
+    title: 'Công cụ khoanh vùng',
+    content: 'Brush để tô xanh lá neon vùng cần chỉnh, eraser để xóa vùng đã tô, pan để kéo ảnh khi zoom. Undo, redo và clear nằm cùng nhóm này.',
+  },
+  {
+    target: '[data-tour="object-image"]',
+    title: 'Ảnh object',
+    content: 'Nếu muốn AI lấy một vật thể cụ thể để đưa vào vùng tô xanh lá neon, bấm nút này rồi upload ảnh object. Nếu bỏ trống, AI sẽ tự tạo nội dung theo prompt.',
   },
   {
     target: '[data-tour="brush-size"]',
     title: 'Kích thước brush',
-    content: 'Điều chỉnh độ lớn của brush hoặc eraser. Mask vẫn được quy đổi đúng về ảnh gốc.',
+    content: 'Điều chỉnh độ lớn của brush hoặc eraser. Vùng tô được quy đổi đúng về kích thước ảnh gốc.',
   },
   {
     target: '[data-tour="zoom"]',
@@ -132,12 +136,12 @@ const tourSteps: Step[] = [
   {
     target: '[data-tour="generate"]',
     title: 'Tạo ảnh',
-    content: 'Gửi ảnh gốc, mask đúng kích thước ảnh gốc và prompt sang luồng xử lý AI.',
+    content: 'Gửi ảnh gốc đã phủ xanh lá neon vùng cần chỉnh, ảnh object nếu có, và prompt sang luồng xử lý AI.',
   },
   {
-    target: '[data-tour="result"]',
+    target: '[data-tour="workspace"]',
     title: 'Kết quả',
-    content: 'Ảnh kết quả sẽ hiện ở đây. Bạn có thể chỉnh tiếp hoặc quay lại ảnh gốc.',
+    content: 'Sau khi AI xử lý xong, ảnh kết quả sẽ thay vào chính khung editor này. Bạn vẫn có thể quay lại ảnh gốc để chỉnh tiếp.',
   },
   {
     target: '[data-tour="history"]',
@@ -217,7 +221,7 @@ const normalizeUserAiImageHistoryItem = (item: UserAiImageHistoryApiItem, index 
     imageUrl: normalizeImageResult(
       item.imageUrl || item.imageResultUrl || item.resultImageUrl || item.resultImage || item.generatedImageUrl || item.generatedImage || item.outputImageUrl || item.outputImage || ''
     ),
-    maskUrl: item.maskUrl || (item.base64Mask ? normalizeImageResult(item.base64Mask) : undefined),
+    maskUrl: item.maskUrl,
   });
 
 const normalizeUserAiImageHistory = (items: UserAiImageHistoryApiItem[]): EditHistoryItem[] =>
@@ -230,6 +234,9 @@ export const AiImageEditorPage: React.FC = () => {
   const [workspaceSize, setWorkspaceSize] = useState({ width: 920, height: 560 });
   const [imageUrl, setImageUrl] = useState('');
   const [image, setImage] = useState<HTMLImageElement | null>(null);
+  const [objectImageUrl, setObjectImageUrl] = useState('');
+  const [objectImage, setObjectImage] = useState<HTMLImageElement | null>(null);
+  const [isObjectUploaderOpen, setIsObjectUploaderOpen] = useState(false);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [redoStack, setRedoStack] = useState<Stroke[]>([]);
   const [tool, setTool] = useState<Tool>('brush');
@@ -334,9 +341,55 @@ export const AiImageEditorPage: React.FC = () => {
     },
   });
 
+  const onObjectDrop = async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Chỉ hỗ trợ JPG, PNG hoặc WebP cho ảnh object.');
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    try {
+      const loaded = await loadImage(url);
+      if (loaded.width > MAX_IMAGE_SIZE || loaded.height > MAX_IMAGE_SIZE) {
+        toast.error('Ảnh object tối đa 4096px mỗi chiều.');
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      if (objectImageUrl) URL.revokeObjectURL(objectImageUrl);
+      setObjectImageUrl(url);
+      setObjectImage(loaded);
+      toast.success('Đã tải ảnh object.');
+    } catch {
+      URL.revokeObjectURL(url);
+      toast.error('Không thể đọc ảnh object này.');
+    }
+  };
+
+  const {
+    getRootProps: getObjectRootProps,
+    getInputProps: getObjectInputProps,
+    isDragActive: isObjectDragActive,
+  } = useDropzone({
+    onDrop: onObjectDrop,
+    multiple: false,
+    accept: {
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp'],
+    },
+  });
+
   useEffect(() => () => {
     if (imageUrl) URL.revokeObjectURL(imageUrl);
   }, [imageUrl]);
+
+  useEffect(() => () => {
+    if (objectImageUrl) URL.revokeObjectURL(objectImageUrl);
+  }, [objectImageUrl]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -496,7 +549,7 @@ export const AiImageEditorPage: React.FC = () => {
     });
   };
 
-  const drawMask = (context: Konva.Context) => {
+  const drawSelectionOverlay = (context: Konva.Context) => {
     const canvasContext = context._context;
     canvasContext.save();
 
@@ -506,8 +559,8 @@ export const AiImageEditorPage: React.FC = () => {
 
       canvasContext.save();
       canvasContext.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
-      canvasContext.globalAlpha = stroke.tool === 'eraser' ? 1 : 0.52;
-      canvasContext.strokeStyle = '#ef4444';
+      canvasContext.globalAlpha = 1;
+      canvasContext.strokeStyle = '#00FF00';
       canvasContext.lineWidth = stroke.size * scaleToImage;
       canvasContext.lineCap = 'round';
       canvasContext.lineJoin = 'round';
@@ -525,42 +578,7 @@ export const AiImageEditorPage: React.FC = () => {
     canvasContext.restore();
   };
 
-  const exportOriginalMask = () => {
-    if (!image) return '';
-
-    const canvas = document.createElement('canvas');
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
-    const context = canvas.getContext('2d');
-    if (!context) return '';
-
-    context.fillStyle = '#000';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    strokes.forEach((stroke) => {
-      if (stroke.points.length < 2) return;
-
-      context.save();
-      context.globalCompositeOperation = 'source-over';
-      context.strokeStyle = stroke.tool === 'eraser' ? '#000' : '#fff';
-      context.lineWidth = stroke.size;
-      context.lineCap = 'round';
-      context.lineJoin = 'round';
-      context.beginPath();
-      context.moveTo(stroke.points[0], stroke.points[1]);
-
-      for (let index = 2; index < stroke.points.length; index += 2) {
-        context.lineTo(stroke.points[index], stroke.points[index + 1]);
-      }
-
-      context.stroke();
-      context.restore();
-    });
-
-    return canvas.toDataURL('image/png');
-  };
-
-  const exportOriginalImage = () => {
+  const exportMarkedImage = () => {
     if (!image) return '';
 
     const canvas = document.createElement('canvas');
@@ -570,15 +588,57 @@ export const AiImageEditorPage: React.FC = () => {
     if (!context) return '';
 
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const overlayCanvas = document.createElement('canvas');
+    overlayCanvas.width = canvas.width;
+    overlayCanvas.height = canvas.height;
+    const overlayContext = overlayCanvas.getContext('2d');
+    if (!overlayContext) return '';
+
+    strokes.forEach((stroke) => {
+      if (stroke.points.length < 2) return;
+
+      overlayContext.save();
+      overlayContext.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
+      overlayContext.globalAlpha = 1;
+      overlayContext.strokeStyle = '#00FF00';
+      overlayContext.lineWidth = stroke.size;
+      overlayContext.lineCap = 'round';
+      overlayContext.lineJoin = 'round';
+      overlayContext.beginPath();
+      overlayContext.moveTo(stroke.points[0], stroke.points[1]);
+
+      for (let index = 2; index < stroke.points.length; index += 2) {
+        overlayContext.lineTo(stroke.points[index], stroke.points[index + 1]);
+      }
+
+      overlayContext.stroke();
+      overlayContext.restore();
+    });
+
+    context.drawImage(overlayCanvas, 0, 0);
+    return canvas.toDataURL('image/png');
+  };
+
+  const exportObjectImage = () => {
+    if (!objectImage) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = objectImage.naturalWidth;
+    canvas.height = objectImage.naturalHeight;
+    const context = canvas.getContext('2d');
+    if (!context) return null;
+
+    context.drawImage(objectImage, 0, 0, canvas.width, canvas.height);
     return canvas.toDataURL('image/png');
   };
 
   const exportCanvas = () => {
-    const dataUrl = exportOriginalMask();
+    const dataUrl = exportMarkedImage();
     if (!dataUrl) return;
 
     const link = document.createElement('a');
-    link.download = 'ai-mask-original-size.png';
+    link.download = 'ai-marked-image.png';
     link.href = dataUrl;
     link.click();
   };
@@ -735,7 +795,7 @@ export const AiImageEditorPage: React.FC = () => {
   };
 
   const processImage = async ({ prompt }: PromptForm) => {
-    if (!image || !stageRef.current) {
+    if (!image) {
       toast.error('Vui lòng tải ảnh trước.');
       return;
     }
@@ -745,12 +805,12 @@ export const AiImageEditorPage: React.FC = () => {
       return;
     }
 
-    const originalImage = exportOriginalImage();
-    const maskForAi = exportOriginalMask();
-    if (!originalImage || !maskForAi) {
-      toast.error('Không thể xuất ảnh hoặc mask.');
+    const markedImage = exportMarkedImage();
+    if (!markedImage) {
+      toast.error('Không thể xuất ảnh đã khoanh vùng.');
       return;
     }
+    const objectImageForAi = exportObjectImage();
 
     setIsProcessing(true);
     const loadingToast = toast.loading('AI đang xử lý ảnh...');
@@ -766,8 +826,8 @@ export const AiImageEditorPage: React.FC = () => {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          base64Image: originalImage,
-          base64Mask: maskForAi,
+          base64Image: markedImage,
+          base64Obj: objectImageForAi,
           prompt,
         }),
       });
@@ -795,7 +855,6 @@ export const AiImageEditorPage: React.FC = () => {
         createdAt: new Date().toISOString(),
         prompt,
         imageUrl: generatedImage,
-        maskUrl: maskForAi,
       }, ...history].slice(0, MAX_HISTORY_ITEMS);
 
       persistHistory(nextHistory);
@@ -895,6 +954,10 @@ export const AiImageEditorPage: React.FC = () => {
           <button className="ai-editor-ghost-btn" type="button" onClick={() => {
             setImage(null);
             setImageUrl('');
+            if (objectImageUrl) URL.revokeObjectURL(objectImageUrl);
+            setObjectImage(null);
+            setObjectImageUrl('');
+            setIsObjectUploaderOpen(false);
             setResultUrl('');
             setStrokes([]);
             setRedoStack([]);
@@ -913,6 +976,43 @@ export const AiImageEditorPage: React.FC = () => {
               <ImageUp size={42} />
               <h2>Click hoặc kéo-thả ảnh vào đây</h2>
               <p>Hỗ trợ JPG, PNG, WebP.</p>
+            </div>
+          ) : isProcessing ? (
+            <div className="ai-editor-canvas-wrap">
+              <div className="ai-editor-processing-card ai-editor-processing-card--workspace" role="status" aria-live="polite">
+                <div className="ai-editor-processing-preview">
+                  <div className="ai-editor-processing-grid" />
+                  <div className="ai-editor-processing-scan" />
+                  <Sparkles className="ai-editor-processing-sparkle" size={34} />
+                </div>
+                <div className="ai-editor-processing-copy">
+                  <Loader2 className="ai-editor-spin" size={20} />
+                  <div>
+                    <strong>AI đang xử lý ảnh</strong>
+                    <span>Đang phân tích vùng khoanh xanh lá neon và tạo ảnh kết quả...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : resultUrl ? (
+            <div className="ai-editor-canvas-wrap">
+              <div className="ai-editor-workspace-result">
+                <img src={resultUrl} alt="AI generated result" />
+                <div className="ai-editor-workspace-result-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResultUrl('');
+                      setStrokes([]);
+                      setRedoStack([]);
+                      setZoom(1);
+                    }}
+                  >
+                    <RotateCcw size={16} />
+                    Quay lại ảnh gốc
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="ai-editor-canvas-wrap" ref={viewportRef}>
@@ -945,7 +1045,7 @@ export const AiImageEditorPage: React.FC = () => {
                   <Shape
                     width={stageSize.width}
                     height={stageSize.height}
-                    sceneFunc={(context) => drawMask(context)}
+                    sceneFunc={(context) => drawSelectionOverlay(context)}
                   />
                 </Layer>
               </Stage>
@@ -955,19 +1055,30 @@ export const AiImageEditorPage: React.FC = () => {
 
         <aside className="ai-editor-panel">
           <div className="ai-editor-tools" data-tour="tools">
-            <button className={tool === 'brush' ? 'is-selected' : ''} type="button" title="Brush" onClick={() => setTool('brush')}>
+            <button className={tool === 'brush' ? 'is-selected' : ''} type="button" title="Brush" disabled={Boolean(resultUrl)} onClick={() => setTool('brush')}>
               <Brush size={18} />
             </button>
-            <button className={tool === 'eraser' ? 'is-selected' : ''} type="button" title="Eraser" onClick={() => setTool('eraser')}>
+            <button className={tool === 'eraser' ? 'is-selected' : ''} type="button" title="Eraser" disabled={Boolean(resultUrl)} onClick={() => setTool('eraser')}>
               <Eraser size={18} />
             </button>
-            <button className={tool === 'pan' ? 'is-selected' : ''} type="button" title="Pan" onClick={() => setTool('pan')}>
+            <button className={tool === 'pan' ? 'is-selected' : ''} type="button" title="Pan" disabled={Boolean(resultUrl)} onClick={() => setTool('pan')}>
               <Hand size={18} />
             </button>
-            <button type="button" title="Undo" disabled={!strokes.length} onClick={undo}><Undo2 size={18} /></button>
-            <button type="button" title="Redo" disabled={!redoStack.length} onClick={redo}><Redo2 size={18} /></button>
-            <button type="button" title="Clear mask" disabled={!strokes.length} onClick={() => { setStrokes([]); setRedoStack([]); }}><Trash2 size={18} /></button>
+            <button type="button" title="Undo" disabled={!strokes.length || Boolean(resultUrl)} onClick={undo}><Undo2 size={18} /></button>
+            <button type="button" title="Redo" disabled={!redoStack.length || Boolean(resultUrl)} onClick={redo}><Redo2 size={18} /></button>
+            <button type="button" title="Clear selection" disabled={!strokes.length || Boolean(resultUrl)} onClick={() => { setStrokes([]); setRedoStack([]); }}><Trash2 size={18} /></button>
           </div>
+
+          <button
+            className={`ai-editor-object-open-btn ${objectImage ? 'has-object' : ''}`}
+            type="button"
+            disabled={Boolean(resultUrl)}
+            onClick={() => setIsObjectUploaderOpen(true)}
+            data-tour="object-image"
+          >
+            <ImageUp size={17} />
+            {objectImage ? 'Đã chọn ảnh object' : 'Nhập ảnh object'}
+          </button>
 
           <label className="ai-editor-control" data-tour="brush-size">
             <span>Kích thước brush: {brushSize}px</span>
@@ -982,7 +1093,6 @@ export const AiImageEditorPage: React.FC = () => {
 
           <form
             className="ai-editor-form"
-            // eslint-disable-next-line react-hooks/refs
             onSubmit={handleSubmit((data) => {
               void processImage(data);
             })}
@@ -999,15 +1109,15 @@ export const AiImageEditorPage: React.FC = () => {
               />
             </label>
             {errors.prompt && <p className="ai-editor-error">{errors.prompt.message}</p>}
-            <button className="ai-editor-primary-btn" type="submit" disabled={isProcessing || !image} data-tour="generate">
+            <button className="ai-editor-primary-btn" type="submit" disabled={isProcessing || !image || Boolean(resultUrl)} data-tour="generate">
               {isProcessing ? <Loader2 className="ai-editor-spin" size={18} /> : <Sparkles size={18} />}
               Tạo ảnh
             </button>
           </form>
 
-          <button className="ai-editor-ghost-btn" type="button" disabled={!image} onClick={exportCanvas}>
+          <button className="ai-editor-ghost-btn" type="button" disabled={!image || Boolean(resultUrl)} onClick={exportCanvas}>
             <Download size={16} />
-            Xuất canvas
+            Xuất ảnh khoanh vùng
           </button>
 
           <button className="ai-editor-ghost-btn" type="button" onClick={openHistory} data-tour="history">
@@ -1017,25 +1127,60 @@ export const AiImageEditorPage: React.FC = () => {
         </aside>
       </div>
 
-      <section className="ai-editor-result" data-tour="result">
-        <div>
-          <p className="label-caps">RESULT</p>
-          <h2>Ảnh kết quả</h2>
+      {isObjectUploaderOpen && (
+        <div className="ai-editor-object-modal-backdrop" role="presentation" onClick={() => setIsObjectUploaderOpen(false)}>
+          <section
+            className="ai-editor-object-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ai-object-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <p className="label-caps">OBJECT IMAGE</p>
+                <h2 id="ai-object-modal-title">Ảnh object muốn thêm</h2>
+              </div>
+              <button type="button" aria-label="Đóng" onClick={() => setIsObjectUploaderOpen(false)}>
+                <X size={18} />
+              </button>
+            </header>
+
+            {objectImageUrl ? (
+              <div className="ai-editor-object-preview ai-editor-object-preview--modal">
+                <img src={objectImageUrl} alt="Object preview" />
+                <div>
+                  <span>Ảnh object hiện tại</span>
+                  <p>AI sẽ lấy object từ ảnh này và đưa vào vùng bạn đã tô xanh lá neon trên ảnh gốc.</p>
+                  <div className="ai-editor-object-modal-actions">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (objectImageUrl) URL.revokeObjectURL(objectImageUrl);
+                        setObjectImageUrl('');
+                        setObjectImage(null);
+                      }}
+                    >
+                      <Trash2 size={15} />
+                      Xóa object
+                    </button>
+                    <button type="button" onClick={() => setIsObjectUploaderOpen(false)}>
+                      Xong
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div {...getObjectRootProps()} className={`ai-editor-object-dropzone ai-editor-object-dropzone--modal ${isObjectDragActive ? 'is-active' : ''}`}>
+                <input {...getObjectInputProps()} />
+                <ImageUp size={32} />
+                <strong>Kéo-thả hoặc chọn ảnh object</strong>
+                <span>Nếu không upload ảnh object, AI sẽ tự tạo nội dung mới dựa theo prompt.</span>
+              </div>
+            )}
+          </section>
         </div>
-        {resultUrl ? (
-          <>
-            <img src={resultUrl} alt="AI generated result" />
-            <div className="ai-editor-result-actions">
-              <button type="button" onClick={() => setResultUrl('')}>Chỉnh tiếp</button>
-              <button type="button" onClick={() => { setStrokes([]); setRedoStack([]); setResultUrl(''); }}>Quay lại ảnh gốc</button>
-            </div>
-          </>
-        ) : (
-          <div className="ai-editor-result-empty">
-            Ảnh kết quả sẽ xuất hiện ở đây sau khi AI xử lý.
-          </div>
-        )}
-      </section>
+      )}
 
       {isHistoryOpen && (
         <div className="ai-editor-history-modal-backdrop" role="presentation" onClick={() => setIsHistoryOpen(false)}>
