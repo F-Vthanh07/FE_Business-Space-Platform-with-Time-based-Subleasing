@@ -369,8 +369,8 @@ export const MyContractsPage: React.FC = () => {
 
             return (
               <div key={id} className="mc-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: '240px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>
+                  <div style={{ flex: '1 1 200px', minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 700, fontSize: '14.5px', color: '#fff' }}>Hợp đồng #{id}</span>
                       <StatusBadge status={status} />

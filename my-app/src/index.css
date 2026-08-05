@@ -174,7 +174,7 @@
 
 html, body {
   height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 body {
@@ -307,6 +307,8 @@ input, textarea {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   overflow: hidden;
   padding: 16px;
   background-color: var(--color-bg-global);
@@ -316,6 +318,7 @@ input, textarea {
 .app-body {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   margin-top: 16px;
   gap: 16px;
@@ -323,7 +326,9 @@ input, textarea {
 
 .main-content {
   flex: 1;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }

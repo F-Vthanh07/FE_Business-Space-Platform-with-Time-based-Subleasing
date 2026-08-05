@@ -16,17 +16,15 @@ import { HomeSearchBar } from './components/HomeSearchBar';
 import { HomeListings } from './components/HomeListings';
 import { ScheduleSidebar } from './components/ScheduleSidebar';
 
-// Data cũ (nhớ giữ lại file demoDb chứa pricingTiers)
-import { pricingTiers } from './demoDb';
-
 import './Homepage.css';
 
 interface HomepageProps {
   onLaunch: () => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
-  const { language, t } = useThemeLanguage();
+  const { t } = useThemeLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // State bật/tắt Map
@@ -106,8 +104,6 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
 
     return () => ctx.revert(); // Dọn dẹp
   }, [isMapMode]);
-
-  const currentPricing = pricingTiers[language] || pricingTiers['en'];
 
   return (
     <div className="homepage-wrapper" ref={containerRef}>
@@ -220,60 +216,6 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch }) => {
               </div>
             </>
           )}
-        </div>
-      </section>
-
-      {/* =========================================
-          SECTION 3: PRICING
-          ========================================= */}
-      <section id="pricing" className="pricing-section reveal-on-scroll">
-        <h2 className="section-title">
-          {language === 'en'
-            ? 'Transparent Subscription Plans'
-            : 'Bảng Giá Dịch Vụ Minh Bạch'}
-        </h2>
-        <p className="section-subtitle">
-          {language === 'en'
-            ? 'Select a suitable tier to scale your retail locations.'
-            : 'Lựa chọn gói dịch vụ phù hợp để tối ưu hóa địa điểm bán lẻ của bạn.'}
-        </p>
-
-        <div className="pricing-grid">
-          {currentPricing?.map((tier: any, idx: number) => (
-            <div
-              key={idx}
-              className={`pricing-card ${tier.popular ? 'pricing-card--popular' : ''}`}
-            >
-              <div>
-                <h3 className="pricing-card-title">{tier.name}</h3>
-                <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 8 }}>
-                  {tier.desc}
-                </p>
-              </div>
-              <div>
-                <span className="pricing-card-price">{tier.price}</span>
-                {tier.period && (
-                  <span className="pricing-price-period"> {tier.period}</span>
-                )}
-              </div>
-              <ul className="pricing-features-list">
-                {tier.features.map((feat: string, fidx: number) => (
-                  <li key={fidx} className="pricing-feature-item">
-                    <span className="pricing-feature-check">+</span>
-                    <span>{feat}</span>
-                  </li>
-                ))}
-              </ul>
-              <button
-                className={`pricing-btn ${
-                  tier.popular ? 'pricing-btn-primary' : 'pricing-btn-secondary'
-                }`}
-                onClick={onLaunch}
-              >
-                {tier.btn}
-              </button>
-            </div>
-          ))}
         </div>
       </section>
 

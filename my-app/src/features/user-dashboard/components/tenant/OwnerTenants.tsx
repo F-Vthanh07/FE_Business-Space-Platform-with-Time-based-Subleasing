@@ -43,6 +43,9 @@ interface Tenant {
   monthlyRent: number;
   status: ContractStatus;
   contract: any;
+  // true nếu người dùng hiện tại là bên cho thuê (lessor) trong hợp đồng này,
+  // false nếu là bên thuê (lessee) — quyết định hiển thị "đối tác" là ai và quyền sửa/xoá.
+  isLessor: boolean;
 }
 
 const statusConfig: Record<ContractStatus, { className: string; icon: React.ReactNode }> = {
@@ -112,8 +115,13 @@ export const OwnerTenants: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      const [contractRes, spaceRes] = await Promise.all([
+      // Lấy cả hợp đồng mà tôi là bên cho thuê (Lessor) VÀ hợp đồng mà tôi là bên thuê (Lessee),
+      // rồi gộp lại — trước đây chỉ gọi theo LessorId nên bỏ sót hợp đồng tôi đứng vai người thuê.
+      const [asLessorRes, asLesseeRes, spaceRes] = await Promise.all([
         fetch(`${API_BASE}/api/Contract/GetAll?LessorId=${encodeURIComponent(currentUserId)}`, {
+          headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+        }),
+        fetch(`${API_BASE}/api/Contract/GetAll?LesseeId=${encodeURIComponent(currentUserId)}`, {
           headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
         }),
         fetch(`${API_BASE}/api/Space/GetAll?OwnerId=${encodeURIComponent(currentUserId)}`, {
@@ -121,15 +129,30 @@ export const OwnerTenants: React.FC = () => {
         }),
       ]);
 
-      const contracts = contractRes.ok ? normalizeList(await contractRes.json()) : [];
+      const asLessorContracts = asLessorRes.ok ? normalizeList(await asLessorRes.json()) : [];
+      const asLesseeContracts = asLesseeRes.ok ? normalizeList(await asLesseeRes.json()) : [];
       const spaces = spaceRes.ok ? normalizeList(await spaceRes.json()) : [];
       const spaceMap = new Map<number, any>(spaces.map((s: any) => [s.id ?? s.Id, s]));
 
-      // Contract GetAll không trả tên/sđt/email người thuê, nên phải gọi riêng User/{id}
-      // cho từng lesseeId duy nhất (tránh gọi trùng nếu 1 người thuê nhiều hợp đồng).
-      const uniqueLesseeIds = Array.from(new Set(contracts.map((c: any) => c.lesseeId ?? c.LesseeId).filter(Boolean)));
+      // Khử trùng lặp theo contractId (phòng trường hợp 1 hợp đồng mà lessor và lessee cùng là tôi).
+      const contractMap = new Map<number, any>();
+      [...asLessorContracts, ...asLesseeContracts].forEach((c: any) => {
+        contractMap.set(c.id ?? c.Id, c);
+      });
+      const contracts = Array.from(contractMap.values());
+
+      // Với mỗi hợp đồng, "đối tác" là bên còn lại — nếu tôi là lessor thì đối tác là lessee, và ngược lại.
+      const uniquePartnerIds = Array.from(
+        new Set(
+          contracts.map((c: any) => {
+            const lessorId = c.lessorId ?? c.LessorId;
+            const lesseeId = c.lesseeId ?? c.LesseeId;
+            return String(lessorId) === String(currentUserId) ? lesseeId : lessorId;
+          }).filter(Boolean)
+        )
+      );
       const userEntries = await Promise.all(
-        uniqueLesseeIds.map(async (id) => {
+        uniquePartnerIds.map(async (id) => {
           try {
             const res = await fetch(`${API_BASE}/api/User/${id}`, {
               headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
@@ -143,16 +166,50 @@ export const OwnerTenants: React.FC = () => {
       );
       const userMap = new Map(userEntries);
 
+      // Với hợp đồng mà tôi là lessee, mặt bằng có thể không thuộc sở hữu của tôi nên không có
+      // trong spaceMap (chỉ chứa Space/GetAll?OwnerId=tôi) — gọi bổ sung Space/GetById cho các spaceId còn thiếu.
+      const missingSpaceIds = Array.from(
+        new Set(
+          contracts
+            .map((c: any) => c.spaceId ?? c.SpaceId)
+            .filter((id: any) => id != null && !spaceMap.has(id))
+        )
+      );
+      if (missingSpaceIds.length > 0) {
+        const extraSpaceEntries = await Promise.all(
+          missingSpaceIds.map(async (id) => {
+            try {
+              const res = await fetch(`${API_BASE}/api/Space/GetById${id}`, {
+                headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+              });
+              if (!res.ok) return [id, null] as const;
+              return [id, await res.json()] as const;
+            } catch {
+              return [id, null] as const;
+            }
+          })
+        );
+        extraSpaceEntries.forEach(([id, space]) => {
+          if (space) spaceMap.set(id, space);
+        });
+      }
+
       const list: Tenant[] = contracts.map((c: any) => {
+        const lessorId = c.lessorId ?? c.LessorId;
         const lesseeId = c.lesseeId ?? c.LesseeId;
+        const isLessor = String(lessorId) === String(currentUserId);
+        const partnerId = isLessor ? lesseeId : lessorId;
         const spaceId = c.spaceId ?? c.SpaceId;
-        const user = userMap.get(lesseeId);
+        const user = userMap.get(partnerId);
         const space = spaceMap.get(spaceId);
-        const name = user?.profileFullName || user?.userName || (language === 'en' ? `Tenant #${lesseeId}` : `Người thuê #${lesseeId}`);
+        const fallbackName = isLessor
+          ? (language === 'en' ? `Tenant #${partnerId}` : `Người thuê #${partnerId}`)
+          : (language === 'en' ? `Owner #${partnerId}` : `Chủ nhà #${partnerId}`);
+        const name = user?.profileFullName || user?.userName || fallbackName;
 
         return {
           contractId: c.id ?? c.Id,
-          lesseeId,
+          lesseeId: partnerId,
           name,
           initials: getInitials(name),
           phone: user?.phoneNumber || '',
@@ -165,6 +222,7 @@ export const OwnerTenants: React.FC = () => {
           monthlyRent: c.price ?? c.Price ?? 0,
           status: (c.status ?? c.Status ?? 'Draft') as ContractStatus,
           contract: c,
+          isLessor,
         };
       });
 
@@ -205,13 +263,32 @@ export const OwnerTenants: React.FC = () => {
     setViewingContract(null);
   };
 
-  const filtered = tenants.filter((tenant) => {
-    const matchSearch =
-      tenant.name.toLowerCase().includes(search.toLowerCase()) ||
-      tenant.space.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filterStatus === 'all' || tenant.status === filterStatus;
-    return matchSearch && matchFilter;
-  });
+  // Ưu tiên hợp đồng còn hiệu lực lên trên, hết hiệu lực xuống dưới:
+  // Active (sắp hết hạn trước, để chủ nhà thấy ngay hợp đồng cần gia hạn) → Draft (chờ ký) → Expired → Cancelled.
+  const statusOrder: Record<ContractStatus, number> = { Active: 0, Draft: 1, Expired: 2, Cancelled: 3 };
+
+  const filtered = tenants
+    .filter((tenant) => {
+      const matchSearch =
+        tenant.name.toLowerCase().includes(search.toLowerCase()) ||
+        tenant.space.toLowerCase().includes(search.toLowerCase());
+      const matchFilter = filterStatus === 'all' || tenant.status === filterStatus;
+      return matchSearch && matchFilter;
+    })
+    .sort((a, b) => {
+      const groupDiff = statusOrder[a.status] - statusOrder[b.status];
+      if (groupDiff !== 0) return groupDiff;
+
+      if (a.status === 'Active') {
+        // Trong nhóm Active, hợp đồng còn ít thời gian nhất (sắp hết hạn) lên đầu.
+        const aTotal = monthsBetween(a.startDate, a.endDate);
+        const bTotal = monthsBetween(b.startDate, b.endDate);
+        const aRemaining = aTotal - Math.min(aTotal, monthsElapsed(a.startDate));
+        const bRemaining = bTotal - Math.min(bTotal, monthsElapsed(b.startDate));
+        if (aRemaining !== bRemaining) return aRemaining - bRemaining;
+      }
+      return b.contractId - a.contractId;
+    });
 
   const activeTenants = tenants.filter((t) => t.status === 'Active');
   const totalRevenue = activeTenants.reduce((sum, t) => sum + t.monthlyRent, 0);
@@ -300,7 +377,22 @@ export const OwnerTenants: React.FC = () => {
                       {tenant.initials}
                     </div>
                     <div>
-                      <h3 className="tenant-name">{tenant.name}</h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <h3 className="tenant-name">{tenant.name}</h3>
+                        <span
+                          style={{
+                            fontSize: 11, fontWeight: 700,
+                            color: tenant.isLessor ? 'var(--color-violet, #C4B5FD)' : 'var(--color-teal, #67E8F9)',
+                            background: tenant.isLessor ? 'rgba(124,58,237,0.15)' : 'rgba(8,145,178,0.15)',
+                            border: `1px solid ${tenant.isLessor ? 'rgba(196,181,253,0.3)' : 'rgba(103,232,249,0.3)'}`,
+                            padding: '2px 8px', borderRadius: 999,
+                          }}
+                        >
+                          {tenant.isLessor
+                            ? (language === 'en' ? 'You are the Lessor' : 'Bạn là Bên cho thuê')
+                            : (language === 'en' ? 'You are the Tenant' : 'Bạn là Bên thuê')}
+                        </span>
+                      </div>
                       <p className="tenant-space">
                         <Building2 size={12} />
                         {tenant.space}
@@ -319,7 +411,7 @@ export const OwnerTenants: React.FC = () => {
                 <div className="tenant-progress-section">
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span className="label-caps">{t('tenants.contractProgress')}</span>
-                    <span style={{ fontSize: 12, fontWeight: 600 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: urgencyColor }}>
                       {t('tenants.remainingMonths', { rem: remaining, total })}
                     </span>
                   </div>
@@ -327,7 +419,7 @@ export const OwnerTenants: React.FC = () => {
                     <div
                       className="progress-fill"
                       style={{
-                        width: `${total > 0 ? (elapsed / total) * 100 : 0}%`,
+                        width: `${Math.max(total > 0 ? (elapsed / total) * 100 : 0, 3)}%`,
                         background: urgencyColor,
                       }}
                     />
@@ -399,7 +491,7 @@ export const OwnerTenants: React.FC = () => {
                     {t('tenants.contract')}
                   </button>
                 </div>
-                {tenant.status === 'Draft' && (
+                {tenant.status === 'Draft' && tenant.isLessor && (
                   <div className="tenant-card-actions" style={{ marginTop: 8 }}>
                     <button
                       className="btn-ghost"
@@ -468,7 +560,7 @@ export const OwnerTenants: React.FC = () => {
                     <div
                       className="progress-fill"
                       style={{
-                        width: `${total > 0 ? (elapsed / total) * 100 : 0}%`,
+                        width: `${Math.max(total > 0 ? (elapsed / total) * 100 : 0, 3)}%`,
                         background: urgencyColor,
                       }}
                     />
@@ -553,7 +645,7 @@ export const OwnerTenants: React.FC = () => {
         <ContractViewModal
           contract={viewingContract}
           onClose={() => setViewingContract(null)}
-          isLessor
+          isLessor={String(viewingContract.lessorId ?? viewingContract.LessorId) === String(currentUserId)}
           onEdit={() => handleEditContract(viewingContract)}
           onDelete={() => handleDeleteContract(viewingContract.id ?? viewingContract.Id)}
         />
