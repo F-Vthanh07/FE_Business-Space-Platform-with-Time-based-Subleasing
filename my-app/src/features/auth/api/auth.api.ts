@@ -10,6 +10,23 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+// Backend đôi khi trả lỗi dạng plain text/JSON string thay vì { message } object,
+// nên phải đọc bằng text() rồi tự parse thay vì response.json() (sẽ throw và mất nội dung lỗi).
+const extractErrorMessage = async (response: Response): Promise<string> => {
+  const rawText = (await response.text()).trim();
+  if (!rawText) return '';
+  try {
+    const parsed = JSON.parse(rawText);
+    if (typeof parsed === 'string') return parsed;
+    if (parsed && typeof parsed === 'object') {
+      return parsed.message || parsed.detail || parsed.title || rawText;
+    }
+    return rawText;
+  } catch {
+    return rawText;
+  }
+};
+
 export const requestPasswordReset = async (email: string): Promise<void> => {
   const response = await fetch(`${API_BASE_URL}/api/Auth/forgot-password`, {
     method: 'POST',
@@ -17,10 +34,9 @@ export const requestPasswordReset = async (email: string): Promise<void> => {
     body: JSON.stringify({ email } satisfies ForgotPasswordRequest),
   });
 
-  const data = await response.json().catch(() => ({}));
-
   if (!response.ok) {
-    throw new Error(data.message || 'Không thể gửi yêu cầu đặt lại mật khẩu.');
+    const serverMessage = await extractErrorMessage(response);
+    throw new Error(serverMessage || 'Không thể gửi yêu cầu đặt lại mật khẩu.');
   }
 };
 
@@ -35,10 +51,9 @@ export const resetPassword = async (
     body: JSON.stringify({ email, otpCode, newPassword } satisfies ResetPasswordRequest),
   });
 
-  const data = await response.json().catch(() => ({}));
-
   if (!response.ok) {
-    throw new Error(data.message || 'Không thể đặt lại mật khẩu.');
+    const serverMessage = await extractErrorMessage(response);
+    throw new Error(serverMessage || 'Không thể đặt lại mật khẩu.');
   }
 };
 

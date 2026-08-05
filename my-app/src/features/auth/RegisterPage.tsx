@@ -120,10 +120,20 @@ export const RegisterPage: React.FC = () => {
         })
       });
 
-      const data = await response.json().catch(() => ({}));
+      const rawText = (await response.text()).trim();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: any = {};
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          data = { message: rawText };
+        }
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || (language === 'en' ? 'Registration failed.' : 'Đăng ký thất bại.'));
+        const serverMessage = typeof data === 'string' ? data : data?.message;
+        throw new Error(serverMessage || (language === 'en' ? 'Registration failed.' : 'Đăng ký thất bại.'));
       }
 
       setShowOtpForm(true);
@@ -155,10 +165,20 @@ export const RegisterPage: React.FC = () => {
         body: JSON.stringify({ email, otpCode })
       });
 
-      const data = await response.json().catch(() => ({}));
+      const rawText = (await response.text()).trim();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: any = {};
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          data = { message: rawText };
+        }
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || (language === 'en' ? 'Invalid OTP.' : 'Xác thực OTP thất bại.'));
+        const serverMessage = typeof data === 'string' ? data : data?.message;
+        throw new Error(serverMessage || (language === 'en' ? 'Invalid OTP.' : 'Xác thực OTP thất bại.'));
       }
 
       setSuccessMsg(language === 'en' ? 'Account verified! Let\'s complete your profile.' : 'Tài khoản đã xác thực! Hãy hoàn tất hồ sơ của bạn.');

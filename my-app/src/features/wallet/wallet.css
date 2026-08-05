@@ -4,7 +4,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  max-width: 1280px;
 }
 
 /* ---------- Hero balance card ---------- */
@@ -43,7 +42,7 @@
 
 .wallet-stats-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
   margin-top: var(--space-6);
 }
@@ -165,7 +164,7 @@
 /* ---------- Deposit form ---------- */
 .deposit-layout {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: var(--space-5);
   align-items: start;
 }
@@ -200,7 +199,7 @@
 
 .deposit-quick-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
   margin-top: var(--space-3);
 }

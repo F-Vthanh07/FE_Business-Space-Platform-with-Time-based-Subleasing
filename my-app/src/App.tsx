@@ -10,6 +10,7 @@ import { ListingFeed } from './features/feed/ListingFeed';
 import { ListingDetail } from './features/feed/ListingDetail';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
+import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 import { PaymentSuccess, PaymentFailed } from './features/wallet';
 import { OnboardingProfilePage } from './features/onboarding';
 import { AiImageEditorPage } from './features/ai-image-editor/AiImageEditorPage';
@@ -92,6 +93,12 @@ const App: React.FC = () => {
         <Route
           path={ROUTES.REGISTER}
           element={<RegisterPage />}
+        />
+
+        {/* Forgot Password Page */}
+        <Route
+          path={ROUTES.FORGOT_PASSWORD}
+          element={<ForgotPasswordPage />}
         />
 
         {/* Post-registration onboarding: profile completion + optional CCCD verification */}

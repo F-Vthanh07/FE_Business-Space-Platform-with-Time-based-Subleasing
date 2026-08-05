@@ -5,6 +5,7 @@ export const ROUTES = {
   USER: '/user',
   LOGIN: '/login',
   REGISTER: '/register',
+  FORGOT_PASSWORD: '/forgot-password',
   ONBOARDING: '/onboarding/profile',
   ADMIN: '/admin',
   ACCESS_DENIED: '/access-denied',
