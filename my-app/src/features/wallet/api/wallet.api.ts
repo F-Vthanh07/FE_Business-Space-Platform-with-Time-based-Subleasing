@@ -1,4 +1,4 @@
-import type { WalletAccount } from '../types';
+import type { WalletAccount, TransactionHistoryItem } from '../types';
 import { API_BASE_URL } from '../../../config/api';
 
 export interface CreateDepositRequest {
@@ -62,4 +62,19 @@ export const createDepositTransaction = async (
   }
 
   return checkoutUrl;
+};
+
+export const fetchTransactionHistory = async (token: string): Promise<TransactionHistoryItem[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/TransactionHistory/GetAllTransactionHistoryByUserId`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      accept: '*/*',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Không thể tải lịch sử giao dịch. Vui lòng thử lại.');
+  }
+
+  return response.json();
 };

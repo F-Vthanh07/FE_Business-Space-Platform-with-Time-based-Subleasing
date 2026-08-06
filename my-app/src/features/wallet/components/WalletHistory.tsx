@@ -1,39 +1,37 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Search, ChevronLeft, Inbox } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
-import { mockTransactions } from '../utils/mockData';
-import type { TransactionType } from '../types';
-import { TransactionRow } from './TransactionRow';
+import { fetchTransactionHistory } from '../api/wallet.api';
+import type { TransactionHistoryItem } from '../types';
+import { TransactionHistoryRow } from './TransactionHistoryRow';
 import '../wallet.css';
 
 interface WalletHistoryProps {
   onNavigate: (page: 'wallet') => void;
 }
 
-type FilterType = 'all' | TransactionType;
-
 export const WalletHistory: React.FC<WalletHistoryProps> = ({ onNavigate }) => {
   const { t } = useThemeLanguage();
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const token = localStorage.getItem('portal_token') || '';
+    fetchTransactionHistory(token)
+      .then((data) => setTransactions([...data].sort((a, b) => b.id - a.id)))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Lỗi tải lịch sử giao dịch'))
+      .finally(() => setIsLoading(false));
+  }, []);
 
   const filtered = useMemo(() => {
-    return mockTransactions.filter((txn) => {
-      const matchType = filterType === 'all' || txn.type === filterType;
-      const q = search.toLowerCase();
-      const matchSearch =
-        !q || txn.id.toLowerCase().includes(q) || (txn.note || '').toLowerCase().includes(q);
-      return matchType && matchSearch;
-    });
-  }, [search, filterType]);
-
-  const filters: { key: FilterType; labelKey: string }[] = [
-    { key: 'all', labelKey: 'wallet.history.all' },
-    { key: 'deposit', labelKey: 'wallet.history.deposit' },
-    { key: 'payment', labelKey: 'wallet.history.payment' },
-    { key: 'payout', labelKey: 'wallet.history.payout' },
-    { key: 'refund', labelKey: 'wallet.history.refund' },
-  ];
+    const q = search.toLowerCase();
+    if (!q) return transactions;
+    return transactions.filter((txn) => (
+      String(txn.id).includes(q) || (txn.description || '').toLowerCase().includes(q)
+    ));
+  }, [search, transactions]);
 
   return (
     <div className="wallet-page animate-in">
@@ -59,21 +57,18 @@ export const WalletHistory: React.FC<WalletHistoryProps> = ({ onNavigate }) => {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="history-filters">
-          {filters.map((f) => (
-            <button
-              key={f.key}
-              className={`filter-tab ${filterType === f.key ? 'filter-tab--active' : ''}`}
-              onClick={() => setFilterType(f.key)}
-            >
-              {t(f.labelKey)}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="glass-card" style={{ padding: 'var(--space-5)' }}>
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="wallet-empty-state">
+            <p className="text-secondary" style={{ fontSize: 13 }}>...</p>
+          </div>
+        ) : error ? (
+          <div className="wallet-empty-state">
+            <p className="text-secondary" style={{ fontSize: 13 }}>{error}</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="wallet-empty-state">
             <div className="wallet-empty-icon">
               <Inbox size={24} />
@@ -84,7 +79,7 @@ export const WalletHistory: React.FC<WalletHistoryProps> = ({ onNavigate }) => {
         ) : (
           <div className="txn-list">
             {filtered.map((txn) => (
-              <TransactionRow key={txn.id} txn={txn} />
+              <TransactionHistoryRow key={txn.id} txn={txn} />
             ))}
           </div>
         )}

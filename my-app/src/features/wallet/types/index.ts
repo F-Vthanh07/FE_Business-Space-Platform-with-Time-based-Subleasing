@@ -50,3 +50,17 @@ export interface WalletAccount {
   updatedBy: string;
   updatedAt: string;
 }
+
+export interface TransactionHistoryItem {
+  id: number;
+  walletId: number;
+  walletAmount: number;
+  transactionAmount: number; // negative = money out, positive = money in
+  status: string;
+  description: string | null;
+  name: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string | null;
+  updatedAt: string;
+}

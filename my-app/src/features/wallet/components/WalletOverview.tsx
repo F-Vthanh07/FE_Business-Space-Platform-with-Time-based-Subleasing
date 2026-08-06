@@ -2,10 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Wallet, Plus, ArrowUpRight, Clock3, TrendingUp, TrendingDown, Inbox } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { formatVnd } from '../utils/format';
-import { mockTransactions } from '../utils/mockData';
-import { fetchWalletAccount } from '../api/wallet.api';
-import type { WalletAccount } from '../types';
-import { TransactionRow } from './TransactionRow';
+import { fetchWalletAccount, fetchTransactionHistory } from '../api/wallet.api';
+import type { WalletAccount, TransactionHistoryItem } from '../types';
+import { TransactionHistoryRow } from './TransactionHistoryRow';
 import '../wallet.css';
 
 interface WalletOverviewProps {
@@ -14,20 +13,30 @@ interface WalletOverviewProps {
 
 export const WalletOverview: React.FC<WalletOverviewProps> = ({ onNavigate }) => {
   const { t, language } = useThemeLanguage();
-  const recent: typeof mockTransactions = [];
 
   const [account, setAccount] = useState<WalletAccount | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [, setBalanceError] = useState('');
+  const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
   useEffect(() => {
     const token = localStorage.getItem('portal_token') || '';
     fetchWalletAccount(token)
       .then(setAccount)
       .catch((err) => setBalanceError(err instanceof Error ? err.message : 'Lỗi tải số dư'))
       .finally(() => setIsLoadingBalance(false));
+    fetchTransactionHistory(token)
+      .then((data) => setTransactions([...data].sort((a, b) => b.id - a.id)))
+      .catch(() => setTransactions([]));
   }, []);
 
   const balance = account?.balance ?? 0;
+  const recent = transactions.slice(0, 5);
+  const totalDeposited = transactions
+    .filter((t) => t.transactionAmount > 0)
+    .reduce((sum, t) => sum + t.transactionAmount, 0);
+  const totalSpent = transactions
+    .filter((t) => t.transactionAmount < 0)
+    .reduce((sum, t) => sum + Math.abs(t.transactionAmount), 0);
   // const linkedAccount = account?.user?.email || mockWalletSummary.linkedAccount;
   // const walletId = account ? `WAL-${account.id}` : mockWalletSummary.walletId;
 
@@ -81,14 +90,14 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({ onNavigate }) =>
               <TrendingUp size={11} style={{ verticalAlign: -1, marginRight: 4 }} />
               {t('wallet.totalDeposited')}
             </span>
-            <span className="wallet-stat-value text-positive">{formatVnd(0, language)}</span>
+            <span className="wallet-stat-value text-positive">{formatVnd(totalDeposited, language)}</span>
           </div>
           <div className="glass-card--inset wallet-stat-tile">
             <span className="label-caps">
               <TrendingDown size={11} style={{ verticalAlign: -1, marginRight: 4 }} />
               {t('wallet.totalSpent')}
             </span>
-            <span className="wallet-stat-value text-negative">{formatVnd(0, language)}</span>
+            <span className="wallet-stat-value text-negative">{formatVnd(totalSpent, language)}</span>
           </div>
         </div>
       </div>
@@ -114,7 +123,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({ onNavigate }) =>
         ) : (
           <div className="txn-list">
             {recent.map((txn) => (
-              <TransactionRow key={txn.id} txn={txn} />
+              <TransactionHistoryRow key={txn.id} txn={txn} />
             ))}
           </div>
         )}
