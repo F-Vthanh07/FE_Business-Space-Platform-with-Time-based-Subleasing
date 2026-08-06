@@ -26,21 +26,21 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ users, updateUserStatu
   };
 
   const renderStatusBadge = (status: string) => {
-    let bg = 'rgba(255, 255, 255, 0.1)';
-    let color = '#fff';
+    let bg = 'rgba(100, 116, 139, 0.12)';
+    let color = '#64748b';
     let text = status;
 
     if (status === 'Active') {
-      bg = 'rgba(0, 212, 160, 0.1)';
-      color = '#00d4a0';
+      bg = 'rgba(22, 163, 74, 0.1)';
+      color = '#16a34a';
       text = language === 'en' ? 'Active' : 'Hoạt động';
     } else if (status === 'Suspended') {
-      bg = 'rgba(255, 122, 0, 0.1)';
-      color = '#ff7a00';
+      bg = 'rgba(217, 119, 6, 0.1)';
+      color = '#d97706';
       text = language === 'en' ? 'Suspended' : 'Đình chỉ';
     } else if (status === 'Banned') {
-      bg = 'rgba(255, 82, 82, 0.1)';
-      color = '#ff5252';
+      bg = 'rgba(220, 38, 38, 0.1)';
+      color = '#dc2626';
       text = language === 'en' ? 'Banned' : 'Bị Cấm';
     }
 
@@ -78,12 +78,12 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ users, updateUserStatu
         fontWeight: 600,
         transition: 'all 0.2s ease',
       }}
-      onMouseEnter={(e) => { 
-        e.currentTarget.style.background = hoverBg; 
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = hoverBg;
         e.currentTarget.style.borderColor = color;
       }}
-      onMouseLeave={(e) => { 
-        e.currentTarget.style.background = `${color}15`; 
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = `${color}15`;
         e.currentTarget.style.borderColor = `${color}40`;
       }}
     >
@@ -112,8 +112,8 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ users, updateUserStatu
           </thead>
           <tbody>
             {users.map(u => (
-              <tr 
-                key={u.id} 
+              <tr
+                key={u.id}
                 className={`${u.status === 'Banned' ? 'blocked-row' : ''} user-row-clickable`}
                 onClick={() => setSelectedUser(u)}
               >
@@ -138,41 +138,41 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ users, updateUserStatu
                 </td>
                 <td style={{ textAlign: 'right' }}>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                    <ActionButton 
-                      icon={Eye} 
-                      text={language === 'en' ? 'View' : 'Xem'} 
-                      color="#4db8ff" 
-                      hoverBg="rgba(77, 184, 255, 0.25)"
-                      onClick={() => setSelectedUser(u)} 
+                    <ActionButton
+                      icon={Eye}
+                      text={language === 'en' ? 'View' : 'Xem'}
+                      color="#2563eb"
+                      hoverBg="rgba(37, 99, 235, 0.2)"
+                      onClick={() => setSelectedUser(u)}
                     />
-                    
+
                     {u.role !== 'ADMIN' && (
                       <>
                         {u.status !== 'Active' && (
-                          <ActionButton 
-                            icon={CheckCircle} 
-                            text={language === 'en' ? 'Activate' : 'Kích hoạt'} 
-                            color="#00d4a0" 
-                            hoverBg="rgba(0, 212, 160, 0.25)"
-                            onClick={() => updateUserStatus(u.id, 'Active')} 
+                          <ActionButton
+                            icon={CheckCircle}
+                            text={language === 'en' ? 'Activate' : 'Kích hoạt'}
+                            color="#16a34a"
+                            hoverBg="rgba(22, 163, 74, 0.2)"
+                            onClick={() => updateUserStatus(u.id, 'Active')}
                           />
                         )}
                         {u.status === 'Active' && (
-                          <ActionButton 
-                            icon={PauseCircle} 
-                            text={language === 'en' ? 'Suspend' : 'Đình chỉ'} 
-                            color="#ff7a00" 
-                            hoverBg="rgba(255, 122, 0, 0.25)"
-                            onClick={() => updateUserStatus(u.id, 'Suspended')} 
+                          <ActionButton
+                            icon={PauseCircle}
+                            text={language === 'en' ? 'Suspend' : 'Đình chỉ'}
+                            color="#d97706"
+                            hoverBg="rgba(217, 119, 6, 0.2)"
+                            onClick={() => updateUserStatus(u.id, 'Suspended')}
                           />
                         )}
                         {u.status !== 'Banned' && (
-                          <ActionButton 
-                            icon={ShieldAlert} 
-                            text={language === 'en' ? 'Ban' : 'Cấm'} 
-                            color="#ff5252" 
-                            hoverBg="rgba(255, 82, 82, 0.25)"
-                            onClick={() => updateUserStatus(u.id, 'Banned')} 
+                          <ActionButton
+                            icon={ShieldAlert}
+                            text={language === 'en' ? 'Ban' : 'Cấm'}
+                            color="#dc2626"
+                            hoverBg="rgba(220, 38, 38, 0.2)"
+                            onClick={() => updateUserStatus(u.id, 'Banned')}
                           />
                         )}
                       </>
@@ -193,10 +193,10 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ users, updateUserStatu
               <X size={20} />
             </button>
             <h2 style={{marginBottom: '24px', fontSize: '1.5rem'}}>{language === 'en' ? 'User Details' : 'Chi tiết Người dùng'}</h2>
-            
+
             <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
               <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-                <div style={{width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 'bold', overflow: 'hidden'}}>
+                <div style={{width: '64px', height: '64px', borderRadius: '50%', background: 'var(--color-bg-hover)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 'bold', overflow: 'hidden', color: 'var(--color-text-primary)'}}>
                   {selectedUser.profileAvatarUrl ? (
                     <img src={selectedUser.profileAvatarUrl} alt="avatar" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                   ) : (
@@ -204,7 +204,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ users, updateUserStatu
                   )}
                 </div>
                 <div>
-                  <h3 style={{margin: 0, fontSize: '1.25rem', color: '#fff'}}>{selectedUser.name}</h3>
+                  <h3 style={{margin: 0, fontSize: '1.25rem', color: 'var(--color-text-primary)'}}>{selectedUser.name}</h3>
                   <div style={{display: 'flex', gap: '10px', marginTop: '6px', alignItems: 'center'}}>
                     <span className={`badge-role ${selectedUser.role.toLowerCase()}`}>{selectedUser.role}</span>
                     {renderStatusBadge(selectedUser.status)}
@@ -213,39 +213,39 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ users, updateUserStatu
               </div>
 
               <div style={{
-                display: 'grid', 
-                gridTemplateColumns: '140px 1fr', 
-                gap: '12px 16px', 
+                display: 'grid',
+                gridTemplateColumns: '140px 1fr',
+                gap: '12px 16px',
                 alignItems: 'start',
-                background: 'rgba(0, 0, 0, 0.2)',
+                background: 'var(--color-bg-hover)',
                 padding: '20px',
                 borderRadius: '12px'
               }}>
-                <strong style={{color: 'rgba(255,255,255,0.7)'}}>ID:</strong> 
+                <strong style={{color: 'var(--color-text-secondary)'}}>ID:</strong>
                 <span className="font-mono" style={{wordBreak: 'break-all'}}>{selectedUser.id}</span>
-                
-                <strong style={{color: 'rgba(255,255,255,0.7)'}}>Email:</strong> 
+
+                <strong style={{color: 'var(--color-text-secondary)'}}>Email:</strong>
                 <span style={{wordBreak: 'break-all'}}>{selectedUser.email}</span>
-                
-                <strong style={{color: 'rgba(255,255,255,0.7)'}}>{language === 'en' ? 'Phone' : 'Số điện thoại'}:</strong> 
+
+                <strong style={{color: 'var(--color-text-secondary)'}}>{language === 'en' ? 'Phone' : 'Số điện thoại'}:</strong>
                 <span>{renderValue(selectedUser.phoneNumber)}</span>
-                
-                <strong style={{color: 'rgba(255,255,255,0.7)'}}>{language === 'en' ? 'Full Name' : 'Họ và tên'}:</strong> 
+
+                <strong style={{color: 'var(--color-text-secondary)'}}>{language === 'en' ? 'Full Name' : 'Họ và tên'}:</strong>
                 <span>{renderValue(selectedUser.profileFullName)}</span>
 
-                <strong style={{color: 'rgba(255,255,255,0.7)'}}>{language === 'en' ? 'Date of Birth' : 'Ngày sinh'}:</strong> 
+                <strong style={{color: 'var(--color-text-secondary)'}}>{language === 'en' ? 'Date of Birth' : 'Ngày sinh'}:</strong>
                 <span>{formatDate(selectedUser.dob)}</span>
-                
-                <strong style={{color: 'rgba(255,255,255,0.7)'}}>{language === 'en' ? 'Gender' : 'Giới tính'}:</strong> 
+
+                <strong style={{color: 'var(--color-text-secondary)'}}>{language === 'en' ? 'Gender' : 'Giới tính'}:</strong>
                 <span>{renderValue(selectedUser.profileGender)}</span>
-                
-                <strong style={{color: 'rgba(255,255,255,0.7)'}}>{language === 'en' ? 'Bio' : 'Tiểu sử'}:</strong> 
+
+                <strong style={{color: 'var(--color-text-secondary)'}}>{language === 'en' ? 'Bio' : 'Tiểu sử'}:</strong>
                 <span>{renderValue(selectedUser.profileBio)}</span>
-                
-                <strong style={{color: 'rgba(255,255,255,0.7)'}}>{language === 'en' ? 'Social Link' : 'Liên kết MXH'}:</strong> 
+
+                <strong style={{color: 'var(--color-text-secondary)'}}>{language === 'en' ? 'Social Link' : 'Liên kết MXH'}:</strong>
                 <span>
                   {selectedUser.profileSocialLink ? (
-                    <a href={selectedUser.profileSocialLink} target="_blank" rel="noreferrer" style={{color: '#4db8ff', textDecoration: 'none'}}>
+                    <a href={selectedUser.profileSocialLink} target="_blank" rel="noreferrer" style={{color: 'var(--color-accent)', textDecoration: 'none'}}>
                       {selectedUser.profileSocialLink}
                     </a>
                   ) : renderValue(null)}

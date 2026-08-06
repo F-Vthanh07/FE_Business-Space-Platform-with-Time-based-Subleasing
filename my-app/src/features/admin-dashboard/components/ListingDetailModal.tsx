@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { 
+import {
   X, MapPin, DollarSign, Clock, User, ShieldCheck
 } from 'lucide-react';
 import type { AdminListingItem, BusinessCategory } from '../types';
+import { getPictureUrl } from '../utils/listingPicture';
 
 interface ListingDetailModalProps {
   listing: AdminListingItem;
@@ -11,15 +12,19 @@ interface ListingDetailModalProps {
   categories: BusinessCategory[];
 }
 
+const FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800",
+  "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=800"
+];
+
 export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClose, language, categories }) => {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
 
   const cleanStatus = (listing.status || 'Pending').toLowerCase();
-  const hasPictures = listing.listingPictures && listing.listingPictures.length > 0 && listing.listingPictures[0] !== 'string';
-  const pictures = hasPictures ? listing.listingPictures : [
-    "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=800"
-  ];
+  const resolvedPictures = (listing.listingPictures || [])
+    .map(getPictureUrl)
+    .filter((url): url is string => !!url);
+  const pictures = resolvedPictures.length > 0 ? resolvedPictures : FALLBACK_IMAGES;
 
   const formatDays = (days: string[]) => {
     if (!days || days.length === 0) return '';
@@ -40,7 +45,7 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing,
   return (
     <div className="listing-detail-backdrop">
       <div className="listing-detail-modal glass-card">
-        
+
         {/* Header */}
         <div className="listing-detail-header">
           <div className="title-area">
@@ -56,16 +61,16 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing,
 
         {/* Content Body */}
         <div className="listing-detail-body">
-          
+
           {/* Left Column: Visuals & Description */}
           <div className="detail-left-col">
-            
+
             {/* Image Previewer */}
             <div className="detail-media-gallery">
               <div className="main-image-wrap">
-                <img 
-                  src={pictures[activeImageIdx]} 
-                  alt="Listing Display" 
+                <img
+                  src={pictures[activeImageIdx]}
+                  alt="Listing Display"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800";
                   }}
@@ -74,14 +79,14 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing,
               {pictures.length > 1 && (
                 <div className="image-thumbnails-strip">
                   {pictures.map((pic, idx) => (
-                    <button 
-                      key={idx} 
+                    <button
+                      key={idx}
                       className={`thumb-btn ${idx === activeImageIdx ? 'active' : ''}`}
                       onClick={() => setActiveImageIdx(idx)}
                     >
-                      <img 
-                        src={pic} 
-                        alt={`Thumb ${idx + 1}`} 
+                      <img
+                        src={pic}
+                        alt={`Thumb ${idx + 1}`}
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800";
                         }}
@@ -118,12 +123,12 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing,
 
           {/* Right Column: Parameters & Amenities */}
           <div className="detail-right-col">
-            
+
             {/* Parameters Block */}
             <div className="detail-section">
               <h3 className="section-title">{language === 'en' ? 'Operational Details' : 'Thông tin Hoạt động'}</h3>
               <div className="parameter-grid">
-                
+
                 <div className="param-item">
                   <div className="param-label"><MapPin size={13} /> {language === 'en' ? 'Space Address' : 'Địa chỉ mặt bằng'}</div>
                   <div className="param-value">{listing.spaceAddress || 'N/A'}</div>

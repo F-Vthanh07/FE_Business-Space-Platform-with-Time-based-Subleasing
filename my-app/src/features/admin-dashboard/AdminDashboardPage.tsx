@@ -7,13 +7,10 @@ import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './AdminDashboardPage.css';
 
 // Types & API imports
-import type { AdminPage, UserAccount, SpaceApprovalItem, AdminListingItem, SystemStat, BusinessCategory } from './types';
-import { 
-  fetchPendingSpaces, 
-  fetchListings, 
-  approveSpace, 
-  rejectSpace, 
-  approveListing, 
+import type { AdminPage, UserAccount, AdminListingItem, SystemStat, BusinessCategory, AdminWalletAccount, PriorityLevel } from './types';
+import {
+  fetchListings,
+  approveListing,
   rejectListing,
   fetchBusinessCategories,
   createSingleCategory,
@@ -21,16 +18,20 @@ import {
   updateCategory,
   deleteCategory,
   fetchUsers,
-  changeUserStatus
+  changeUserStatus,
+  fetchAllWallets,
+  fetchPriorityLevels,
+  createPriorityLevel,
+  updatePriorityLevel
 } from './api/admin.api';
 
 // Components imports
 import { OverviewModule } from './components/OverviewModule';
 import { UsersModule } from './components/UsersModule';
-import { SpacesModule } from './components/SpacesModule';
 import { ListingsModule } from './components/ListingsModule';
-import { TransactionsModule } from './components/TransactionsModule';
 import { CategoriesModule } from './components/CategoriesModule';
+import { WalletsModule } from './components/WalletsModule';
+import { PriorityLevelsModule } from './components/PriorityLevelsModule';
 
 export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { language } = useThemeLanguage();
@@ -45,10 +46,10 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   });
   
   const [users, setUsers] = useState<UserAccount[]>([]);
-  const [pendingSpaces, setPendingSpaces] = useState<SpaceApprovalItem[]>([]);
   const [listings, setListings] = useState<AdminListingItem[]>([]);
-  const [listingsFilter, setListingsFilter] = useState<'all' | 'pending' | 'accepted' | 'canceled'>('all');
   const [categories, setCategories] = useState<BusinessCategory[]>([]);
+  const [wallets, setWallets] = useState<AdminWalletAccount[]>([]);
+  const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
   
   // Loading & Notification states
   const [isLoading, setIsLoading] = useState(false);
@@ -73,13 +74,6 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       { id: 'US003', name: 'Lê Hoàng C', email: 'hoangc@gmail.com', role: 'USER', status: 'Banned', createdAt: '2026-05-20' },
       { id: 'US004', name: 'Super Admin', email: 'admin@flexispace.com', role: 'ADMIN', status: 'Active', createdAt: '2026-01-01' },
       { id: 'US005', name: 'Phạm Minh D', email: 'minhd@gmail.com', role: 'USER', status: 'Active', createdAt: '2026-06-02' },
-    ]);
-
-    // Mock Pending Spaces
-    setPendingSpaces([
-      { id: 'SP001', name: 'Ether Workspace Quận 1', address: '120 Lê Lợi, Bến Thành, Quận 1, TP.HCM', area: 150, ownerName: 'Nguyễn Văn A', ownerId: 'US001', status: 'PENDING', createdAt: '2026-06-22' },
-      { id: 'SP002', name: 'Nhà kho thương mại Thủ Đức', address: '45 Võ Văn Ngân, Linh Chiểu, Thủ Đức', area: 320, ownerName: 'Phạm Minh D', ownerId: 'US005', status: 'PENDING', createdAt: '2026-06-23' },
-      { id: 'SP003', name: 'Co-working Space Cầu Giấy', address: '88 Cầu Giấy, Hà Nội', area: 90, ownerName: 'Nguyễn Văn A', ownerId: 'US001', status: 'PENDING', createdAt: '2026-06-24' },
     ]);
 
     // Mock Listings
@@ -212,61 +206,35 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       setUsers(mappedUsers);
       setStats(prev => ({ ...prev, totalUsers: mappedUsers.length }));
     } catch (e) {
-      console.warn("Không kết nối được API thật cho Users.");
-    }
-
-    try {
-      const spacesData = await fetchPendingSpaces(token);
-      setPendingSpaces(spacesData);
-    } catch (e) {
-      console.warn("Không kết nối được API thật cho Spaces.");
+      console.warn("Không kết nối được API thật cho Users.", e);
     }
 
     try {
       const listingsData = await fetchListings(token);
       setListings(listingsData);
     } catch (e) {
-      console.warn("Không kết nối được API thật cho Listings, đang sử dụng dữ liệu mô phỏng local.");
+      console.warn("Không kết nối được API thật cho Listings, đang sử dụng dữ liệu mô phỏng local.", e);
     }
 
     try {
       const categoriesData = await fetchBusinessCategories(token);
       setCategories(categoriesData);
     } catch (e) {
-      console.warn("Không kết nối được API thật cho Business Categories.");
+      console.warn("Không kết nối được API thật cho Business Categories.", e);
     }
-  };
 
-  // --- ACTIONS XỬ LÝ DUYỆT / TỪ CHỐI MẶT BẰNG (SPACES) ---
-  const handleApproveSpace = async (spaceId: string) => {
-    setIsLoading(true);
     try {
-      await approveSpace(spaceId, token || '');
-      setPendingSpaces(prev => prev.filter(item => item.id !== spaceId));
-      setStats(prev => ({ ...prev, totalSpaces: prev.totalSpaces + 1 }));
-      showNotification(language === 'en' ? "Property space approved successfully!" : "Đã duyệt mặt bằng thành công!");
-    } catch (err) {
-      console.error(err);
-      setPendingSpaces(prev => prev.filter(item => item.id !== spaceId));
-      setStats(prev => ({ ...prev, totalSpaces: prev.totalSpaces + 1 }));
-      showNotification(language === 'en' ? "Property approved (Demo mode)" : "Phê duyệt thành công (Chế độ mô phỏng)");
-    } finally {
-      setIsLoading(false);
+      const walletsData = await fetchAllWallets(token);
+      setWallets(walletsData);
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Wallets.", e);
     }
-  };
 
-  const handleRejectSpace = async (spaceId: string) => {
-    setIsLoading(true);
     try {
-      await rejectSpace(spaceId, token || '');
-      setPendingSpaces(prev => prev.filter(item => item.id !== spaceId));
-      showNotification(language === 'en' ? "Property space rejected." : "Đã từ chối mặt bằng.", 'error');
-    } catch (err) {
-      console.error(err);
-      setPendingSpaces(prev => prev.filter(item => item.id !== spaceId));
-      showNotification(language === 'en' ? "Property rejected (Demo mode)" : "Đã từ chối mặt bằng (Chế độ mô phỏng)", 'error');
-    } finally {
-      setIsLoading(false);
+      const priorityLevelsData = await fetchPriorityLevels(token);
+      setPriorityLevels(priorityLevelsData);
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Priority Levels.", e);
     }
   };
 
@@ -415,6 +383,49 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     }
   };
 
+  // --- ACTIONS QUẢN LÝ GÓI GIÁ ĐĂNG BÀI (PRIORITY LEVELS) ---
+  const handleCreatePriorityLevel = async (name: string, price: number, isActive: boolean) => {
+    setIsLoading(true);
+    try {
+      await createPriorityLevel(name, price, isActive, token || '');
+      showNotification(language === 'en' ? "Priority package created successfully!" : "Đã tạo gói giá đăng bài thành công!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      // Fallback
+      const newLevel: PriorityLevel = {
+        id: priorityLevels.length > 0 ? Math.max(...priorityLevels.map(p => p.id)) + 1 : 1,
+        name,
+        price,
+        isActive,
+        createdBy: 'US004', // Super admin mock
+        createdAt: new Date().toISOString(),
+        updatedBy: null,
+        updatedAt: '0001-01-01T00:00:00'
+      };
+      setPriorityLevels(prev => [...prev, newLevel]);
+      showNotification(language === 'en' ? "Priority package created (Demo mode)" : "Tạo gói giá thành công (Chế độ mô phỏng)");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdatePriorityLevel = async (id: number, name: string, price: number, isActive: boolean) => {
+    setIsLoading(true);
+    try {
+      await updatePriorityLevel(id, name, price, isActive, token || '');
+      showNotification(language === 'en' ? "Priority package updated successfully!" : "Đã cập nhật gói giá đăng bài thành công!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      // Fallback
+      setPriorityLevels(prev => prev.map(p => p.id === id ? { ...p, name, price, isActive, updatedAt: new Date().toISOString() } : p));
+      showNotification(language === 'en' ? "Priority package updated (Demo mode)" : "Cập nhật gói giá thành công (Chế độ mô phỏng)");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="admin-dashboard-container">
       {/* Sidebar */}
@@ -437,7 +448,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
 
         {/* --- MODULE 1: OVERVIEW --- */}
         {activeTab === 'overview' && (
-          <OverviewModule stats={stats} language={language} />
+          <OverviewModule stats={stats} listings={listings} language={language} />
         )}
 
         {/* --- MODULE 2: USERS --- */}
@@ -445,23 +456,10 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
           <UsersModule users={users} updateUserStatus={updateUserStatus} language={language} />
         )}
 
-        {/* --- MODULE 3: SPACES APPROVAL --- */}
-        {activeTab === 'spaces' && (
-          <SpacesModule 
-            pendingSpaces={pendingSpaces} 
-            handleApproveSpace={handleApproveSpace} 
-            handleRejectSpace={handleRejectSpace} 
-            isLoading={isLoading} 
-            language={language} 
-          />
-        )}
-
-        {/* --- MODULE 4: LISTINGS APPROVAL --- */}
+        {/* --- MODULE 3: LISTINGS APPROVAL --- */}
         {activeTab === 'listings' && (
-          <ListingsModule 
+          <ListingsModule
             listings={listings}
-            listingsFilter={listingsFilter}
-            setListingsFilter={setListingsFilter}
             handleApproveListing={handleApproveListing}
             handleRejectListing={handleRejectListing}
             isLoading={isLoading}
@@ -470,9 +468,20 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
           />
         )}
 
-        {/* --- MODULE 5: TRANSACTIONS --- */}
-        {activeTab === 'transactions' && (
-          <TransactionsModule language={language} />
+        {/* --- MODULE 4: WALLETS --- */}
+        {activeTab === 'wallets' && (
+          <WalletsModule wallets={wallets} language={language} />
+        )}
+
+        {/* --- MODULE 5: PRIORITY LEVELS (LISTING PACKAGES) --- */}
+        {activeTab === 'priorityLevels' && (
+          <PriorityLevelsModule
+            priorityLevels={priorityLevels}
+            handleCreatePriorityLevel={handleCreatePriorityLevel}
+            handleUpdatePriorityLevel={handleUpdatePriorityLevel}
+            isLoading={isLoading}
+            language={language}
+          />
         )}
 
         {/* --- MODULE 6: CATEGORIES MANAGEMENT --- */}

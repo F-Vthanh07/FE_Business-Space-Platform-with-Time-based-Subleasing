@@ -9,8 +9,6 @@ import {
   Plus,
   Globe,
   LogOut,
-  Sun,
-  Moon,
   Wallet,
   Inbox,
 } from 'lucide-react';
@@ -79,7 +77,7 @@ const getPageLabels = (id: string, lang: string) => {
 };
 
 export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate, onNewSpaceClick, onNewSlotClick, onLogout }) => {
-  const { t, language, setLanguage, theme, toggleTheme } = useThemeLanguage();
+  const { t, language, setLanguage } = useThemeLanguage();
   const [pendingBookingCount, setPendingBookingCount] = useState(0);
 
   const getSeenBookingIds = (): Set<string | number> => {
@@ -222,15 +220,6 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
             onClick={() => setLanguage(language === 'en' ? 'vi' : 'en')}
           >
             <Globe size={16} />
-          </button>
-          <div className="user-sidebar-footer-divider" />
-          <button
-            className="user-sidebar-action-btn"
-            title={theme === 'dark' ? t('common.themeLight') : t('common.themeDark')}
-            onClick={toggleTheme}
-            type="button"
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
           <div className="user-sidebar-footer-divider" />
           <button
