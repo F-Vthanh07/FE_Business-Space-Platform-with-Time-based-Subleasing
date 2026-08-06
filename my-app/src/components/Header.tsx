@@ -1,7 +1,7 @@
 ﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, FileText, Globe, LogOut, User, CheckCircle2, Sun, Moon } from 'lucide-react';
+import { Bell, FileText, Globe, LogOut, User, CheckCircle2 } from 'lucide-react';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
 import { useIdentityVerification } from '../features/identity-verification';
 import { clearLocalStorageForLogout } from '../utils/preserveLocalStorage';
@@ -16,7 +16,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { language, setLanguage, theme, toggleTheme } = useThemeLanguage();
+  const { language, setLanguage } = useThemeLanguage();
   const { isVerified } = useIdentityVerification();
 
   const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | 'ai' | null => {
@@ -188,14 +188,6 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
           
           <button className="header-icon-btn" onClick={() => setLanguage(language === 'en' ? 'vi' : 'en')} style={{ width: 'auto', padding: '0 8px', display: 'flex', gap: 4, alignItems: 'center' }}>
             <Globe size={14} /> <span style={{ fontSize: 10, fontWeight: 700 }}>{language.toUpperCase()}</span>
-          </button>
-
-          <button
-            className="header-icon-btn"
-            title={language === 'en' ? 'Toggle theme' : 'Đổi giao diện sáng/tối'}
-            onClick={toggleTheme}
-          >
-            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
           </button>
 
           {isLoggedIn ? (

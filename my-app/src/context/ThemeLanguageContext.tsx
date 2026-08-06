@@ -1142,7 +1142,6 @@ interface ThemeLanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   theme: Theme;
-  toggleTheme: () => void;
   t: (key: string, replacements?: Record<string, string | number>) => string;
 }
 
@@ -1154,23 +1153,15 @@ export const ThemeLanguageProvider: React.FC<{ children: React.ReactNode }> = ({
     return (saved as Language) || 'vi';
   });
 
-  const [theme, setThemeState] = useState<Theme>(() => {
-    const saved = localStorage.getItem('app-theme');
-    return (saved as Theme) || 'dark';
-  });
+  const theme: Theme = 'light';
 
   useEffect(() => {
-    // Sync theme class to html/body elements
+    // App is light-mode only
     const root = document.documentElement;
-    if (theme === 'light') {
-      root.classList.add('light-theme');
-      root.setAttribute('data-theme', 'light');
-    } else {
-      root.classList.remove('light-theme');
-      root.setAttribute('data-theme', 'dark');
-    }
-    localStorage.setItem('app-theme', theme);
-  }, [theme]);
+    root.classList.add('light-theme');
+    root.setAttribute('data-theme', 'light');
+    localStorage.removeItem('app-theme');
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('app-language', language);
@@ -1178,10 +1169,6 @@ export const ThemeLanguageProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-  };
-
-  const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
   const t = (key: string, replacements?: Record<string, string | number>): string => {
@@ -1200,7 +1187,7 @@ export const ThemeLanguageProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <ThemeLanguageContext.Provider value={{ language, setLanguage, theme, toggleTheme, t }}>
+    <ThemeLanguageContext.Provider value={{ language, setLanguage, theme, t }}>
       {children}
     </ThemeLanguageContext.Provider>
   );

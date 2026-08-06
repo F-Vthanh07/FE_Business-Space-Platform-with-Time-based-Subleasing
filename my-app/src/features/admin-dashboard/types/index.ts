@@ -16,17 +16,6 @@ export interface UserAccount {
   profileGender?: string | null;
 }
 
-export interface SpaceApprovalItem {
-  id: string;
-  name: string;
-  address: string;
-  area: number;
-  ownerName: string;
-  ownerId: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  createdAt: string;
-}
-
 export interface AdminListingItem {
   id: number;
   spaceId: number;
@@ -83,6 +72,42 @@ export interface SystemStat {
 
 export interface BusinessCategory {
   id: number;
+  isActive: boolean;
+  name: string;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string | null;
+  updatedAt: string;
+}
+
+export interface AdminWalletOwner {
+  userId: string;
+  userName: string | null;
+  phoneNumber: string | null;
+  email: string | null;
+  role: string;
+  userStatus: string;
+  profileFullName: string | null;
+  profileAvatarUrl: string | null;
+  profileBio: string | null;
+  profileSocialLink: string | null;
+  profileGender: string | null;
+}
+
+export interface AdminWalletAccount {
+  id: number;
+  balance: number;
+  user: AdminWalletOwner;
+  name: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string;
+  updatedAt: string;
+}
+
+export interface PriorityLevel {
+  id: number;
+  price: number;
   isActive: boolean;
   name: string;
   createdBy: string;

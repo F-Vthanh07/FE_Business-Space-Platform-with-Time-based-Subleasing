@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { SpaceApprovalItem, AdminListingItem, BusinessCategory } from '../types';
+import type { AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel } from '../types';
 
 export const fetchUsers = async (token: string): Promise<any[]> => {
   const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/User', {
@@ -28,20 +28,6 @@ export const changeUserStatus = async (userId: string, status: string, token: st
   }
 };
 
-export const fetchPendingSpaces = async (token: string): Promise<SpaceApprovalItem[]> => {
-  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Admin/Spaces/pending', {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'accept': '*/*'
-    }
-  });
-  if (!response.ok) {
-    throw new Error('Failed to fetch pending spaces');
-  }
-  const data = await response.json();
-  return Array.isArray(data) ? data : [];
-};
-
 export const fetchListings = async (token: string): Promise<AdminListingItem[]> => {
   const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', {
     headers: {
@@ -54,32 +40,6 @@ export const fetchListings = async (token: string): Promise<AdminListingItem[]> 
   }
   const data = await response.json();
   return Array.isArray(data) ? data : (data?.data || data?.items || []);
-};
-
-export const approveSpace = async (spaceId: string, token: string): Promise<void> => {
-  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Admin/Spaces/${spaceId}/approve`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'accept': '*/*'
-    }
-  });
-  if (!response.ok) {
-    throw new Error('Failed to approve space');
-  }
-};
-
-export const rejectSpace = async (spaceId: string, token: string): Promise<void> => {
-  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Admin/Spaces/${spaceId}/reject`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'accept': '*/*'
-    }
-  });
-  if (!response.ok) {
-    throw new Error('Failed to reject space');
-  }
 };
 
 export const approveListing = async (listingId: number, token: string): Promise<void> => {
@@ -187,6 +147,64 @@ export const deleteCategory = async (id: number, token: string): Promise<void> =
   });
   if (!response.ok) {
     throw new Error('Failed to delete category');
+  }
+};
+
+export const fetchAllWallets = async (token: string): Promise<AdminWalletAccount[]> => {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Wallet', {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch wallets');
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data?.data || data?.items || []);
+};
+
+export const fetchPriorityLevels = async (token: string): Promise<PriorityLevel[]> => {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/PriorityLevel/GetAll', {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch priority levels');
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data?.data || data?.items || []);
+};
+
+export const createPriorityLevel = async (name: string, price: number, isActive: boolean, token: string): Promise<void> => {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/PriorityLevel/Create', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'accept': '*/*'
+    },
+    body: JSON.stringify({ name, price, isActive })
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create priority level');
+  }
+};
+
+export const updatePriorityLevel = async (id: number, name: string, price: number, isActive: boolean, token: string): Promise<void> => {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/PriorityLevel/Update${id}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'accept': '*/*'
+    },
+    body: JSON.stringify({ name, price, isActive })
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update priority level');
   }
 };
 

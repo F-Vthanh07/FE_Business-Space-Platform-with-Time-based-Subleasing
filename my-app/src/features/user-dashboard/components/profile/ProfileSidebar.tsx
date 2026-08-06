@@ -6,8 +6,6 @@ import {
   HelpCircle,
   Globe,
   LogOut,
-  Sun,
-  Moon,
   ArrowLeft,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
@@ -45,7 +43,7 @@ const getPageLabels = (id: string, lang: string) => {
 };
 
 export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ activePage, onNavigate, onLogout }) => {
-  const { t, language, setLanguage, theme, toggleTheme } = useThemeLanguage();
+  const { t, language, setLanguage } = useThemeLanguage();
 
   const renderNavGroup = (items: NavItem[]) =>
     items.map((item) => {
@@ -100,15 +98,6 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ activePage, onNa
             onClick={() => setLanguage(language === 'en' ? 'vi' : 'en')}
           >
             <Globe size={16} />
-          </button>
-          <div className="user-sidebar-footer-divider" />
-          <button
-            className="user-sidebar-action-btn"
-            title={theme === 'dark' ? t('common.themeLight') : t('common.themeDark')}
-            onClick={toggleTheme}
-            type="button"
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
           <div className="user-sidebar-footer-divider" />
           <button

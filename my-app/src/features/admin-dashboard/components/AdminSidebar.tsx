@@ -2,19 +2,17 @@ import React from 'react';
 import {
   LayoutDashboard,
   Users,
-  Building2,
   FileText,
-  CreditCard,
   Globe,
   LogOut,
-  Sun,
-  Moon,
   Tag,
+  Wallet,
+  Zap,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import './AdminSidebar.css';
 
-export type AdminPage = 'overview' | 'users' | 'spaces' | 'listings' | 'transactions' | 'categories';
+export type AdminPage = 'overview' | 'users' | 'listings' | 'categories' | 'wallets' | 'priorityLevels';
 
 interface AdminSidebarProps {
   activePage: AdminPage;
@@ -30,14 +28,14 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'overview', icon: <LayoutDashboard size={16} /> },
   { id: 'users', icon: <Users size={16} /> },
-  { id: 'spaces', icon: <Building2 size={16} /> },
   { id: 'listings', icon: <FileText size={16} /> },
-  { id: 'transactions', icon: <CreditCard size={16} /> },
+  { id: 'wallets', icon: <Wallet size={16} /> },
+  { id: 'priorityLevels', icon: <Zap size={16} /> },
   { id: 'categories', icon: <Tag size={16} /> },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNavigate, onLogout }) => {
-  const { language, setLanguage, theme, toggleTheme } = useThemeLanguage();
+  const { language, setLanguage } = useThemeLanguage();
 
   const getPageLabels = (id: AdminPage) => {
     const isEn = language === 'en';
@@ -46,12 +44,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNaviga
         return { title: isEn ? 'Overview' : 'Tổng quan', sub: isEn ? 'System statistics' : 'Số liệu hệ thống' };
       case 'users':
         return { title: isEn ? 'Users' : 'Người dùng', sub: isEn ? 'Accounts registry' : 'Danh sách tài khoản' };
-      case 'spaces':
-        return { title: isEn ? 'Spaces Approval' : 'Duyệt mặt bằng', sub: isEn ? 'Pending properties' : 'Bất động sản chờ duyệt' };
       case 'listings':
         return { title: isEn ? 'Listings Approval' : 'Duyệt tin đăng', sub: isEn ? 'Market offers' : 'Tin thuê chờ duyệt' };
-      case 'transactions':
-        return { title: isEn ? 'Transactions' : 'Giao dịch', sub: isEn ? 'Escrow & payouts' : 'Ví ký quỹ & thanh toán' };
+      case 'wallets':
+        return { title: isEn ? 'Wallets' : 'Ví', sub: isEn ? 'User balances' : 'Số dư người dùng' };
+      case 'priorityLevels':
+        return { title: isEn ? 'Priority Packages' : 'Gói giá đăng bài', sub: isEn ? 'Listing boosts' : 'Ưu tiên hiển thị' };
       case 'categories':
         return { title: isEn ? 'Categories' : 'Ngành nghề', sub: isEn ? 'Business niches' : 'Ngành hàng kinh doanh' };
       default:
@@ -62,7 +60,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNaviga
   return (
     <aside className="admin-sidebar glass-card">
       <div className="sidebar-header">
-        <h2 className="sidebar-title font-press-start">Admin Portal</h2>
+        <h2 className="sidebar-title">Admin Portal</h2>
         <p className="sidebar-subtitle text-neon-green">SYSTEM CONTROLLER</p>
       </div>
 
@@ -88,10 +86,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNaviga
 
       <div className="sidebar-footer">
         <div className="sidebar-divider" />
-        
+
         <div className="sidebar-footer-actions">
-          <button 
-            className="sidebar-action-btn" 
+          <button
+            className="sidebar-action-btn"
             title={language === 'en' ? 'Tiếng Việt' : 'English'}
             onClick={() => setLanguage(language === 'en' ? 'vi' : 'en')}
           >
@@ -101,17 +99,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNaviga
             </span>
           </button>
           <div className="sidebar-footer-divider" />
-          <button 
-            className="sidebar-action-btn" 
-            title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-            onClick={toggleTheme}
-          >
-            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-          </button>
-          <div className="sidebar-footer-divider" />
-          <button 
-            className="sidebar-action-btn logout-btn" 
-            title={language === 'en' ? 'Logout' : 'Đăng xuất'} 
+          <button
+            className="sidebar-action-btn logout-btn"
+            title={language === 'en' ? 'Logout' : 'Đăng xuất'}
             onClick={onLogout}
           >
             <LogOut size={15} />

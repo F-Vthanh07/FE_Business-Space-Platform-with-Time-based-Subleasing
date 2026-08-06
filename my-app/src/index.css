@@ -288,6 +288,10 @@ input, textarea {
   box-shadow: var(--shadow-card-hover);
 }
 
+.text-neon-green {
+  color: var(--color-positive);
+}
+
 .glass-card--inset {
   background: var(--color-bg-card-deep);
   box-shadow: var(--shadow-inner);

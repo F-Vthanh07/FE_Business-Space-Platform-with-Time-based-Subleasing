@@ -1,13 +1,48 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Users, Building, FileText, DollarSign, Activity } from 'lucide-react';
-import type { SystemStat } from '../types';
+import type { SystemStat, AdminListingItem } from '../types';
 
 interface OverviewModuleProps {
   stats: SystemStat;
+  listings: AdminListingItem[];
   language: 'en' | 'vi';
 }
 
-export const OverviewModule: React.FC<OverviewModuleProps> = ({ stats, language }) => {
+export const OverviewModule: React.FC<OverviewModuleProps> = ({ stats, listings, language }) => {
+  const statusBreakdown = useMemo(() => {
+    const counts = { pending: 0, accepted: 0, canceled: 0 };
+    listings.forEach(l => {
+      const status = (l.status || 'Pending').toLowerCase();
+      if (status === 'pending') counts.pending++;
+      else if (status === 'accepted') counts.accepted++;
+      else if (status === 'canceled') counts.canceled++;
+    });
+    const total = listings.length || 1;
+    return [
+      {
+        key: 'pending',
+        label: language === 'en' ? 'Pending' : 'Chờ duyệt',
+        count: counts.pending,
+        percent: Math.round((counts.pending / total) * 100),
+        className: '',
+      },
+      {
+        key: 'accepted',
+        label: language === 'en' ? 'Accepted' : 'Đã duyệt',
+        count: counts.accepted,
+        percent: Math.round((counts.accepted / total) * 100),
+        className: 'active',
+      },
+      {
+        key: 'canceled',
+        label: language === 'en' ? 'Canceled' : 'Từ chối',
+        count: counts.canceled,
+        percent: Math.round((counts.canceled / total) * 100),
+        className: '',
+      },
+    ];
+  }, [listings, language]);
+
   return (
     <div className="admin-module animate-fade-in">
       <header className="module-header">
@@ -50,21 +85,34 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({ stats, language 
         </div>
       </div>
 
-      {/* Activity Block */}
+      {/* Listings status breakdown — dữ liệu thật từ danh sách tin đăng đã tải */}
       <div className="admin-activity-section glass-card">
         <div className="section-title-row">
           <Activity size={18} className="text-neon-green" />
-          <h3>{language === 'en' ? 'Realtime Node Analytics' : 'Biểu đồ hoạt động hệ thống'}</h3>
+          <h3>{language === 'en' ? 'Listings Status Breakdown' : 'Phân bổ trạng thái tin đăng'}</h3>
         </div>
-        <div className="simulated-chart">
-          <div className="chart-bar-container">
-            <div className="chart-bar" style={{ height: '70%' }}><span className="bar-label">May</span></div>
-            <div className="chart-bar" style={{ height: '85%' }}><span className="bar-label">Jun</span></div>
-            <div className="chart-bar" style={{ height: '60%' }}><span className="bar-label">Jul</span></div>
-            <div className="chart-bar" style={{ height: '90%' }}><span className="bar-label">Aug</span></div>
-            <div className="chart-bar active" style={{ height: '95%' }}><span className="bar-label">Current</span></div>
+        {listings.length === 0 ? (
+          <p className="text-secondary" style={{ padding: '12px 0' }}>
+            {language === 'en' ? 'No listings data available yet.' : 'Chưa có dữ liệu tin đăng.'}
+          </p>
+        ) : (
+          <div className="status-breakdown-list">
+            {statusBreakdown.map(item => (
+              <div key={item.key} className="status-breakdown-row">
+                <div className="status-breakdown-label">
+                  <span>{item.label}</span>
+                  <span className="status-breakdown-count">{item.count} ({item.percent}%)</span>
+                </div>
+                <div className="status-breakdown-track">
+                  <div
+                    className={`status-breakdown-fill ${item.className}`}
+                    style={{ width: `${item.percent}%` }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
