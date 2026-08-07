@@ -183,6 +183,10 @@
 .form-select-input {
   cursor: pointer;
   appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23A0AABC' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 36px;
 }
 
 .form-textarea {
@@ -196,7 +200,7 @@
 .form-textarea:focus {
   border-color: var(--color-accent);
   background: rgba(0, 0, 0, 0.4);
-  box-shadow: 0 0 10px rgba(74, 114, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(74, 114, 255, 0.15);
 }
 
 .form-input:disabled,
@@ -234,6 +238,20 @@
 
 .submit-btn {
   padding: 10px 24px;
+}
+
+/* Số dư ví hiển thị cạnh dropdown gói bài đăng — chỉ đọc, không phải input */
+.wallet-balance-display {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 16px;
+  background: rgba(0, 212, 160, 0.08);
+  border: 1px solid rgba(0, 212, 160, 0.25);
+  border-radius: var(--radius-lg);
+  color: #00D4A0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
 }
 
 /* Error box dùng chung */

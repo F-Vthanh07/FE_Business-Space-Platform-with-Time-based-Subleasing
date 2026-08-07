@@ -19,9 +19,9 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const { language, setLanguage } = useThemeLanguage();
   const { isVerified } = useIdentityVerification();
 
-  const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | 'ai' | null => {
+  const getActiveTab = (pathname: string): 'home' | 'overview' | 'feed' | 'ai' | null => {
     if (pathname === '/') return 'home';
-    if (pathname.startsWith('/user/spaces')) return 'spaces';
+    if (pathname.startsWith('/user/overview')) return 'overview';
     if (pathname === '/feed') return 'feed';
     if (pathname === '/ai-image-editor') return 'ai';
     return null;
@@ -168,8 +168,8 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
             <button className={`header-nav-item ${activeTab === 'home' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/')}>
               {language === 'en' ? 'HOME' : 'TRANG CHỦ'}
             </button>
-            <button className={`header-nav-item ${activeTab === 'spaces' ? 'header-nav-item--active' : ''}`} onClick={() => navigate(isLoggedIn ? '/user/spaces' : '/login')}>
-              {language === 'en' ? 'MANAGE SPACES' : 'QUẢN LÝ MẶT BẰNG'}
+            <button className={`header-nav-item ${activeTab === 'overview' ? 'header-nav-item--active' : ''}`} onClick={() => navigate(isLoggedIn ? '/user/overview' : '/login')}>
+              {language === 'en' ? 'OVERVIEW' : 'CÔNG CỤ QUẢN LÝ'}
             </button>
             <button className={`header-nav-item ${activeTab === 'feed' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/feed')}>
               {language === 'en' ? 'DISCOVER' : 'KHÁM PHÁ'}

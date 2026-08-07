@@ -4,9 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, DollarSign, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, Users, ShieldCheck, Clock } from 'lucide-react';
 import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
+import { Select } from '../../../../components/Select';
+import { DatePicker } from '../../../../components/DatePicker';
 import "../../../shared/ModalShell.css";
 import './ListingForm.css';
 import { createShareListing, updateShareListing } from './shareListing.api';
+import { fetchPriorityLevels, type PriorityLevel } from './priorityLevel.api';
+import { fetchWalletAccount } from '../../../wallet/api/wallet.api';
 import type { ShareListingPayload } from '../../types';
 
 interface ListingFormProps {
@@ -21,17 +25,6 @@ const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'S
 const DAYS_LABEL_VI: Record<string, string> = {
   Monday: 'T2', Tuesday: 'T3', Wednesday: 'T4', Thursday: 'T5',
   Friday: 'T6', Saturday: 'T7', Sunday: 'CN'
-};
-
-const getSafeDateString = (dateString: any) => {
-  try {
-    if (!dateString) return new Date().toISOString().slice(0, 16);
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return new Date().toISOString().slice(0, 16);
-    return date.toISOString().slice(0, 16);
-  } catch {
-    return new Date().toISOString().slice(0, 16);
-  }
 };
 
 const getSafeDateOnly = (dateString: any) => {
@@ -51,6 +44,11 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const [error, setError] = useState('');
   const { isVerified } = useIdentityVerification();
 
+  const isEditingListing = !!initialData;
+  const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
+  const [priorityLevelId, setPriorityLevelId] = useState<number | ''>('');
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+
   // Đã sửa: Dựa vào listingType thật từ API để quyết định form
   const initialMode: ListingMode = initialData?.listingType === 'SharedSpace' ? 'share' : 'longterm';
   const [mode, setMode] = useState<ListingMode>(initialMode);
@@ -63,12 +61,12 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
-  const [allowedStartTime, setAllowedStartTime] = useState(() => getSafeDateString(initialData?.allowedStartTime));
+  const [allowedStartTime, setAllowedStartTime] = useState(() => getSafeDateOnly(initialData?.allowedStartTime));
   const [allowedEndTime, setAllowedEndTime] = useState(() => {
-    if (initialData?.allowedEndTime) return getSafeDateString(initialData.allowedEndTime);
+    if (initialData?.allowedEndTime) return getSafeDateOnly(initialData.allowedEndTime);
     const nextMonth = new Date();
     nextMonth.setMonth(nextMonth.getMonth() + 1);
-    return getSafeDateString(nextMonth);
+    return getSafeDateOnly(nextMonth);
   });
 
   const [maxSubRenter, setMaxSubRenter] = useState<number>(initialData?.shareSpaceDetailMaxSubRenter || 1);
@@ -100,6 +98,27 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     };
     fetchSpaces();
   }, []);
+
+  useEffect(() => {
+    if (isEditingListing) return;
+    const loadPriorityLevels = async () => {
+      const levels = await fetchPriorityLevels();
+      setPriorityLevels(levels);
+      if (levels.length > 0) setPriorityLevelId(levels[0].id);
+    };
+    loadPriorityLevels();
+
+    const loadWalletBalance = async () => {
+      try {
+        const token = localStorage.getItem('portal_token') || '';
+        const wallet = await fetchWalletAccount(token);
+        setWalletBalance(wallet.balance);
+      } catch (err) {
+        console.error("Lỗi lấy số dư ví:", err);
+      }
+    };
+    loadWalletBalance();
+  }, [isEditingListing]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -173,6 +192,19 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       return;
     }
 
+    if (!isEditingListing && priorityLevelId === '') {
+      setError('Vui lòng chọn gói bài đăng!');
+      return;
+    }
+
+    if (!isEditingListing) {
+      const chosenPackagePrice = priorityLevels.find(p => p.id === priorityLevelId)?.price ?? 0;
+      if (walletBalance !== null && walletBalance < chosenPackagePrice) {
+        setError(`Số dư ví không đủ để đăng tin! Cần ${chosenPackagePrice.toLocaleString('vi-VN')} VNĐ, ví hiện có ${walletBalance.toLocaleString('vi-VN')} VNĐ.`);
+        return;
+      }
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0); 
     const startDate = new Date(allowedStartTime);
@@ -197,8 +229,8 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     }
 
     if (mode === 'share') {
-      const allowedEnd = new Date(allowedEndTime.substring(0, 10));
-      const allowedStart = new Date(allowedStartTime.substring(0, 10));
+      const allowedEnd = new Date(allowedEndTime);
+      const allowedStart = new Date(allowedStartTime);
       const badSlot = availabilities.find(slot => {
         const vFrom = new Date(slot.validFrom);
         const vTo = new Date(slot.validTo);
@@ -206,7 +238,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       });
       if (badSlot) {
         setError(
-          `Khung giờ "Áp dụng từ ${badSlot.validFrom} đến ${badSlot.validTo}" phải nằm trong khoảng thời gian hiệu lực bài đăng (${allowedStartTime.substring(0,10)} → ${allowedEndTime.substring(0,10)})!`
+          `Khung giờ "Áp dụng từ ${badSlot.validFrom} đến ${badSlot.validTo}" phải nằm trong khoảng thời gian hiệu lực bài đăng (${allowedStartTime} → ${allowedEndTime})!`
         );
         return;
       }
@@ -225,12 +257,15 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
     setIsLoading(true);
 
+    const selectedPriorityLevel = priorityLevels.find(p => p.id === priorityLevelId);
+    const amount = selectedPriorityLevel?.price ?? 0;
+
     // ===== NHÁNH 1: CHIA SẺ MẶT BẰNG =====
     if (mode === 'share') {
       const sharePayload: ShareListingPayload = {
         spaceId: Number(spaceId),
-        allowedStartTime: allowedStartTime.substring(0, 10),
-        allowedEndTime: allowedEndTime.substring(0, 10),
+        allowedStartTime,
+        allowedEndTime,
         name,   
         description,
         price: Number(price),
@@ -253,7 +288,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         if (initialData) {
           await updateShareListing(initialData.id || initialData.Id, sharePayload);
         } else {
-          const created = await createShareListing(sharePayload);
+          const created = await createShareListing(sharePayload, amount);
           createdShareListingId = created?.id ?? created?.Id ?? created;
         }
 
@@ -306,13 +341,13 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       const targetId = initialData?.id || initialData?.Id;
       const url = isEditing
         ? `https://flexi-space-capstone-project.onrender.com/api/Listing/Update/${targetId}`
-        : `https://flexi-space-capstone-project.onrender.com/api/Listing/Create`;
+        : `https://flexi-space-capstone-project.onrender.com/api/Listing/Create?amount=${amount}`;
 
       const listingPayload = {
         spaceId: Number(spaceId),
-        allowedStartTime: allowedStartTime.substring(0, 10),
-        allowedEndTime: allowedEndTime.substring(0, 10),
-        name,   
+        allowedStartTime,
+        allowedEndTime,
+        name,
         description: description,
         price: Number(price),
         listingPictures: []
@@ -442,18 +477,13 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 <label className="form-label">
                   Chọn mặt bằng vật lý <span className="required-mark">*</span>
                 </label>
-                <select
-                  className="form-select-input form-select-input--flat"
+                <Select
                   value={spaceId}
-                  onChange={(e) => setSpaceId(Number(e.target.value))}
-                  required
+                  onChange={(v) => setSpaceId(Number(v))}
                   disabled={isLoading || !!initialData}
-                >
-                  <option value="">-- Chọn mặt bằng --</option>
-                  {mySpaces.map(s => (
-                    <option key={s.id || s.Id} value={s.id || s.Id}>{s.name}</option>
-                  ))}
-                </select>
+                  placeholder="-- Chọn mặt bằng --"
+                  options={mySpaces.map(s => ({ value: s.id || s.Id, label: s.name }))}
+                />
               </div>
 
               <div className="form-group">
@@ -474,6 +504,32 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 </div>
               </div>
             </div>
+
+            {!isEditingListing && (
+              <div className="form-grid-2">
+                <div className="form-group">
+                  <label className="form-label">
+                    Gói bài đăng <span className="required-mark">*</span>
+                  </label>
+                  <Select
+                    value={priorityLevelId}
+                    onChange={(v) => setPriorityLevelId(Number(v))}
+                    disabled={isLoading}
+                    placeholder="-- Chọn gói bài đăng --"
+                    options={priorityLevels.map(p => ({
+                      value: p.id,
+                      label: `${p.name} — ${p.price.toLocaleString('vi-VN')} VNĐ`
+                    }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Số dư ví</label>
+                  <div className="wallet-balance-display">
+                    {walletBalance === null ? 'Đang tải...' : `${walletBalance.toLocaleString('vi-VN')} VNĐ`}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {mode === 'share' && (
               <div className="form-grid-2">
@@ -547,29 +603,20 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
             <div className="form-grid-2">
               <div className="form-group">
                 <label className="form-label"><Calendar size={14} /> Thời gian bắt đầu</label>
-                <div className="input-with-icon">
-                  <Calendar size={14} className="input-icon" />
-                  <input
-                    type="datetime-local"
-                    className="form-input"
-                    value={allowedStartTime}
-                    onChange={e => setAllowedStartTime(e.target.value)}
-                    disabled={isLoading}
-                  />
-                </div>
+                <DatePicker
+                  value={allowedStartTime}
+                  onChange={setAllowedStartTime}
+                  disabled={isLoading}
+                />
               </div>
               <div className="form-group">
                 <label className="form-label"><Calendar size={14} /> Thời gian kết thúc</label>
-                <div className="input-with-icon">
-                  <Calendar size={14} className="input-icon" />
-                  <input
-                    type="datetime-local"
-                    className="form-input"
-                    value={allowedEndTime}
-                    onChange={e => setAllowedEndTime(e.target.value)}
-                    disabled={isLoading}
-                  />
-                </div>
+                <DatePicker
+                  value={allowedEndTime}
+                  onChange={setAllowedEndTime}
+                  disabled={isLoading}
+                  min={allowedStartTime}
+                />
               </div>
             </div>
           </div>
@@ -610,13 +657,13 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                     <div className="form-group">
                       <label className="form-label">Áp dụng từ</label>
                       <input type="date" className="form-input" value={slot.validFrom}
-                        min={allowedStartTime.substring(0, 10)}
+                        min={allowedStartTime}
                         onChange={e => updateSlotField(idx, 'validFrom', e.target.value)} disabled={isLoading} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Áp dụng đến</label>
-                      <input type="date" className="form-input" value={slot.validTo} 
-                      max={allowedEndTime.substring(0, 10)}
+                      <input type="date" className="form-input" value={slot.validTo}
+                      max={allowedEndTime}
                         onChange={e => updateSlotField(idx, 'validTo', e.target.value)} disabled={isLoading} />
                     </div>
                   </div>

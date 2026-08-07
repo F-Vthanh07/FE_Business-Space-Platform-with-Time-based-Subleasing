@@ -149,7 +149,8 @@
   position: absolute;
   bottom: 10px;
   left: 12px;
-  background: rgba(0, 0, 0, 0.7);
+  background: #FFFFFF;
+  color: #0F172A;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   padding: 3px 10px;
