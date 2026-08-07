@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Share2, Heart, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Clock, Tag } from 'lucide-react';
+import { MapPin, Share2, Heart, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Clock, Tag, Flag } from 'lucide-react';
 import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
@@ -85,6 +85,17 @@ const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 const formatTime = (t: string) => (t ? t.substring(0, 5) : '');
 
+// --- LÝ DO BÁO CÁO BÀI ĐĂNG VI PHẠM (ReportReasonEnum) ---
+const REPORT_REASONS: { value: string; label: string }[] = [
+  { value: 'ScamOrFraud', label: 'Lừa đảo / Gian lận' },
+  { value: 'FakeInformation', label: 'Thông tin giả mạo' },
+  { value: 'PriceMismatch', label: 'Giá không đúng thực tế' },
+  { value: 'FakeAddress', label: 'Địa chỉ không chính xác' },
+  { value: 'InappropriateContent', label: 'Nội dung không phù hợp' },
+  { value: 'WrongCategory', label: 'Sai danh mục' },
+  { value: 'Other', label: 'Lý do khác' },
+];
+
 export const ListingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -109,6 +120,12 @@ export const ListingDetail: React.FC = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shareModalAnimateIn, setShareModalAnimateIn] = useState(false);
+
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [reportReasons, setReportReasons] = useState<string[]>([]);
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportSuccess, setReportSuccess] = useState(false);
 
   const currentUserId = localStorage.getItem('current_user_id'); 
   const token = localStorage.getItem('portal_token');
@@ -302,6 +319,56 @@ export const ListingDetail: React.FC = () => {
     }
   };
 
+  const toggleReportReason = (value: string) => {
+    setReportReasons(prev => prev.includes(value) ? prev.filter(r => r !== value) : [...prev, value]);
+  };
+
+  const handleOpenReportModal = () => {
+    if (!token) {
+      alert("Vui lòng đăng nhập để báo cáo bài đăng!");
+      navigate('/login');
+      return;
+    }
+    setReportReasons([]);
+    setReportDetails('');
+    setReportSuccess(false);
+    setIsReportModalOpen(true);
+  };
+
+  const handleSubmitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (reportReasons.length === 0) {
+      alert("Vui lòng chọn ít nhất một lý do báo cáo.");
+      return;
+    }
+    setIsSubmittingReport(true);
+    try {
+      const payload = {
+        listingId: Number(listing.id || listing.Id),
+        reasons: reportReasons,
+        additionalDetails: reportDetails
+      };
+
+      const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/Reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'accept': '*/*' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        setReportSuccess(true);
+      } else {
+        const err = await response.json().catch(() => ({}));
+        alert(err.message || "Có lỗi xảy ra khi gửi báo cáo.");
+      }
+    } catch (error) {
+      console.error("Lỗi API Report:", error);
+      alert("Có lỗi xảy ra khi gửi báo cáo.");
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   if (isLoading) return <div style={{ paddingTop: '100px', textAlign: 'center' }}>Đang tải thông tin...</div>;
   if (!listing) return <div style={{ paddingTop: '100px', textAlign: 'center' }}>Không tìm thấy bài đăng!</div>;
 
@@ -390,9 +457,14 @@ export const ListingDetail: React.FC = () => {
                   onClick={handleToggleFavorite}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: isFavorite ? '#E02424' : '#555', fontWeight: 500 }}
                 >
-                  <Heart size={18} fill={isFavorite ? '#E02424' : 'none'} color={isFavorite ? '#E02424' : 'currentColor'} /> 
+                  <Heart size={18} fill={isFavorite ? '#E02424' : 'none'} color={isFavorite ? '#E02424' : 'currentColor'} />
                   {isFavorite ? 'Đã lưu' : 'Lưu tin'}
                 </button>
+                {!isOwner && (
+                  <button onClick={handleOpenReportModal} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: '#E02424', fontWeight: 500 }}>
+                    <Flag size={18} /> Báo cáo
+                  </button>
+                )}
               </div>
             </div>
 
@@ -770,6 +842,86 @@ export const ListingDetail: React.FC = () => {
                 onClick={handleCopyLink}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {isReportModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ backgroundColor: '#fff', width: '460px', maxWidth: '90vw', borderRadius: '12px', padding: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E0E0E0', paddingBottom: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '18px', color: '#1E293B' }}>
+                <Flag size={20} color="#E02424" /> Báo cáo bài đăng vi phạm
+              </div>
+              <button onClick={() => setIsReportModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {reportSuccess ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ fontSize: '15px', color: '#333', marginBottom: '20px' }}>
+                  Cảm ơn bạn đã gửi báo cáo. Đội ngũ quản trị sẽ xem xét bài đăng này sớm nhất có thể.
+                </div>
+                <button
+                  onClick={() => setIsReportModalOpen(false)}
+                  style={{ padding: '10px 24px', borderRadius: '6px', border: 'none', backgroundColor: '#1E293B', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  Đóng
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitReport} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '8px', display: 'block' }}>
+                    Lý do báo cáo (chọn ít nhất 1)
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {REPORT_REASONS.map(reason => (
+                      <label
+                        key={reason.value}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          padding: '10px 12px', borderRadius: '6px',
+                          border: reportReasons.includes(reason.value) ? '1px solid #E02424' : '1px solid #ddd',
+                          backgroundColor: reportReasons.includes(reason.value) ? '#FEF2F2' : '#fff',
+                          cursor: 'pointer', fontSize: '14px', color: '#333'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={reportReasons.includes(reason.value)}
+                          onChange={() => toggleReportReason(reason.value)}
+                        />
+                        {reason.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>
+                    Mô tả thêm (Tùy chọn)
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Cung cấp thêm thông tin chi tiết về vi phạm..."
+                    value={reportDetails}
+                    onChange={(e) => setReportDetails(e.target.value)}
+                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', resize: 'none' }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingReport}
+                  style={{ marginTop: '8px', width: '100%', padding: '12px', borderRadius: '6px', border: 'none', backgroundColor: '#E02424', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  {isSubmittingReport ? 'Đang gửi báo cáo...' : 'Gửi báo cáo'}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

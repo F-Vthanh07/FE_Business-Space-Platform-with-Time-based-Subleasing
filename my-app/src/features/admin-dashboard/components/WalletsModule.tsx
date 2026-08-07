@@ -1,17 +1,22 @@
 import React, { useMemo, useState } from 'react';
-import { Search, ArrowUpDown, Wallet } from 'lucide-react';
+import { Search, ArrowUpDown, Wallet, Edit3, X } from 'lucide-react';
 import type { AdminWalletAccount } from '../types';
 
 interface WalletsModuleProps {
   wallets: AdminWalletAccount[];
   language: 'en' | 'vi';
+  handleUpdateWalletBalance: (userId: string, amount: number) => Promise<void>;
+  isLoading?: boolean;
 }
 
 type SortOrder = 'desc' | 'asc';
 
-export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language }) => {
+export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language, handleUpdateWalletBalance, isLoading }) => {
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState<AdminWalletAccount | null>(null);
+  const [amount, setAmount] = useState('');
 
   const formatMoney = (n: number) => `${n.toLocaleString('vi-VN')}₫`;
 
@@ -38,6 +43,28 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language 
       sortOrder === 'desc' ? b.balance - a.balance : a.balance - b.balance
     );
   }, [wallets, search, sortOrder]);
+
+  const handleOpenEdit = (wallet: AdminWalletAccount) => {
+    setSelectedWallet(wallet);
+    setAmount('');
+    setIsEditModalOpen(true);
+  };
+
+  const onEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedWallet?.user?.userId) return;
+    const amountValue = Number(amount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      alert(language === 'en' ? 'Please enter a valid amount' : 'Vui lòng nhập số tiền hợp lệ');
+      return;
+    }
+    try {
+      await handleUpdateWalletBalance(selectedWallet.user.userId, amountValue);
+      setIsEditModalOpen(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <div className="admin-module animate-fade-in">
@@ -99,12 +126,13 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language 
               <th>{language === 'en' ? 'Role' : 'Vai trò'}</th>
               <th style={{ textAlign: 'right' }}>{language === 'en' ? 'Balance' : 'Số dư'}</th>
               <th>{language === 'en' ? 'Last Updated' : 'Cập nhật gần nhất'}</th>
+              <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredWallets.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
                   {language === 'en' ? 'No wallets found.' : 'Không tìm thấy ví nào.'}
                 </td>
               </tr>
@@ -134,6 +162,18 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language 
                       <strong className="text-neon-green">{formatMoney(w.balance)}</strong>
                     </td>
                     <td className="font-mono">{formatDate(w.updatedAt)}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        <button
+                          className="btn-action-icon unblock"
+                          onClick={() => handleOpenEdit(w)}
+                          title={language === 'en' ? 'Add funds' : 'Cộng tiền'}
+                          disabled={isLoading || !w.user?.userId}
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })
@@ -141,6 +181,58 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language 
           </tbody>
         </table>
       </div>
+
+      {/* Top-up Balance Modal */}
+      {isEditModalOpen && selectedWallet && (
+        <div className="listing-detail-backdrop">
+          <div className="listing-form-modal glass-card" style={{ maxWidth: '400px', width: '100%' }}>
+            <div className="listing-form-header">
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>
+                {language === 'en' ? 'Add Funds to Wallet' : 'Cộng tiền vào ví'}
+              </h2>
+              <button className="btn-icon" onClick={() => setIsEditModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <p style={{ margin: '12px 0 0', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+              {selectedWallet.user?.profileFullName || selectedWallet.user?.userName || selectedWallet.user?.email}
+              {' — '}
+              {language === 'en' ? 'Current balance: ' : 'Số dư hiện tại: '}
+              <strong className="text-neon-green">{formatMoney(selectedWallet.balance)}</strong>
+            </p>
+
+            <form onSubmit={onEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 600 }}>
+                  {language === 'en' ? 'Amount to add (VND)' : 'Số tiền cộng thêm (VNĐ)'} <span style={{ color: 'red' }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  step={1000}
+                  className="slot-input-text"
+                  style={{ height: '40px', width: '100%', boxSizing: 'border-box', padding: '0 12px' }}
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  required
+                  autoFocus
+                  placeholder="0"
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+                <button type="button" className="btn-ghost" onClick={() => setIsEditModalOpen(false)}>
+                  {language === 'en' ? 'Cancel' : 'Hủy'}
+                </button>
+                <button type="submit" className="btn-primary" style={{ padding: '0 20px' }} disabled={isLoading}>
+                  {language === 'en' ? 'Add Funds' : 'Cộng tiền'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -7,22 +7,27 @@ import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './AdminDashboardPage.css';
 
 // Types & API imports
-import type { AdminPage, UserAccount, AdminListingItem, SystemStat, BusinessCategory, AdminWalletAccount, PriorityLevel } from './types';
+import type { AdminPage, UserAccount, AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem } from './types';
 import {
   fetchListings,
   approveListing,
   rejectListing,
   fetchBusinessCategories,
   createSingleCategory,
-  createCategoryList,
   updateCategory,
   deleteCategory,
   fetchUsers,
   changeUserStatus,
   fetchAllWallets,
+  updateWalletBalance,
   fetchPriorityLevels,
   createPriorityLevel,
-  updatePriorityLevel
+  updatePriorityLevel,
+  fetchAllSpaces,
+  fetchListingReports,
+  softDeleteListing,
+  fetchSoftDeletedListings,
+  restoreListing
 } from './api/admin.api';
 
 // Components imports
@@ -32,24 +37,23 @@ import { ListingsModule } from './components/ListingsModule';
 import { CategoriesModule } from './components/CategoriesModule';
 import { WalletsModule } from './components/WalletsModule';
 import { PriorityLevelsModule } from './components/PriorityLevelsModule';
+import { SpacesModule } from './components/SpacesModule';
 
 export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { language } = useThemeLanguage();
   const [activeTab, setActiveTab] = useState<AdminPage>('overview');
-  
+
   // States dữ liệu
-  const [stats, setStats] = useState<SystemStat>({
-    totalUsers: 142,
-    totalSpaces: 56,
-    totalListings: 43,
-    totalRevenue: 245000000 // 245M VND
-  });
-  
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [listings, setListings] = useState<AdminListingItem[]>([]);
   const [categories, setCategories] = useState<BusinessCategory[]>([]);
   const [wallets, setWallets] = useState<AdminWalletAccount[]>([]);
   const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
+  const [spaces, setSpaces] = useState<AdminSpaceItem[]>([]);
+  const [listingReports, setListingReports] = useState<ListingReportItem[]>([]);
+  const [deletedListings, setDeletedListings] = useState<AdminListingItem[]>([]);
+  const [deletedListingType, setDeletedListingType] = useState<'EntireSpace' | 'SharedSpace'>('EntireSpace');
+  const [isLoadingDeleted, setIsLoadingDeleted] = useState(false);
   
   // Loading & Notification states
   const [isLoading, setIsLoading] = useState(false);
@@ -64,123 +68,9 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Mock initial data as fallback
   useEffect(() => {
-    // Mock Users
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setUsers([
-      { id: 'US001', name: 'Nguyễn Văn A', email: 'vana@gmail.com', role: 'USER', status: 'Active', createdAt: '2026-05-12' },
-      { id: 'US002', name: 'Trần Thị B', email: 'thib@gmail.com', role: 'USER', status: 'Active', createdAt: '2026-05-15' },
-      { id: 'US003', name: 'Lê Hoàng C', email: 'hoangc@gmail.com', role: 'USER', status: 'Banned', createdAt: '2026-05-20' },
-      { id: 'US004', name: 'Super Admin', email: 'admin@flexispace.com', role: 'ADMIN', status: 'Active', createdAt: '2026-01-01' },
-      { id: 'US005', name: 'Phạm Minh D', email: 'minhd@gmail.com', role: 'USER', status: 'Active', createdAt: '2026-06-02' },
-    ]);
-
-    // Mock Listings
-    setListings([
-      {
-        id: 1,
-        spaceId: 1,
-        creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35",
-        allowedStartTime: "0001-01-01",
-        allowedEndTime: "0001-01-01",
-        description: "Chia sẻ mặt bằng quán cafe buổi sáng. Vị trí góc ngã tư đông người qua lại, rất phù hợp bán đồ ăn sáng mang đi hoặc ăn tại chỗ.",
-        listingType: "SharedSpace",
-        status: "Pending",
-        lessorName: "Nguyễn Văn A",
-        spaceAddress: "123 Nguyễn Đình Chiểu, Phường Võ Thị Sáu",
-        createdAt: "2026-06-25T11:40:32.55648",
-        updatedAt: "0001-01-01T00:00:00",
-        isDeleted: false,
-        isActive: false,
-        cancelReason: null,
-        listingPictures: [
-          "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800",
-          "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=400"
-        ],
-        shareSpaceDetailMaxSubRenter: 1,
-        shareSpaceDetailIsOwner: false,
-        shareSpaceDetailIsLegalCommitted: true,
-        shareSpaceDetailLegalCommittedAt: "2026-06-25T11:40:32.556599",
-        shareSpaceDetailShareSpaceAmenities: [
-          { id: 1, amenityId: 1, shareSpaceDetailId: 1, isIncluded: true, price: 0 },
-          { id: 2, amenityId: 2, shareSpaceDetailId: 1, isIncluded: false, price: 500000 }
-        ],
-        shareSpaceDetailAvailabilitiesTimes: [
-          {
-            id: 1,
-            shareSpaceDetailId: 1,
-            daysOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-            specificdate: "0001-01-01",
-            startTime: "05:30:00",
-            endTime: "11:00:00",
-            validFrom: "2026-07-01",
-            validTo: "2026-12-31"
-          }
-        ],
-        shareSpaceDetailShareSpaceCategories: [
-          { id: 1, bussinessCategoryId: 1, shareSpaceDetailId: 1, note: "Chỉ ưu tiên bán thức ăn nhẹ, bánh mì, đồ ăn sáng không gây nhiều khói." }
-        ]
-      },
-      {
-        id: 2,
-        spaceId: 2,
-        creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC36",
-        allowedStartTime: "0001-01-01",
-        allowedEndTime: "0001-01-01",
-        description: "Không gian tổ chức Workshop thời trang tối thứ 6. Mặt bằng rộng rãi, có hệ thống đèn chiếu sáng hiện đại, điều hòa công suất lớn.",
-        listingType: "SharedSpace",
-        status: "Pending",
-        lessorName: "Phạm Minh D",
-        spaceAddress: "88 Cầu Giấy, Hà Nội",
-        createdAt: "2026-06-24T18:30:00",
-        updatedAt: "0001-01-01T00:00:00",
-        isDeleted: false,
-        isActive: false,
-        cancelReason: null,
-        listingPictures: [
-          "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&q=80&w=800"
-        ],
-        shareSpaceDetailMaxSubRenter: 2,
-        shareSpaceDetailIsOwner: true,
-        shareSpaceDetailIsLegalCommitted: true,
-        shareSpaceDetailLegalCommittedAt: "2026-06-24T18:30:00",
-        shareSpaceDetailShareSpaceAmenities: [
-          { id: 3, amenityId: 3, shareSpaceDetailId: 2, isIncluded: true, price: 0 }
-        ],
-        shareSpaceDetailAvailabilitiesTimes: [
-          {
-            id: 2,
-            shareSpaceDetailId: 2,
-            daysOfWeek: ["Friday"],
-            specificdate: "0001-01-01",
-            startTime: "18:00:00",
-            endTime: "22:00:00",
-            validFrom: "2026-07-01",
-            validTo: "2026-12-31"
-          }
-        ],
-        shareSpaceDetailShareSpaceCategories: [
-          { id: 2, bussinessCategoryId: 2, shareSpaceDetailId: 2, note: "Phù hợp cho các hoạt động workshop, seminar nhỏ." }
-        ]
-      }
-    ]);
-    
-    // Mock Business Categories
-    setCategories([
-      { id: 1, name: "Dịch vụ ăn uống", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.44544" },
-      { id: 2, name: "Bán lẻ", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445861" },
-      { id: 3, name: "Bất động sản", isActive: false, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445865" },
-      { id: 4, name: "Công nghệ thông tin", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445866" },
-      { id: 5, name: "Dịch vụ làm đẹp và Spa", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445868" },
-      { id: 6, name: "Du lịch và Lữ hành", isActive: false, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445869" },
-      { id: 7, name: "Giáo dục và Đào tạo", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.445869" },
-      { id: 8, name: "Vận tải và Logistics", isActive: true, creatorId: "01KVYGTNZFXSXTHQ5Q5DM0BC35", createdAt: "2026-06-25T11:36:23.44587" }
-    ] as any);
-
-    // Gọi API thực tế
-    // eslint-disable-next-line react-hooks/immutability
     fetchRealAdminData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchRealAdminData = async () => {
@@ -204,7 +94,6 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
         profileGender: u.profileGender
       }));
       setUsers(mappedUsers);
-      setStats(prev => ({ ...prev, totalUsers: mappedUsers.length }));
     } catch (e) {
       console.warn("Không kết nối được API thật cho Users.", e);
     }
@@ -236,6 +125,57 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     } catch (e) {
       console.warn("Không kết nối được API thật cho Priority Levels.", e);
     }
+
+    try {
+      const spacesData = await fetchAllSpaces(token);
+      setSpaces(spacesData);
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Spaces.", e);
+    }
+
+    try {
+      const reportsData = await fetchListingReports(token);
+      setListingReports(reportsData);
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Listing Reports.", e);
+    }
+  };
+
+  const fetchDeletedListings = async (listingType: 'EntireSpace' | 'SharedSpace') => {
+    if (!token) return;
+    setIsLoadingDeleted(true);
+    try {
+      const data = await fetchSoftDeletedListings(listingType, token);
+      setDeletedListings(data);
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Deleted Listings.", e);
+      setDeletedListings([]);
+    } finally {
+      setIsLoadingDeleted(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'listings') {
+      fetchDeletedListings(deletedListingType);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, deletedListingType, token]);
+
+  const handleRestoreListing = async (listingId: number) => {
+    setIsLoading(true);
+    try {
+      await restoreListing(listingId, token || '');
+      setDeletedListings(prev => prev.filter(l => l.id !== listingId));
+      showNotification(language === 'en' ? "Listing restored successfully!" : "Đã khôi phục tin đăng thành công!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      setDeletedListings(prev => prev.filter(l => l.id !== listingId));
+      showNotification(language === 'en' ? "Listing restored (Demo mode)" : "Khôi phục tin đăng thành công (Chế độ mô phỏng)");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // --- ACTIONS XỬ LÝ DUYỆT / TỪ CHỐI TIN ĐĂNG (LISTINGS) ---
@@ -244,12 +184,10 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     try {
       await approveListing(listingId, token || '');
       setListings(prev => prev.map(item => item.id === listingId ? { ...item, status: 'Accepted' } : item));
-      setStats(prev => ({ ...prev, totalListings: prev.totalListings + 1 }));
       showNotification(language === 'en' ? "Rental listing approved!" : "Đã phê duyệt bài đăng cho thuê!");
     } catch (err) {
       console.error(err);
       setListings(prev => prev.map(item => item.id === listingId ? { ...item, status: 'Accepted' } : item));
-      setStats(prev => ({ ...prev, totalListings: prev.totalListings + 1 }));
       showNotification(language === 'en' ? "Listing approved (Demo mode)" : "Phê duyệt tin đăng thành công (Chế độ mô phỏng)");
     } finally {
       setIsLoading(false);
@@ -266,6 +204,23 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       console.error(err);
       setListings(prev => prev.map(item => item.id === listingId ? { ...item, status: 'Canceled', cancelReason: reason } : item));
       showNotification(language === 'en' ? "Listing rejected (Demo mode)" : "Từ chối tin đăng (Chế độ mô phỏng)", 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteReportedListing = async (listingId: number) => {
+    setIsLoading(true);
+    try {
+      await softDeleteListing(listingId, token || '');
+      setListingReports(prev => prev.filter(r => r.listingId !== listingId));
+      setListings(prev => prev.filter(l => l.id !== listingId));
+      showNotification(language === 'en' ? "Listing deleted successfully!" : "Đã xóa tin đăng vi phạm thành công!");
+    } catch (err) {
+      console.error(err);
+      setListingReports(prev => prev.filter(r => r.listingId !== listingId));
+      setListings(prev => prev.filter(l => l.id !== listingId));
+      showNotification(language === 'en' ? "Listing deleted (Demo mode)" : "Xóa tin đăng thành công (Chế độ mô phỏng)", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -316,41 +271,6 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     }
   };
 
-  const handleBulkCreateCategories = async () => {
-    setIsLoading(true);
-    const defaultList = [
-      { name: "Dịch vụ ăn uống", isActive: true },
-      { name: "Bán lẻ", isActive: true },
-      { name: "Bất động sản", isActive: false },
-      { name: "Công nghệ thông tin", isActive: true },
-      { name: "Dịch vụ làm đẹp và Spa", isActive: true },
-      { name: "Du lịch và Lữ hành", isActive: false },
-      { name: "Giáo dục và Đào tạo", isActive: true },
-      { name: "Vận tải và Logistics", isActive: true }
-    ];
-    try {
-      await createCategoryList(defaultList, token || '');
-      showNotification(language === 'en' ? "Categories initialized successfully!" : "Đã khởi tạo danh sách ngành nghề thành công!");
-      fetchRealAdminData();
-    } catch (err) {
-      console.error(err);
-      // Fallback: overwrite categories state
-      const mappedList: BusinessCategory[] = defaultList.map((c, idx) => ({
-        id: idx + 1,
-        name: c.name,
-        isActive: c.isActive,
-        createdBy: 'US004',
-        createdAt: new Date().toISOString(),
-        updatedBy: null,
-        updatedAt: '0001-01-01T00:00:00'
-      }));
-      setCategories(mappedList);
-      showNotification(language === 'en' ? "Categories initialized (Demo mode)" : "Khởi tạo danh sách thành công (Chế độ mô phỏng)");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleUpdateCategory = async (id: number, name: string, isActive: boolean) => {
     setIsLoading(true);
     try {
@@ -378,6 +298,23 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       // Fallback
       setCategories(prev => prev.filter(c => c.id !== id));
       showNotification(language === 'en' ? "Category deleted (Demo mode)" : "Xóa ngành nghề thành công (Chế độ mô phỏng)", 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- ACTIONS QUẢN LÝ VÍ (WALLETS) ---
+  const handleUpdateWalletBalance = async (userId: string, amountToAdd: number) => {
+    setIsLoading(true);
+    try {
+      await updateWalletBalance(userId, amountToAdd, token || '');
+      showNotification(language === 'en' ? "Funds added to wallet successfully!" : "Đã cộng tiền vào ví thành công!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      // Fallback
+      setWallets(prev => prev.map(w => w.user?.userId === userId ? { ...w, balance: w.balance + amountToAdd, updatedAt: new Date().toISOString() } : w));
+      showNotification(language === 'en' ? "Funds added to wallet (Demo mode)" : "Cộng tiền vào ví thành công (Chế độ mô phỏng)");
     } finally {
       setIsLoading(false);
     }
@@ -448,7 +385,16 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
 
         {/* --- MODULE 1: OVERVIEW --- */}
         {activeTab === 'overview' && (
-          <OverviewModule stats={stats} listings={listings} language={language} />
+          <OverviewModule
+            users={users}
+            listings={listings}
+            spaces={spaces}
+            wallets={wallets}
+            priorityLevels={priorityLevels}
+            categories={categories}
+            reports={listingReports}
+            language={language}
+          />
         )}
 
         {/* --- MODULE 2: USERS --- */}
@@ -465,12 +411,24 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
             isLoading={isLoading}
             language={language}
             categories={categories}
+            reports={listingReports}
+            handleDeleteReportedListing={handleDeleteReportedListing}
+            deletedListings={deletedListings}
+            deletedListingType={deletedListingType}
+            onChangeDeletedListingType={setDeletedListingType}
+            isLoadingDeleted={isLoadingDeleted}
+            handleRestoreListing={handleRestoreListing}
           />
+        )}
+
+        {/* --- MODULE 7: SPACES --- */}
+        {activeTab === 'spaces' && (
+          <SpacesModule spaces={spaces} users={users} listings={listings} language={language} />
         )}
 
         {/* --- MODULE 4: WALLETS --- */}
         {activeTab === 'wallets' && (
-          <WalletsModule wallets={wallets} language={language} />
+          <WalletsModule wallets={wallets} language={language} handleUpdateWalletBalance={handleUpdateWalletBalance} isLoading={isLoading} />
         )}
 
         {/* --- MODULE 5: PRIORITY LEVELS (LISTING PACKAGES) --- */}
@@ -489,7 +447,6 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
           <CategoriesModule
             categories={categories}
             handleCreateCategory={handleCreateCategory}
-            handleBulkCreateCategories={handleBulkCreateCategories}
             handleUpdateCategory={handleUpdateCategory}
             handleDeleteCategory={handleDeleteCategory}
             isLoading={isLoading}

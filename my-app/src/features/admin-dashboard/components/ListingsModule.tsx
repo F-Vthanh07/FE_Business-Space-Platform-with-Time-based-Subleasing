@@ -1,8 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, MapPin, Clock, Eye, Building2, Users, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { AdminListingItem, BusinessCategory } from '../types';
+import { Check, X, MapPin, Clock, Eye, Building2, Users, ChevronLeft, ChevronRight, Flag, Trash2, RotateCcw, Archive } from 'lucide-react';
+import type { AdminListingItem, BusinessCategory, ListingReportItem, ListingReportDetail } from '../types';
 import { ListingDetailModal } from './ListingDetailModal';
 import { getPictureUrl } from '../utils/listingPicture';
+import { fetchListingReportDetail } from '../api/admin.api';
+
+export const REPORT_REASON_LABELS: Record<string, { en: string; vi: string }> = {
+  ScamOrFraud: { en: 'Scam / Fraud', vi: 'Lừa đảo / Gian lận' },
+  FakeInformation: { en: 'Fake information', vi: 'Thông tin giả mạo' },
+  PriceMismatch: { en: 'Price mismatch', vi: 'Giá không đúng thực tế' },
+  FakeAddress: { en: 'Fake address', vi: 'Địa chỉ không chính xác' },
+  InappropriateContent: { en: 'Inappropriate content', vi: 'Nội dung không phù hợp' },
+  WrongCategory: { en: 'Wrong category', vi: 'Sai danh mục' },
+  Other: { en: 'Other', vi: 'Lý do khác' },
+};
+
+export const getReasonLabel = (reason: string, language: 'en' | 'vi') =>
+  REPORT_REASON_LABELS[reason]?.[language] || reason;
+
+type DeletedListingType = 'EntireSpace' | 'SharedSpace';
 
 interface ListingsModuleProps {
   listings: AdminListingItem[];
@@ -11,7 +27,16 @@ interface ListingsModuleProps {
   isLoading: boolean;
   language: 'en' | 'vi';
   categories: BusinessCategory[];
+  reports: ListingReportItem[];
+  handleDeleteReportedListing: (listingId: number) => void;
+  deletedListings: AdminListingItem[];
+  deletedListingType: DeletedListingType;
+  onChangeDeletedListingType: (type: DeletedListingType) => void;
+  isLoadingDeleted: boolean;
+  handleRestoreListing: (listingId: number) => void;
 }
+
+type ListingsTab = 'all' | 'reports' | 'deleted';
 
 const statusConfig: Record<string, { className: string; label: { en: string; vi: string } }> = {
   pending: { className: 'badge--warning', label: { en: 'Pending', vi: 'Chờ duyệt' } },
@@ -51,11 +76,64 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
   isLoading,
   language,
   categories,
+  reports,
+  handleDeleteReportedListing,
+  deletedListings,
+  deletedListingType,
+  onChangeDeletedListingType,
+  isLoadingDeleted,
+  handleRestoreListing,
 }) => {
+  const [activeListingsTab, setActiveListingsTab] = useState<ListingsTab>('all');
   const [selectedListing, setSelectedListing] = useState<AdminListingItem | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [deletingReportId, setDeletingReportId] = useState<number | null>(null);
+  const [deletingListingId, setDeletingListingId] = useState<number | null>(null);
+  const [reportDetails, setReportDetails] = useState<Record<number, ListingReportDetail>>({});
+  const [loadingReportDetailId, setLoadingReportDetailId] = useState<number | null>(null);
+  const [expandedReportId, setExpandedReportId] = useState<number | null>(null);
+  const [selectedListingReportDetail, setSelectedListingReportDetail] = useState<ListingReportDetail | null>(null);
+
+  const token = localStorage.getItem('portal_token');
+
+  const loadReportDetail = async (listingId: number): Promise<ListingReportDetail | null> => {
+    if (reportDetails[listingId]) return reportDetails[listingId];
+    if (!token) return null;
+    setLoadingReportDetailId(listingId);
+    try {
+      const detail = await fetchListingReportDetail(listingId, token);
+      setReportDetails(prev => ({ ...prev, [listingId]: detail }));
+      return detail;
+    } catch (e) {
+      console.warn('Không tải được lý do báo cáo cho tin đăng', listingId, e);
+      return null;
+    } finally {
+      setLoadingReportDetailId(null);
+    }
+  };
+
+  const handleToggleReportReasons = async (listingId: number) => {
+    if (expandedReportId === listingId) {
+      setExpandedReportId(null);
+      return;
+    }
+    setExpandedReportId(listingId);
+    await loadReportDetail(listingId);
+  };
+
+  const handleViewReportedListing = async (listingId: number) => {
+    const found = listings.find(l => l.id === listingId);
+    if (found) {
+      setSelectedListing(found);
+      setSelectedListingReportDetail(null);
+      const detail = await loadReportDetail(listingId);
+      setSelectedListingReportDetail(detail);
+    } else {
+      alert(language === 'en' ? 'Listing details are not loaded yet.' : 'Chưa tải được chi tiết tin đăng này.');
+    }
+  };
 
   const totalPages = Math.max(1, Math.ceil(listings.length / ITEMS_PER_PAGE));
   const pagedListings = listings.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -81,7 +159,232 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
         <p>{language === 'en' ? 'Review lease and time-sharing offers before publishing' : 'Kiểm tra và duyệt các gói tin đăng cho thuê trước khi công khai lên sàn giao dịch'}</p>
       </header>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+        <button
+          className={`btn-ghost ${activeListingsTab === 'all' ? 'admin-tab--active' : ''}`}
+          onClick={() => setActiveListingsTab('all')}
+        >
+          {language === 'en' ? 'All Listings' : 'Tất cả tin đăng'}
+        </button>
+        <button
+          className={`btn-ghost ${activeListingsTab === 'reports' ? 'admin-tab--active' : ''}`}
+          onClick={() => setActiveListingsTab('reports')}
+        >
+          <Flag size={14} />
+          {language === 'en' ? 'Reported Listings' : 'Tin đăng bị báo cáo'}
+          {reports.length > 0 && <span className="badge badge--negative" style={{ marginLeft: '4px' }}>{reports.length}</span>}
+        </button>
+        <button
+          className={`btn-ghost ${activeListingsTab === 'deleted' ? 'admin-tab--active' : ''}`}
+          onClick={() => setActiveListingsTab('deleted')}
+        >
+          <Archive size={14} />
+          {language === 'en' ? 'Deleted Listings' : 'Tin đăng đã xóa'}
+        </button>
+      </div>
+
+      {activeListingsTab === 'reports' && (
+        <div className="admin-table-container glass-card">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>{language === 'en' ? 'Description' : 'Mô tả'}</th>
+                <th style={{ textAlign: 'center' }}>{language === 'en' ? 'Reports' : 'Số lượt báo cáo'}</th>
+                <th>{language === 'en' ? 'Reasons' : 'Lý do báo cáo'}</th>
+                <th>{language === 'en' ? 'Status' : 'Trạng thái'}</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reports.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
+                    {language === 'en' ? 'No reported listings.' : 'Không có tin đăng nào bị báo cáo.'}
+                  </td>
+                </tr>
+              ) : (
+                reports.map(r => {
+                  const cleanStatus = (r.listingStatus || 'Pending').toLowerCase();
+                  const status = statusConfig[cleanStatus] || statusConfig.pending;
+                  const isExpanded = expandedReportId === r.listingId;
+                  const detail = reportDetails[r.listingId];
+                  return (
+                    <React.Fragment key={r.listingId}>
+                    <tr className={r.isBanned ? 'blocked-row' : ''}>
+                      <td className="font-mono">{r.listingId}</td>
+                      <td>
+                        {r.listingDescription && r.listingDescription.length > 80
+                          ? `${r.listingDescription.substring(0, 80)}...`
+                          : r.listingDescription || (language === 'en' ? 'No description' : 'Không có mô tả')}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <strong className="text-negative">{r.reportCount}</strong>
+                      </td>
+                      <td>
+                        <button
+                          className="btn-ghost"
+                          style={{ fontSize: '12px', padding: '4px 8px' }}
+                          onClick={() => handleToggleReportReasons(r.listingId)}
+                        >
+                          <Flag size={12} />
+                          {isExpanded
+                            ? (language === 'en' ? 'Hide reasons' : 'Ẩn lý do')
+                            : (language === 'en' ? 'Show reasons' : 'Xem lý do')}
+                        </button>
+                      </td>
+                      <td>
+                        <span className={`badge ${status.className}`}>{status.label[language]}</span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <button
+                            className="btn-action-icon unblock"
+                            onClick={() => handleViewReportedListing(r.listingId)}
+                            title={language === 'en' ? 'View details' : 'Xem chi tiết'}
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            className="btn-action-icon block"
+                            onClick={() => setDeletingReportId(r.listingId)}
+                            title={language === 'en' ? 'Delete listing' : 'Xóa tin đăng'}
+                            disabled={isLoading}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className={r.isBanned ? 'blocked-row' : ''}>
+                        <td colSpan={6} style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.02)' }}>
+                          {loadingReportDetailId === r.listingId ? (
+                            <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                              {language === 'en' ? 'Loading reasons...' : 'Đang tải lý do báo cáo...'}
+                            </span>
+                          ) : detail && detail.reasonBreakdown.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                              {detail.reasonBreakdown.map(rb => (
+                                <span key={rb.reason} className="badge badge--negative" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  <Flag size={11} />
+                                  {getReasonLabel(rb.reason, language)}
+                                  <strong>× {rb.count}</strong>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                              {language === 'en' ? 'No reason data available.' : 'Không có dữ liệu lý do báo cáo.'}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {activeListingsTab === 'deleted' && (
+        <>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <button
+              className={`btn-ghost ${deletedListingType === 'EntireSpace' ? 'admin-tab--active' : ''}`}
+              onClick={() => onChangeDeletedListingType('EntireSpace')}
+            >
+              {language === 'en' ? 'Entire Space' : 'Toàn bộ mặt bằng'}
+            </button>
+            <button
+              className={`btn-ghost ${deletedListingType === 'SharedSpace' ? 'admin-tab--active' : ''}`}
+              onClick={() => onChangeDeletedListingType('SharedSpace')}
+            >
+              {language === 'en' ? 'Shared Space' : 'Chia sẻ mặt bằng'}
+            </button>
+          </div>
+
+          <div className="admin-table-container glass-card">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>{language === 'en' ? 'Description' : 'Mô tả'}</th>
+                  <th>{language === 'en' ? 'Address' : 'Địa chỉ'}</th>
+                  <th style={{ textAlign: 'right' }}>{language === 'en' ? 'Price' : 'Giá'}</th>
+                  <th>{language === 'en' ? 'Status' : 'Trạng thái'}</th>
+                  <th>{language === 'en' ? 'Deleted At' : 'Ngày xóa'}</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoadingDeleted ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
+                      {language === 'en' ? 'Loading...' : 'Đang tải...'}
+                    </td>
+                  </tr>
+                ) : deletedListings.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
+                      {language === 'en' ? 'No deleted listings.' : 'Không có tin đăng nào bị xóa.'}
+                    </td>
+                  </tr>
+                ) : (
+                  deletedListings.map(lt => {
+                    const cleanStatus = (lt.status || 'Pending').toLowerCase();
+                    const status = statusConfig[cleanStatus] || statusConfig.pending;
+                    return (
+                      <tr key={lt.id} className="blocked-row">
+                        <td className="font-mono">{lt.id}</td>
+                        <td>
+                          {lt.description && lt.description.length > 80
+                            ? `${lt.description.substring(0, 80)}...`
+                            : lt.description || (language === 'en' ? 'No description' : 'Không có mô tả')}
+                        </td>
+                        <td>{lt.spaceAddress || '—'}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          {lt.price ? `${lt.price.toLocaleString('vi-VN')}₫` : '—'}
+                        </td>
+                        <td>
+                          <span className={`badge ${status.className}`}>{status.label[language]}</span>
+                        </td>
+                        <td className="font-mono">{formatDate(lt.updatedAt)}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                            <button
+                              className="btn-action-icon unblock"
+                              onClick={() => handleViewReportedListing(lt.id)}
+                              title={language === 'en' ? 'View details' : 'Xem chi tiết'}
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button
+                              className="btn-action-icon unblock"
+                              onClick={() => handleRestoreListing(lt.id)}
+                              title={language === 'en' ? 'Restore' : 'Khôi phục'}
+                              disabled={isLoading}
+                            >
+                              <RotateCcw size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
       {/* Listings Grid */}
+      {activeListingsTab === 'all' && (
       <div className="listings-grid">
         {listings.length === 0 ? (
           <div className="empty-approval glass-card">
@@ -161,7 +464,7 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
                   <button
                     className="btn-ghost"
                     style={{ flex: 1, justifyContent: 'center' }}
-                    onClick={() => setSelectedListing(lt)}
+                    onClick={() => handleViewReportedListing(lt.id)}
                   >
                     <Eye size={14} /> {language === 'en' ? 'View' : 'Xem'}
                   </button>
@@ -191,15 +494,25 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
                       </button>
                     </>
                   )}
+                  <button
+                    className="btn-icon"
+                    style={{ color: 'var(--color-negative)' }}
+                    disabled={isLoading}
+                    title={language === 'en' ? 'Delete' : 'Xóa'}
+                    onClick={() => setDeletingListingId(lt.id)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             );
           })
         )}
       </div>
+      )}
 
       {/* Pagination */}
-      {listings.length > 0 && totalPages > 1 && (
+      {activeListingsTab === 'all' && listings.length > 0 && totalPages > 1 && (
         <div className="admin-pagination">
           <button
             className="btn-icon"
@@ -235,9 +548,11 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
       {selectedListing && (
         <ListingDetailModal
           listing={selectedListing}
-          onClose={() => setSelectedListing(null)}
+          onClose={() => { setSelectedListing(null); setSelectedListingReportDetail(null); }}
           language={language}
           categories={categories}
+          reportDetail={selectedListingReportDetail}
+          isLoadingReportDetail={loadingReportDetailId === selectedListing.id}
         />
       )}
 
@@ -301,6 +616,100 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
                 }}
               >
                 {language === 'en' ? 'Confirm' : 'Xác nhận'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Reported Listing Confirmation */}
+      {deletingReportId !== null && (
+        <div className="listing-detail-backdrop">
+          <div className="listing-form-modal glass-card" style={{ maxWidth: '400px', width: '90%' }}>
+            <div className="listing-form-header">
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
+                {language === 'en' ? 'Delete Reported Listing' : 'Xóa tin đăng vi phạm'}
+              </h3>
+              <button
+                className="close-btn"
+                style={{ background: 'transparent', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}
+                onClick={() => setDeletingReportId(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '14px' }}>
+              {language === 'en'
+                ? 'This listing will be removed from the platform. This action cannot be undone.'
+                : 'Tin đăng này sẽ bị gỡ khỏi hệ thống. Hành động này không thể hoàn tác.'}
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button
+                className="btn-secondary"
+                style={{ padding: '8px 16px', fontSize: '13px' }}
+                onClick={() => setDeletingReportId(null)}
+              >
+                {language === 'en' ? 'Cancel' : 'Hủy bỏ'}
+              </button>
+              <button
+                className="btn-reject"
+                style={{ padding: '8px 16px', fontSize: '13px', flex: 'none' }}
+                disabled={isLoading}
+                onClick={() => {
+                  handleDeleteReportedListing(deletingReportId);
+                  setDeletingReportId(null);
+                }}
+              >
+                {language === 'en' ? 'Delete' : 'Xóa'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Listing Confirmation (All Listings tab) */}
+      {deletingListingId !== null && (
+        <div className="listing-detail-backdrop">
+          <div className="listing-form-modal glass-card" style={{ maxWidth: '400px', width: '90%' }}>
+            <div className="listing-form-header">
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
+                {language === 'en' ? 'Delete Listing' : 'Xóa tin đăng'}
+              </h3>
+              <button
+                className="close-btn"
+                style={{ background: 'transparent', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}
+                onClick={() => setDeletingListingId(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginTop: '14px' }}>
+              {language === 'en'
+                ? 'This listing will be removed from the platform. This action cannot be undone.'
+                : 'Tin đăng này sẽ bị gỡ khỏi hệ thống. Hành động này không thể hoàn tác.'}
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button
+                className="btn-secondary"
+                style={{ padding: '8px 16px', fontSize: '13px' }}
+                onClick={() => setDeletingListingId(null)}
+              >
+                {language === 'en' ? 'Cancel' : 'Hủy bỏ'}
+              </button>
+              <button
+                className="btn-reject"
+                style={{ padding: '8px 16px', fontSize: '13px', flex: 'none' }}
+                disabled={isLoading}
+                onClick={() => {
+                  handleDeleteReportedListing(deletingListingId);
+                  setDeletingListingId(null);
+                }}
+              >
+                {language === 'en' ? 'Delete' : 'Xóa'}
               </button>
             </div>
           </div>

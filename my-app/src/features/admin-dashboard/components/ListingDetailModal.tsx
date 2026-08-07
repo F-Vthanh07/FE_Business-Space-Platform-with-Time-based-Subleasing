@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import {
-  X, MapPin, DollarSign, Clock, User, ShieldCheck
+  X, MapPin, DollarSign, Clock, User, ShieldCheck, Flag
 } from 'lucide-react';
-import type { AdminListingItem, BusinessCategory } from '../types';
+import type { AdminListingItem, BusinessCategory, ListingReportDetail } from '../types';
 import { getPictureUrl } from '../utils/listingPicture';
+import { getReasonLabel } from './ListingsModule';
 
 interface ListingDetailModalProps {
   listing: AdminListingItem;
   onClose: () => void;
   language: 'en' | 'vi';
   categories: BusinessCategory[];
+  reportDetail?: ListingReportDetail | null;
+  isLoadingReportDetail?: boolean;
 }
 
 const FALLBACK_IMAGES = [
@@ -17,7 +20,7 @@ const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=800"
 ];
 
-export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClose, language, categories }) => {
+export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing, onClose, language, categories, reportDetail, isLoadingReportDetail }) => {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
 
   const cleanStatus = (listing.status || 'Pending').toLowerCase();
@@ -102,6 +105,32 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing,
               <h3>{language === 'en' ? 'Description' : 'Mô tả'}</h3>
               <p className="desc-content">{listing.description || (language === 'en' ? 'No description provided.' : 'Chủ nhà chưa cung cấp thông tin mô tả.')}</p>
             </div>
+
+            {/* Report Reasons card */}
+            {(isLoadingReportDetail || (reportDetail && reportDetail.reasonBreakdown.length > 0)) && (
+              <div className="detail-desc-card glass-card--inset">
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-negative)' }}>
+                  <Flag size={15} /> {language === 'en' ? 'Report Reasons' : 'Lý do bị báo cáo'}
+                  {reportDetail && (
+                    <span className="badge badge--negative" style={{ marginLeft: '4px' }}>
+                      {language === 'en' ? `${reportDetail.totalReportCount} total` : `${reportDetail.totalReportCount} lượt`}
+                    </span>
+                  )}
+                </h3>
+                {isLoadingReportDetail ? (
+                  <p className="desc-content">{language === 'en' ? 'Loading report reasons...' : 'Đang tải lý do báo cáo...'}</p>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                    {reportDetail!.reasonBreakdown.map(rb => (
+                      <span key={rb.reason} className="badge badge--negative" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        {getReasonLabel(rb.reason, language)}
+                        <strong>× {rb.count}</strong>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Categories Notes */}
             {listing.shareSpaceDetailShareSpaceCategories && listing.shareSpaceDetailShareSpaceCategories.length > 0 && (
