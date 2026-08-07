@@ -81,6 +81,8 @@
 
 /* Light Theme Variables Overrides */
 .light-theme {
+  color-scheme: light;
+
   /* Colors - Background */
   --color-bg-global: #F8FAFC;
   --color-bg-card: #FFFFFF;
@@ -204,7 +206,7 @@ button {
   outline: none;
 }
 
-input, textarea {
+input, textarea, select {
   font-family: var(--font-family);
   outline: none;
 }

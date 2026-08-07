@@ -89,7 +89,9 @@ export const OwnerListings: React.FC = () => {
             ...l,
             // Móc địa chỉ từ Mặt bằng sang Bài đăng nếu bài đăng không có sẵn
             address: l.location || l.address || l.spaceAddress || parentSpace?.address || parentSpace?.location || '',
-            area: l.area || parentSpace?.area || ''
+            area: l.area || parentSpace?.area || '',
+            spaceName: parentSpace?.name || '',
+            spaceCity: parentSpace?.city || ''
           };
         });
 
@@ -289,7 +291,9 @@ export const OwnerListings: React.FC = () => {
                   <Building2 className="fallback-icon" size={32} style={{ color: 'rgba(0, 212, 160, 0.4)' }} />
                 )}
 
-                <div className="listing-area-badge">{listing.area || 'N/A'}</div>
+                {Number(listing.area) > 0 && (
+                  <div className="listing-area-badge">{listing.area} m²</div>
+                )}
                 {listing.subleasing && (
                   <div className="sublease-badge">{t('listings.subleaseBadge') || 'Cho thuê lại'}</div>
                 )}
@@ -311,22 +315,14 @@ export const OwnerListings: React.FC = () => {
                   <span className="text-secondary" style={{ fontSize: 12 }}>/giờ</span>
                 </div>
 
-                <div className="listing-meta">
-                  <div className="listing-meta-item">
-                    <Eye size={12} className="text-secondary" />
-                    <span>{t('listings.views', { count: listing.views || 0 }) || `${listing.views || 0} Lượt xem`}</span>
-                  </div>
-                  <div className="listing-meta-item">
-                    <Building2 size={12} className="text-secondary" />
-                    <span>{t('listings.inquiries', { count: listing.inquiries || 0 }) || `${listing.inquiries || 0} Yêu cầu`}</span>
-                  </div>
-                  {listing.rating > 0 && (
+                {listing.rating > 0 && (
+                  <div className="listing-meta">
                     <div className="listing-meta-item">
                       <Star size={12} style={{ color: '#D9A05B' }} />
                       <span style={{ color: '#D9A05B', fontWeight: 600 }}>{listing.rating}</span>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <p className="listing-date text-secondary">
                   Đăng ngày {formatDate(listing.createdAt)}
@@ -443,14 +439,55 @@ export const OwnerListings: React.FC = () => {
                   <p style={{ margin: 0, lineHeight: '1.6', whiteSpace: 'pre-wrap', color: 'var(--color-text-secondary)' }}>{viewingListing.description || 'Chưa có mô tả'}</p>
                 </div>
 
+                <div className="glass-card--inset" style={{ padding: '16px', borderRadius: 'var(--radius-lg)' }}>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', color: 'var(--color-text-primary)' }}>Thông tin mặt bằng</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                    <div><strong style={{ color: 'var(--color-text-primary)' }}>Mặt bằng:</strong> {viewingListing.spaceName || 'Chưa cập nhật'}</div>
+                    <div><strong style={{ color: 'var(--color-text-primary)' }}>Thành phố:</strong> {viewingListing.spaceCity || 'Chưa cập nhật'}</div>
+                    <div style={{ gridColumn: '1 / -1' }}><strong style={{ color: 'var(--color-text-primary)' }}>Địa chỉ:</strong> {viewingListing.location || viewingListing.address || 'Chưa cập nhật địa chỉ'}</div>
+                  </div>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-                  <div><strong style={{ color: 'var(--color-text-primary)' }}>Bắt đầu:</strong> {formatDate(viewingListing.allowedStartTime)}</div>
-                  <div><strong style={{ color: 'var(--color-text-primary)' }}>Kết thúc:</strong> {formatDate(viewingListing.allowedEndTime)}</div>
-                  <div><strong style={{ color: 'var(--color-text-primary)' }}>Đăng lúc:</strong> {formatDate(viewingListing.createdAt)}</div>
+                  <div><strong style={{ color: 'var(--color-text-primary)' }}>Thời gian hiệu lực từ:</strong> {formatDate(viewingListing.allowedStartTime)}</div>
+                  <div><strong style={{ color: 'var(--color-text-primary)' }}>Đến:</strong> {formatDate(viewingListing.allowedEndTime)}</div>
+                  <div><strong style={{ color: 'var(--color-text-primary)' }}>Ngày đăng cho thuê:</strong> {formatDate(viewingListing.createdAt)}</div>
                   {isShareListing(viewingListing) && (
                     <div><strong style={{ color: 'var(--color-text-primary)' }}>Số người thuê chung tối đa:</strong> {viewingListing.shareSpaceDetailMaxSubRenter ?? 'N/A'}</div>
                   )}
                 </div>
+
+                {isShareListing(viewingListing) && (
+                  <div className="glass-card--inset" style={{ padding: '16px', borderRadius: 'var(--radius-lg)' }}>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--color-text-primary)' }}>Khung giờ chia sẻ</h4>
+                    {viewingListing.shareSpaceDetailAvailabilitiesTimes?.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {viewingListing.shareSpaceDetailAvailabilitiesTimes.map((slot: any, i: number) => (
+                          <div
+                            key={i}
+                            style={{
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                              flexWrap: 'wrap', gap: '6px', padding: '10px 12px',
+                              background: 'var(--color-bg-hover)', borderRadius: 'var(--radius-md)', fontSize: '13px'
+                            }}
+                          >
+                            <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
+                              {slot.daysOfWeek?.length > 0 ? slot.daysOfWeek.join(', ') : (slot.specificdate ? formatDate(slot.specificdate) : 'Không rõ')}
+                            </span>
+                            <span style={{ color: 'var(--color-text-secondary)' }}>
+                              {slot.startTime?.slice(0, 5)} - {slot.endTime?.slice(0, 5)}
+                            </span>
+                            <span style={{ color: 'var(--color-text-secondary)' }}>
+                              {formatDate(slot.validFrom)} → {formatDate(slot.validTo)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '13px' }}>Chưa có khung giờ chia sẻ nào.</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
