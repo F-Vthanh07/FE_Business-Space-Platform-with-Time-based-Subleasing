@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, DollarSign, Users, ShieldCheck, ShieldAlert, Plus, Trash2, Clock, Type } from 'lucide-react';
 import "../../../shared/ModalShell.css";
+import { Select } from '../../../../components/Select';
 import { createShareListing, updateShareListing } from './shareListing.api';
+import { fetchPriorityLevels, type PriorityLevel } from './priorityLevel.api';
+import { fetchWalletAccount } from '../../../wallet/api/wallet.api';
 import type { ShareListingPayload } from '../../types';
 
 interface SpaceOption {
@@ -42,6 +45,32 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const isEditingListing = !!initialData;
+  const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
+  const [priorityLevelId, setPriorityLevelId] = useState<number | ''>('');
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isEditingListing) return;
+    const loadPriorityLevels = async () => {
+      const levels = await fetchPriorityLevels();
+      setPriorityLevels(levels);
+      if (levels.length > 0) setPriorityLevelId(levels[0].id);
+    };
+    loadPriorityLevels();
+
+    const loadWalletBalance = async () => {
+      try {
+        const token = localStorage.getItem('portal_token') || '';
+        const wallet = await fetchWalletAccount(token);
+        setWalletBalance(wallet.balance);
+      } catch (err) {
+        console.error("Lỗi lấy số dư ví:", err);
+      }
+    };
+    loadWalletBalance();
+  }, [isEditingListing]);
 
   const [spaceId, setSpaceId] = useState<number | ''>(initialData?.spaceId || '');
   const [name, setName] = useState(initialData?.name || '');
@@ -210,6 +239,17 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       return;
     }
 
+    if (!isEditingListing && priorityLevelId === '') {
+      setError('Vui lòng chọn gói bài đăng!');
+      return;
+    }
+
+    const chosenPackagePrice = priorityLevels.find(p => p.id === priorityLevelId)?.price ?? 0;
+    if (!isEditingListing && walletBalance !== null && walletBalance < chosenPackagePrice) {
+      setError(`Số dư ví không đủ để đăng tin! Cần ${chosenPackagePrice.toLocaleString('vi-VN')} VNĐ, ví hiện có ${walletBalance.toLocaleString('vi-VN')} VNĐ.`);
+      return;
+    }
+
     setIsLoading(true);
 
     const payload: ShareListingPayload = {
@@ -238,7 +278,7 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       if (initialData) {
         await updateShareListing(initialData.id || initialData.Id, payload);
       } else {
-        await createShareListing(payload);
+        await createShareListing(payload, chosenPackagePrice);
       }
       onSuccess();
     } catch (err: any) {
@@ -330,6 +370,32 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                 </div>
               </div>
             </div>
+
+            {!isEditingListing && (
+              <div className="form-grid-2">
+                <div className="form-group">
+                  <label className="form-label">
+                    Gói bài đăng <span className="required-mark">*</span>
+                  </label>
+                  <Select
+                    value={priorityLevelId}
+                    onChange={(v) => setPriorityLevelId(Number(v))}
+                    disabled={isLoading}
+                    placeholder="-- Chọn gói bài đăng --"
+                    options={priorityLevels.map(p => ({
+                      value: p.id,
+                      label: `${p.name} — ${p.price.toLocaleString('vi-VN')} VNĐ`
+                    }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Số dư ví</label>
+                  <div className="wallet-balance-display">
+                    {walletBalance === null ? 'Đang tải...' : `${walletBalance.toLocaleString('vi-VN')} VNĐ`}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="form-grid-2">
               <div className="form-group">

@@ -29,17 +29,3 @@
   align-items: center;
   cursor: pointer;
 }
-
-/* Số dư ví hiển thị cạnh dropdown gói bài đăng — chỉ đọc, không phải input */
-.wallet-balance-display {
-  display: flex;
-  align-items: center;
-  height: 42px;
-  padding: 0 16px;
-  background: rgba(0, 212, 160, 0.08);
-  border: 1px solid rgba(0, 212, 160, 0.25);
-  border-radius: var(--radius-lg);
-  color: #00D4A0;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-}
