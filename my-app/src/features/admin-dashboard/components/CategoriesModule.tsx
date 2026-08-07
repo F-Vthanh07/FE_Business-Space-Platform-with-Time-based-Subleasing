@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit3, Check, X, Tag, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Edit3, Check, X, Tag } from 'lucide-react';
 import type { BusinessCategory } from '../types';
 
 interface CategoriesModuleProps {
   categories: BusinessCategory[];
   handleCreateCategory: (name: string, isActive: boolean) => Promise<void>;
-  handleBulkCreateCategories: () => Promise<void>;
   handleUpdateCategory: (id: number, name: string, isActive: boolean) => Promise<void>;
   handleDeleteCategory: (id: number) => Promise<void>;
   isLoading: boolean;
@@ -15,7 +14,6 @@ interface CategoriesModuleProps {
 export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
   categories,
   handleCreateCategory,
-  handleBulkCreateCategories,
   handleUpdateCategory,
   handleDeleteCategory,
   isLoading,
@@ -85,27 +83,9 @@ export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
 
   return (
     <div className="admin-module animate-fade-in">
-      <header className="module-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h1>{language === 'en' ? 'Business Categories' : 'Quản lý Ngành nghề'}</h1>
-          <p>{language === 'en' ? 'Configure available business niches allowed for sub-leasing' : 'Quản lý các ngành hàng kinh doanh được phép đăng ký thuê lại mặt bằng'}</p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            className="btn-approve"
-            style={{ background: 'rgba(139, 92, 246, 0.12)', border: '1px solid rgba(139, 92, 246, 0.3)', color: '#7c3aed' }}
-            disabled={isLoading}
-            onClick={handleBulkCreateCategories}
-          >
-            <Sparkles size={16} />
-            {language === 'en' ? 'Quick Initialize' : 'Khởi tạo Nhanh'}
-          </button>
-          <button className="btn-approve" disabled={isLoading} onClick={handleOpenAdd}>
-            <Plus size={16} />
-            {language === 'en' ? 'Add Category' : 'Thêm Ngành nghề'}
-          </button>
-        </div>
+      <header className="module-header">
+        <h1>{language === 'en' ? 'Business Categories' : 'Quản lý Ngành nghề'}</h1>
+        <p>{language === 'en' ? 'Configure available business niches allowed for sub-leasing' : 'Quản lý các ngành hàng kinh doanh được phép đăng ký thuê lại mặt bằng'}</p>
       </header>
 
       {/* Summary Stats Cards */}
@@ -209,6 +189,14 @@ export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Add button — đặt dưới bảng, dạng nút phụ nhỏ gọn */}
+      <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+        <button className="btn-ghost" disabled={isLoading} onClick={handleOpenAdd}>
+          <Plus size={16} />
+          {language === 'en' ? 'Add Category' : 'Thêm Ngành nghề'}
+        </button>
       </div>
 
       {/* Add Category Modal */}

@@ -1,14 +1,43 @@
 import React, { useMemo } from 'react';
-import { Users, Building, FileText, DollarSign, Activity } from 'lucide-react';
-import type { SystemStat, AdminListingItem } from '../types';
+import { Users, Building, FileText, Wallet, Activity, AlertTriangle, Zap, Tag } from 'lucide-react';
+import type { AdminListingItem, UserAccount, AdminSpaceItem, AdminWalletAccount, PriorityLevel, BusinessCategory, ListingReportItem } from '../types';
 
 interface OverviewModuleProps {
-  stats: SystemStat;
+  users: UserAccount[];
   listings: AdminListingItem[];
+  spaces: AdminSpaceItem[];
+  wallets: AdminWalletAccount[];
+  priorityLevels: PriorityLevel[];
+  categories: BusinessCategory[];
+  reports: ListingReportItem[];
   language: 'en' | 'vi';
 }
 
-export const OverviewModule: React.FC<OverviewModuleProps> = ({ stats, listings, language }) => {
+export const OverviewModule: React.FC<OverviewModuleProps> = ({
+  users,
+  listings,
+  spaces,
+  wallets,
+  priorityLevels,
+  categories,
+  reports,
+  language,
+}) => {
+  const totalWalletBalance = useMemo(() => wallets.reduce((sum, w) => sum + (w.balance || 0), 0), [wallets]);
+
+  const pendingListingsCount = useMemo(
+    () => listings.filter(l => (l.status || 'Pending').toLowerCase() === 'pending').length,
+    [listings]
+  );
+
+  const unresolvedReportsCount = useMemo(
+    () => reports.filter(r => !r.isBanned).length,
+    [reports]
+  );
+
+  const activePriorityCount = useMemo(() => priorityLevels.filter(p => p.isActive).length, [priorityLevels]);
+  const activeCategoryCount = useMemo(() => categories.filter(c => c.isActive).length, [categories]);
+
   const statusBreakdown = useMemo(() => {
     const counts = { pending: 0, accepted: 0, canceled: 0 };
     listings.forEach(l => {
@@ -43,11 +72,13 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({ stats, listings,
     ];
   }, [listings, language]);
 
+  const hasAlerts = pendingListingsCount > 0 || unresolvedReportsCount > 0;
+
   return (
     <div className="admin-module animate-fade-in">
       <header className="module-header">
         <h1>{language === 'en' ? 'System Overview' : 'Tổng quan Hệ thống'}</h1>
-        <p>{language === 'en' ? 'Live analytics and nodes monitoring' : 'Thông số hoạt động và phân tích trực tiếp'}</p>
+        <p>{language === 'en' ? 'Live analytics and system monitoring' : 'Thông số hoạt động và phân tích trực tiếp'}</p>
       </header>
 
       {/* Stats Cards */}
@@ -55,37 +86,67 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({ stats, listings,
         <div className="admin-stat-card glass-card">
           <div className="stat-icon-wrapper blue"><Users size={20} /></div>
           <div className="stat-data">
-            <span className="stat-label">{language === 'en' ? 'ACTIVE USERS' : 'NGƯỜI DÙNG HOẠT ĐỘNG'}</span>
-            <h2 className="stat-value">{stats.totalUsers}</h2>
+            <span className="stat-label">{language === 'en' ? 'TOTAL USERS' : 'TỔNG NGƯỜI DÙNG'}</span>
+            <h2 className="stat-value">{users.length}</h2>
           </div>
         </div>
 
         <div className="admin-stat-card glass-card">
           <div className="stat-icon-wrapper green"><Building size={20} /></div>
           <div className="stat-data">
-            <span className="stat-label">{language === 'en' ? 'VERIFIED SPACES' : 'MẶT BẰNG ĐÃ XÁC MINH'}</span>
-            <h2 className="stat-value">{stats.totalSpaces}</h2>
+            <span className="stat-label">{language === 'en' ? 'REGISTERED SPACES' : 'MẶT BẰNG ĐÃ ĐĂNG KÝ'}</span>
+            <h2 className="stat-value">{spaces.length}</h2>
           </div>
         </div>
 
         <div className="admin-stat-card glass-card">
           <div className="stat-icon-wrapper orange"><FileText size={20} /></div>
           <div className="stat-data">
-            <span className="stat-label">{language === 'en' ? 'PUBLISHED LISTINGS' : 'TIN ĐĂNG CHO THUÊ'}</span>
-            <h2 className="stat-value">{stats.totalListings}</h2>
+            <span className="stat-label">{language === 'en' ? 'TOTAL LISTINGS' : 'TỔNG TIN ĐĂNG'}</span>
+            <h2 className="stat-value">{listings.length}</h2>
           </div>
         </div>
 
         <div className="admin-stat-card glass-card">
-          <div className="stat-icon-wrapper purple"><DollarSign size={20} /></div>
+          <div className="stat-icon-wrapper purple"><Wallet size={20} /></div>
           <div className="stat-data">
-            <span className="stat-label">{language === 'en' ? 'ESTIMATED VOLUME' : 'TỔNG DOANH THU'}</span>
-            <h2 className="stat-value">{(stats.totalRevenue).toLocaleString('vi-VN')} đ</h2>
+            <span className="stat-label">{language === 'en' ? 'TOTAL WALLET BALANCE' : 'TỔNG SỐ DƯ VÍ HỆ THỐNG'}</span>
+            <h2 className="stat-value">{totalWalletBalance.toLocaleString('vi-VN')} đ</h2>
           </div>
         </div>
       </div>
 
-      {/* Listings status breakdown — dữ liệu thật từ danh sách tin đăng đã tải */}
+      {/* Alerts requiring action */}
+      {hasAlerts && (
+        <div className="admin-activity-section glass-card" style={{ marginBottom: '24px' }}>
+          <div className="section-title-row">
+            <AlertTriangle size={18} className="text-negative" />
+            <h3>{language === 'en' ? 'Needs Attention' : 'Cần xử lý'}</h3>
+          </div>
+          <div className="admin-stats-grid" style={{ marginTop: '12px', marginBottom: 0 }}>
+            {pendingListingsCount > 0 && (
+              <div className="admin-stat-card glass-card--inset">
+                <div className="stat-icon-wrapper orange"><FileText size={18} /></div>
+                <div className="stat-data">
+                  <span className="stat-label">{language === 'en' ? 'PENDING LISTINGS' : 'TIN ĐĂNG CHỜ DUYỆT'}</span>
+                  <h2 className="stat-value">{pendingListingsCount}</h2>
+                </div>
+              </div>
+            )}
+            {unresolvedReportsCount > 0 && (
+              <div className="admin-stat-card glass-card--inset">
+                <div className="stat-icon-wrapper orange"><AlertTriangle size={18} /></div>
+                <div className="stat-data">
+                  <span className="stat-label">{language === 'en' ? 'UNRESOLVED REPORTS' : 'TIN BỊ BÁO CÁO CHƯA XỬ LÝ'}</span>
+                  <h2 className="stat-value">{unresolvedReportsCount}</h2>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Listings status breakdown */}
       <div className="admin-activity-section glass-card">
         <div className="section-title-row">
           <Activity size={18} className="text-neon-green" />
@@ -113,6 +174,25 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({ stats, listings,
             ))}
           </div>
         )}
+      </div>
+
+      {/* Priority packages & categories summary */}
+      <div className="admin-stats-grid" style={{ marginTop: '24px', marginBottom: 0 }}>
+        <div className="admin-stat-card glass-card">
+          <div className="stat-icon-wrapper blue"><Zap size={20} /></div>
+          <div className="stat-data">
+            <span className="stat-label">{language === 'en' ? 'ACTIVE PRIORITY PACKAGES' : 'GÓI ƯU TIÊN ĐANG HOẠT ĐỘNG'}</span>
+            <h2 className="stat-value">{activePriorityCount} / {priorityLevels.length}</h2>
+          </div>
+        </div>
+
+        <div className="admin-stat-card glass-card">
+          <div className="stat-icon-wrapper green"><Tag size={20} /></div>
+          <div className="stat-data">
+            <span className="stat-label">{language === 'en' ? 'ACTIVE CATEGORIES' : 'NGÀNH NGHỀ ĐANG HOẠT ĐỘNG'}</span>
+            <h2 className="stat-value">{activeCategoryCount} / {categories.length}</h2>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -8,11 +8,12 @@ import {
   Tag,
   Wallet,
   Zap,
+  Building2,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import './AdminSidebar.css';
 
-export type AdminPage = 'overview' | 'users' | 'listings' | 'categories' | 'wallets' | 'priorityLevels';
+export type AdminPage = 'overview' | 'users' | 'listings' | 'categories' | 'wallets' | 'priorityLevels' | 'spaces';
 
 interface AdminSidebarProps {
   activePage: AdminPage;
@@ -28,6 +29,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'overview', icon: <LayoutDashboard size={16} /> },
   { id: 'users', icon: <Users size={16} /> },
+  { id: 'spaces', icon: <Building2 size={16} /> },
   { id: 'listings', icon: <FileText size={16} /> },
   { id: 'wallets', icon: <Wallet size={16} /> },
   { id: 'priorityLevels', icon: <Zap size={16} /> },
@@ -44,6 +46,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNaviga
         return { title: isEn ? 'Overview' : 'Tổng quan', sub: isEn ? 'System statistics' : 'Số liệu hệ thống' };
       case 'users':
         return { title: isEn ? 'Users' : 'Người dùng', sub: isEn ? 'Accounts registry' : 'Danh sách tài khoản' };
+      case 'spaces':
+        return { title: isEn ? 'Spaces' : 'Mặt bằng', sub: isEn ? 'All registered spaces' : 'Tất cả mặt bằng đã đăng ký' };
       case 'listings':
         return { title: isEn ? 'Listings Approval' : 'Duyệt tin đăng', sub: isEn ? 'Market offers' : 'Tin thuê chờ duyệt' };
       case 'wallets':

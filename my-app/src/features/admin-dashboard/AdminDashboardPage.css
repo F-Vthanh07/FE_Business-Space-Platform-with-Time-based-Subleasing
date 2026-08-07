@@ -394,6 +394,13 @@
   background: rgba(22, 163, 74, 0.12);
 }
 
+/* Tab switcher dùng trong ListingsModule (Tất cả tin đăng / Tin đăng bị báo cáo) */
+.admin-tab--active {
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-accent) !important;
+  background: rgba(74, 114, 255, 0.1) !important;
+}
+
 /* Text-only action link (thay thế nút icon-only, đúng quy tắc typography) */
 .btn-text-action {
   background: transparent;

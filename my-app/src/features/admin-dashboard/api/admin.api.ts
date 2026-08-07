@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel } from '../types';
+import type { AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem, ListingReportDetail } from '../types';
 
 export const fetchUsers = async (token: string): Promise<any[]> => {
   const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/User', {
@@ -193,6 +193,19 @@ export const createPriorityLevel = async (name: string, price: number, isActive:
   }
 };
 
+export const updateWalletBalance = async (userId: string, amountToAdd: number, token: string): Promise<void> => {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Wallet/update-balance/${userId}?uBalance=${amountToAdd}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update wallet balance');
+  }
+};
+
 export const updatePriorityLevel = async (id: number, name: string, price: number, isActive: boolean, token: string): Promise<void> => {
   const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/PriorityLevel/Update${id}`, {
     method: 'PUT',
@@ -205,6 +218,87 @@ export const updatePriorityLevel = async (id: number, name: string, price: numbe
   });
   if (!response.ok) {
     throw new Error('Failed to update priority level');
+  }
+};
+
+export const fetchAllSpaces = async (token: string): Promise<AdminSpaceItem[]> => {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Space/GetAll', {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch spaces');
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data?.data || data?.items || []);
+};
+
+export const fetchListingReports = async (token: string): Promise<ListingReportItem[]> => {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/Reports/Admin', {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch listing reports');
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data?.data || data?.items || []);
+};
+
+export const fetchListingReportDetail = async (listingId: number, token: string): Promise<ListingReportDetail> => {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/Reports/Admin/Detail/${listingId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch listing report detail');
+  }
+  return response.json();
+};
+
+export const softDeleteListing = async (listingId: number, token: string): Promise<void> => {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/SoftDelete/${listingId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to soft delete listing');
+  }
+};
+
+export const fetchSoftDeletedListings = async (listingType: 'EntireSpace' | 'SharedSpace', token: string): Promise<AdminListingItem[]> => {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/SoftDeleted?listingType=${listingType}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch soft deleted listings');
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data?.data || data?.items || []);
+};
+
+export const restoreListing = async (listingId: number, token: string): Promise<void> => {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/Restore/${listingId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to restore listing');
   }
 };
 
