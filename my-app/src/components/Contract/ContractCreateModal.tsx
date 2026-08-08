@@ -663,11 +663,14 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                   <option value={0} disabled>
                     {isLoadingBookingRequests ? '-- Đang tải... --' : '-- Chọn yêu cầu --'}
                   </option>
-                  {matchedBookingRequests.map((req) => (
-                    <option key={req.id} value={req.id}>
-                      #{req.id} - {Number(req.offeredPrice || 0).toLocaleString('vi-VN')}₫
-                    </option>
-                  ))}
+                  {matchedBookingRequests.map((req) => {
+                    const space = mySpaces.find((s) => String(s.id || s.Id) === String(req.spaceId));
+                    return (
+                      <option key={req.id} value={req.id}>
+                        Yêu cầu #{req.id} - {space?.name || 'Mặt bằng trống'} - {Number(req.offeredPrice || 0).toLocaleString('vi-VN')}₫
+                      </option>
+                    );
+                  })}
                 </select>
                 {!isLoadingBookingRequests && matchedBookingRequests.length === 0 && (
                   <span style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px', display: 'block' }}>
