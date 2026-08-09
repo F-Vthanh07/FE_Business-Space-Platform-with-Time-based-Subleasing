@@ -185,7 +185,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     if (!token) return;
     try {
       await fetch('https://flexi-space-capstone-project.onrender.com/api/Notification/read-all', {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
       fetchUnreadCount();
@@ -196,10 +196,13 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   };
 
   const handleNotifClick = async (notif: any) => {
-    if (!notif.isRead && notif.id) {
+    const notifId = notif.id || notif.notificationId || notif.Id;
+    const isRead = notif.isRead !== undefined ? notif.isRead : notif.IsRead;
+
+    if (!isRead && notifId) {
       try {
-        await fetch(`https://flexi-space-capstone-project.onrender.com/api/Notification/${notif.id}/read`, {
-          method: 'PUT',
+        await fetch(`https://flexi-space-capstone-project.onrender.com/api/Notification/${notifId}/read`, {
+          method: 'PATCH',
           headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
         });
         fetchUnreadCount();
@@ -211,8 +214,11 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
 
     setShowNotif(false);
     
+    const typeStr = (notif.type || notif.Type || '').toLowerCase();
+    const titleStr = (notif.title || notif.Title || '').toLowerCase();
+
     // Nếu thông báo là tin nhắn, dispatch sự kiện mở chat
-    if (notif.conversationId || (notif.type && notif.type.toLowerCase().includes('message'))) {
+    if (notif.conversationId || typeStr.includes('message')) {
       const event = new CustomEvent('open-ether-chat', {
         detail: { 
           conversationId: notif.conversationId || notif.relatedId, 
@@ -220,6 +226,8 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
         }
       });
       window.dispatchEvent(event);
+    } else if (typeStr.includes('booking') || typeStr.includes('request') || titleStr.includes('booking') || titleStr.includes('đặt chỗ') || titleStr.includes('yêu cầu')) {
+      navigate('/user/booking-requests');
     } else if (notif.link || notif.relatedUrl) {
       navigate(notif.link || notif.relatedUrl);
     }
@@ -304,27 +312,31 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                           Không có thông báo nào
                         </div>
                       ) : (
-                        notifications.map((notif, idx) => (
-                          <div
-                            key={notif.id || idx}
-                            className="notif-dropdown-item"
-                            onClick={() => handleNotifClick(notif)}
-                            style={{ 
-                              backgroundColor: notif.isRead ? 'transparent' : 'rgba(0, 212, 160, 0.1)',
-                              borderLeft: notif.isRead ? 'none' : '3px solid #00D4A0'
-                            }}
-                          >
-                            <div className="notif-dropdown-item-title">
-                              <strong>{notif.title || notif.senderName || 'Thông báo'}</strong>
+                        notifications.map((notif, idx) => {
+                          const notifId = notif.id || notif.notificationId || notif.Id || idx;
+                          const isRead = notif.isRead !== undefined ? notif.isRead : notif.IsRead;
+                          return (
+                            <div
+                              key={notifId}
+                              className="notif-dropdown-item"
+                              onClick={() => handleNotifClick(notif)}
+                              style={{ 
+                                backgroundColor: isRead ? 'transparent' : 'rgba(0, 212, 160, 0.1)',
+                                borderLeft: isRead ? 'none' : '3px solid #00D4A0'
+                              }}
+                            >
+                              <div className="notif-dropdown-item-title">
+                                <strong>{notif.title || notif.senderName || 'Thông báo'}</strong>
+                              </div>
+                              <div className="notif-dropdown-item-message">
+                                {notif.message || notif.content}
+                              </div>
+                              <div className="notif-dropdown-item-time">
+                                {notif.createdAt ? new Date(notif.createdAt).toLocaleString('vi-VN') : (notif.time || 'Vừa xong')}
+                              </div>
                             </div>
-                            <div className="notif-dropdown-item-message">
-                              {notif.message || notif.content}
-                            </div>
-                            <div className="notif-dropdown-item-time">
-                              {notif.createdAt ? new Date(notif.createdAt).toLocaleString('vi-VN') : (notif.time || 'Vừa xong')}
-                            </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>
