@@ -1,12 +1,11 @@
-﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, FileText, Globe, LogOut, User, CheckCircle2 } from 'lucide-react';
-import { useThemeLanguage } from '../context/ThemeLanguageContext';
+import { Bell, FileText, LogOut, User, CheckCircle2 } from 'lucide-react';
 import { useIdentityVerification } from '../features/identity-verification';
 import { clearLocalStorageForLogout } from '../utils/preserveLocalStorage';
 import './Header.css';
-import { Shuffle } from '../components/Shuffle';
+import { Shuffle } from './Shuffle'; // adjust path to Shuffle
 
 interface HeaderProps {
   userInitials?: string;
@@ -16,12 +15,11 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { language, setLanguage } = useThemeLanguage();
   const { isVerified } = useIdentityVerification();
 
-  const getActiveTab = (pathname: string): 'home' | 'overview' | 'feed' | 'ai' | null => {
+  const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | 'ai' | null => {
     if (pathname === '/') return 'home';
-    if (pathname.startsWith('/user/overview')) return 'overview';
+    if (pathname.startsWith('/user/spaces')) return 'spaces';
     if (pathname === '/feed') return 'feed';
     if (pathname === '/ai-image-editor') return 'ai';
     return null;
@@ -30,6 +28,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
 
   const [showNotif, setShowNotif] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
   // Số đơn "Yêu cầu chờ duyệt" chưa xem.
   const [pendingBookingCount, setPendingBookingCount] = useState(0);
@@ -61,13 +60,50 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const fetchUnreadCount = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/Notification/unread-count', {
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+      if (res.ok) {
+        const count = await res.json();
+        setUnreadNotifCount(count);
+      }
+    } catch (err) {
+      console.error('Lỗi lấy số thông báo chưa đọc:', err);
+    }
+  };
+
+  const fetchNotifHistory = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/Notification/history', {
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+      }
+    } catch (err) {
+      console.error('Lỗi lấy lịch sử thông báo:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (showNotif) {
+      fetchNotifHistory();
+    }
+  }, [showNotif]);
+
   // Lắng nghe sự kiện từ floating chat để mở toast.
   useEffect(() => {
     const handleNewNotif = (e: Event) => {
       const customEvent = e as CustomEvent;
       const notifData = customEvent.detail;
       
-      setNotifications(prev => [notifData, ...prev]);
+      fetchUnreadCount();
+      if (showNotif) fetchNotifHistory();
 
       setToastNotif({
         show: true,
@@ -83,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     
     window.addEventListener('new-notification', handleNewNotif);
     return () => window.removeEventListener('new-notification', handleNewNotif);
-  }, []);
+  }, [showNotif]);
 
   // Lấy set các ID đơn đã xem từ localStorage.
   const getSeenBookingIds = (): Set<string | number> => {
@@ -116,22 +152,28 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   };
 
   useEffect(() => {
-    if (!isLoggedIn || role !== 'user') return;
+    if (!isLoggedIn) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    checkPendingBookingRequests();
-    const interval = setInterval(checkPendingBookingRequests, 15000);
+    fetchUnreadCount();
+    const intervalNotif = setInterval(fetchUnreadCount, 15000);
 
-    // Khi trang yêu cầu chờ duyệt báo đã xem xong thì cập nhật badge ngay.
-    const handleSeen = () => checkPendingBookingRequests();
-    window.addEventListener('booking-request-seen', handleSeen);
+    if (role === 'user') {
+      checkPendingBookingRequests();
+      const intervalBooking = setInterval(checkPendingBookingRequests, 15000);
 
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('booking-request-seen', handleSeen);
-    };
+      const handleSeen = () => checkPendingBookingRequests();
+      window.addEventListener('booking-request-seen', handleSeen);
+
+      return () => {
+        clearInterval(intervalNotif);
+        clearInterval(intervalBooking);
+        window.removeEventListener('booking-request-seen', handleSeen);
+      };
+    }
+
+    return () => clearInterval(intervalNotif);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn]);
+  }, [isLoggedIn, role]);
 
   const handleLogout = () => {
     clearLocalStorageForLogout();
@@ -139,15 +181,48 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     window.location.reload();
   };
 
-  const handleNotifClick = (notif: any) => {
-    setShowNotif(false);
-    const event = new CustomEvent('open-ether-chat', {
-      detail: { 
-        conversationId: notif.conversationId, 
-        name: notif.senderName || 'Người dùng'
+  const handleMarkAllRead = async () => {
+    if (!token) return;
+    try {
+      await fetch('https://flexi-space-capstone-project.onrender.com/api/Notification/read-all', {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+      fetchUnreadCount();
+      fetchNotifHistory();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleNotifClick = async (notif: any) => {
+    if (!notif.isRead && notif.id) {
+      try {
+        await fetch(`https://flexi-space-capstone-project.onrender.com/api/Notification/${notif.id}/read`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+        });
+        fetchUnreadCount();
+        fetchNotifHistory();
+      } catch (err) {
+        console.error(err);
       }
-    });
-    window.dispatchEvent(event);
+    }
+
+    setShowNotif(false);
+    
+    // Nếu thông báo là tin nhắn, dispatch sự kiện mở chat
+    if (notif.conversationId || (notif.type && notif.type.toLowerCase().includes('message'))) {
+      const event = new CustomEvent('open-ether-chat', {
+        detail: { 
+          conversationId: notif.conversationId || notif.relatedId, 
+          name: notif.senderName || notif.title || 'Người dùng'
+        }
+      });
+      window.dispatchEvent(event);
+    } else if (notif.link || notif.relatedUrl) {
+      navigate(notif.link || notif.relatedUrl);
+    }
   };
 
   return (
@@ -166,16 +241,16 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
         <div className="header-center">
           <nav className="header-nav">
             <button className={`header-nav-item ${activeTab === 'home' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/')}>
-              {language === 'en' ? 'HOME' : 'TRANG CHỦ'}
+              TRANG CHỦ
             </button>
-            <button className={`header-nav-item ${activeTab === 'overview' ? 'header-nav-item--active' : ''}`} onClick={() => navigate(isLoggedIn ? '/user/overview' : '/login')}>
-              {language === 'en' ? 'OVERVIEW' : 'CÔNG CỤ QUẢN LÝ'}
+            <button className={`header-nav-item ${activeTab === 'spaces' ? 'header-nav-item--active' : ''}`} onClick={() => navigate(isLoggedIn ? '/user/spaces' : '/login')}>
+              QUẢN LÝ MẶT BẰNG
             </button>
             <button className={`header-nav-item ${activeTab === 'feed' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/feed')}>
-              {language === 'en' ? 'DISCOVER' : 'KHÁM PHÁ'}
+              KHÁM PHÁ
             </button>
             <button className={`header-nav-item ${activeTab === 'ai' ? 'header-nav-item--active' : ''}`} onClick={() => navigate(isLoggedIn ? '/ai-image-editor' : '/login')}>
-              {language === 'en' ? 'AI EDITOR' : 'AI CHỈNH ẢNH'}
+              AI CHỈNH ẢNH
             </button>
           </nav>
         </div>
@@ -183,29 +258,44 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
         {/* RIGHT CONTROLS */}
         <div className="header-right">
           <button className="btn-post-listing" onClick={handlePostListing}>
-            {language === 'en' ? 'Post Listing' : 'Đăng tin'} <span className="arrow-icon">→</span>
+            Đăng tin <span className="arrow-icon">→</span>
           </button>
           
-          <button className="header-icon-btn" onClick={() => setLanguage(language === 'en' ? 'vi' : 'en')} style={{ width: 'auto', padding: '0 8px', display: 'flex', gap: 4, alignItems: 'center' }}>
-            <Globe size={14} /> <span style={{ fontSize: 10, fontWeight: 700 }}>{language.toUpperCase()}</span>
-          </button>
-
           {isLoggedIn ? (
             <>
               {/* Khu vực chuông thông báo */}
               <div style={{ position: 'relative' }} ref={notifRef}>
-                <button className="header-icon-btn" title="Notifications" onClick={() => setShowNotif(!showNotif)}>
+                <button className="header-icon-btn" title="Thông báo" onClick={() => setShowNotif(!showNotif)}>
                   <Bell size={15} />
-                  {notifications.length > 0 && (
-                    <span className="notif-dot" style={{ position: 'absolute', top: '2px', right: '4px', width: '8px', height: '8px', backgroundColor: '#ef4444', borderRadius: '50%' }} />
+                  {unreadNotifCount > 0 && (
+                    <span 
+                      style={{ 
+                        position: 'absolute', 
+                        top: '2px', 
+                        right: '2px', 
+                        backgroundColor: '#ef4444', 
+                        color: '#fff', 
+                        fontSize: '10px', 
+                        fontWeight: 700, 
+                        borderRadius: '999px', 
+                        padding: '0 4px', 
+                        minWidth: '15px', 
+                        textAlign: 'center', 
+                        lineHeight: '15px', 
+                        border: '1px solid #0D1117' 
+                      }}
+                    >
+                      {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
+                    </span>
                   )}
                 </button>
 
                 {/* Box xổ xuống khi bấm chuông */}
                 {showNotif && (
                   <div className="header-dropdown-menu notif-dropdown animate-in" style={{ width: '320px', right: '-40px', padding: 0, overflow: 'hidden' }}>
-                    <div className="notif-dropdown-header">
-                      {language === 'en' ? 'Notifications' : 'Thông báo mới'}
+                    <div className="notif-dropdown-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Thông báo mới</span>
+                      <button onClick={handleMarkAllRead} style={{ fontSize: '11px', background: 'none', border: 'none', color: '#00D4A0', cursor: 'pointer', padding: 0 }}>Đánh dấu tất cả đã đọc</button>
                     </div>
 
                     <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -216,17 +306,23 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                       ) : (
                         notifications.map((notif, idx) => (
                           <div
-                            key={idx}
+                            key={notif.id || idx}
                             className="notif-dropdown-item"
                             onClick={() => handleNotifClick(notif)}
+                            style={{ 
+                              backgroundColor: notif.isRead ? 'transparent' : 'rgba(0, 212, 160, 0.1)',
+                              borderLeft: notif.isRead ? 'none' : '3px solid #00D4A0'
+                            }}
                           >
                             <div className="notif-dropdown-item-title">
-                              <strong>{notif.senderName}</strong> vừa nhắn tin cho bạn:
+                              <strong>{notif.title || notif.senderName || 'Thông báo'}</strong>
                             </div>
                             <div className="notif-dropdown-item-message">
-                              "{notif.message}"
+                              {notif.message || notif.content}
                             </div>
-                            <div className="notif-dropdown-item-time">{notif.time || 'Vừa xong'}</div>
+                            <div className="notif-dropdown-item-time">
+                              {notif.createdAt ? new Date(notif.createdAt).toLocaleString('vi-VN') : (notif.time || 'Vừa xong')}
+                            </div>
                           </div>
                         ))
                       )}
@@ -239,7 +335,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
               {role === 'user' && (
                 <button
                   className="header-icon-btn"
-                  title={language === 'en' ? 'Booking Requests' : 'Yêu cầu chờ duyệt'}
+                  title="Yêu cầu chờ duyệt"
                   onClick={() => navigate('/user/booking-requests')}
                   style={{ position: 'relative' }}
                 >
@@ -272,14 +368,14 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
               <div
                 className="header-avatar"
                 onClick={() => navigate('/user/profile')}
-                title={language === 'en' ? 'Profile' : 'Hồ sơ cá nhân'}
+                title="Hồ sơ cá nhân"
                 style={{ cursor: 'pointer', userSelect: 'none', position: 'relative' }}
               >
                 {displayInitials}
                 {isVerified && (
                   <span
                     className="header-avatar-verified-badge"
-                    title={language === 'en' ? 'Identity verified' : 'Đã xác thực định danh'}
+                    title="Đã xác thực định danh"
                   >
                     <CheckCircle2 size={12} />
                   </span>
@@ -289,16 +385,16 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
               {/* LOGOUT */}
               <button
                 className="header-icon-btn"
-                title={language === 'en' ? 'Log out' : 'Đăng xuất'}
+                title="Đăng xuất"
                 onClick={handleLogout}
               >
                 <LogOut size={15} />
               </button>
             </>
           ) : (
-            <button className="btn-primary" onClick={() => navigate('/login')} style={{ padding: '8px 20px', fontSize: '12px', marginLeft: '8px' }}>
-              <User size={14} style={{ marginRight: '6px' }} /> {language === 'en' ? 'Sign In' : 'Đăng nhập'}
-            </button>
+             <button className="btn-primary" onClick={() => navigate('/login')} style={{ padding: '8px 20px', fontSize: '12px', marginLeft: '8px', cursor: 'pointer' }}>
+               <User size={14} style={{ marginRight: '6px' }} /> Đăng nhập
+             </button>
           )}
         </div>
       </header>
@@ -349,4 +445,3 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     </>
   );
 };
-

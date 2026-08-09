@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 interface HomeListingsProps {
   onCardClick: (id: string) => void;
   selectedId: string;
+  isMapMode?: boolean;
+  onToggleMap?: () => void;
 }
 
 // Ảnh mặc định duy nhất, chỉ dùng khi bài đăng KHÔNG có ảnh thật nào
@@ -54,7 +56,11 @@ const getRentalCategory = (item: any): RentalCategory => {
   return 'longterm';
 };
 
-export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
+export const HomeListings: React.FC<HomeListingsProps> = ({
+  selectedId,
+  isMapMode,
+  onToggleMap,
+}) => {
   const [listings, setListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -335,6 +341,27 @@ export const HomeListings: React.FC<HomeListingsProps> = ({ selectedId }) => {
           >
             <Globe size={14} /> Khám phá Feed
           </button>
+          
+          {onToggleMap && (
+            <button
+              onClick={onToggleMap}
+              style={{
+                borderRadius: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '13px',
+                padding: '8px 16px',
+                border: '1px solid #00D4A0',
+                backgroundColor: isMapMode ? '#00D4A0' : '#fff',
+                color: isMapMode ? '#fff' : '#00D4A0',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              <Globe size={14} /> {isMapMode ? 'Ẩn bản đồ' : 'Xem bản đồ'}
+            </button>
+          )}
         </div>
 
         <span className="sort-by">

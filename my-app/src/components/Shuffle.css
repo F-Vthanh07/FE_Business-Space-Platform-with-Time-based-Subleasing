@@ -1,52 +1,31 @@
 .shuffle-parent {
   display: inline-block;
-  line-height: inherit; /* Cho nó theo dòng với chữ Ether */
-  font-size: inherit;   /* Nhận size từ cha */
-  font-family: inherit; /* Nhận font từ cha */
+  line-height: inherit;
+  font-size: inherit;
+  font-family: inherit;
   text-transform: inherit;
   visibility: hidden;
-  color: #00D4A0;      /* Màu xanh neon */
+  color: #00D4A0;
 }
-
-
 
 .shuffle-parent.is-ready {
   visibility: visible;
 }
 
-
-
 .shuffle-char-wrapper {
-
   display: inline-block;
-
   overflow: hidden;
-
   vertical-align: baseline;
-
   position: relative;
-
 }
-
-
 
 .shuffle-char-wrapper > span {
-
   display: inline-flex;
-
   will-change: transform;
-
 }
-
-
 
 .shuffle-char {
-
   line-height: 1;
-
   display: inline-block;
-
   text-align: center;
-
 }
-

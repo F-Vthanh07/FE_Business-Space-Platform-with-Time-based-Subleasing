@@ -86,6 +86,12 @@ export const FloatingChat: React.FC = () => {
       const myRooms: any[] = await res.json();
       setConversations(myRooms);
 
+      // Cập nhật số tin nhắn chưa đọc nếu BE có hỗ trợ trả về
+      const totalUnread = myRooms.reduce((sum, room) => sum + (room.unreadCount || room.UnreadCount || 0), 0);
+      if (totalUnread > 0) {
+        setUnreadCount(totalUnread);
+      }
+
       const activeConnection = connectionRef.current;
       if (activeConnection) {
         for (const room of myRooms) {
@@ -132,7 +138,8 @@ export const FloatingChat: React.FC = () => {
                   id: savedMessage.id || Date.now(),
                   senderId: savedMessage.senderId,
                   text: savedMessage.content || savedMessage.message,
-                  time: new Date(savedMessage.createdAt || new Date()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                  time: new Date(savedMessage.createdAt || new Date()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                  isRead: false
                 }];
               });
             } else { if (!isMyOwnMessage) setUnreadCount(prev => prev + 1); }
@@ -231,7 +238,8 @@ export const FloatingChat: React.FC = () => {
       if (res.ok) {
         const historyData = await res.json();
         const mappedHistory = historyData.map((msg: any) => ({
-          id: msg.id, senderId: msg.senderId, text: msg.content || msg.message || '', time: new Date(msg.createdAt || msg.sentAt || new Date()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+          id: msg.id, senderId: msg.senderId, text: msg.content || msg.message || '', time: new Date(msg.createdAt || msg.sentAt || new Date()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          isRead: msg.isRead || msg.IsRead || false
         }));
         setChatHistory(mappedHistory);
       }
@@ -387,8 +395,12 @@ export const FloatingChat: React.FC = () => {
                       <div key={idx} onClick={() => openChatRoom(room)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #F0F0F0', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                         <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#E4E6EB', color: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{displayName.substring(0, 2).toUpperCase()}</div>
                         <div style={{ flex: 1, overflow: 'hidden' }}>
-                          <div style={{ fontWeight: '600', fontSize: '14px', color: '#2C2C2C', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
-                          <div style={{ fontSize: '12px', color: '#777', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Nhấp để xem tin nhắn...</div>
+                          <div style={{ fontWeight: '600', fontSize: '14px', color: (room.unreadCount || room.UnreadCount) > 0 ? '#1E293B' : '#2C2C2C', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {displayName}
+                          </div>
+                          <div style={{ fontSize: '12px', color: (room.unreadCount || room.UnreadCount) > 0 ? '#ef4444' : '#777', fontWeight: (room.unreadCount || room.UnreadCount) > 0 ? 'bold' : 'normal', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {(room.unreadCount || room.UnreadCount) > 0 ? `(${room.unreadCount || room.UnreadCount} tin nhắn mới)` : 'Nhấp để xem tin nhắn...'}
+                          </div>
                         </div>
                       </div>
                     )
@@ -436,7 +448,10 @@ export const FloatingChat: React.FC = () => {
                       <div style={{ maxWidth: '75%', padding: '10px 14px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px', backgroundColor: isMe ? '#1E293B' : '#fff', color: isMe ? '#fff' : '#2D3748', fontSize: '13.5px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', lineHeight: '1.4', border: isMe ? 'none' : '1px solid #EDF2F7', wordBreak: 'break-word' }}>
                         {renderMessageContent(msg.text)}
                       </div>
-                      <span style={{ fontSize: '10px', color: '#A0AEC0', marginTop: '3px', padding: '0 4px' }}>{msg.time}</span>
+                      <span style={{ fontSize: '10px', color: '#A0AEC0', marginTop: '3px', padding: '0 4px' }}>
+                        {msg.time}
+                        {isMe && msg.isRead && <span style={{ marginLeft: '6px', color: '#4ADE80', fontWeight: 'bold' }}>✓ Đã xem</span>}
+                      </span>
                     </div>
                   );
                 })}

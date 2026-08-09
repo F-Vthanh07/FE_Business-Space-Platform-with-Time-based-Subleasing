@@ -1,16 +1,8 @@
 // src/features/homepage/components/HomeSearchBar.tsx
 import React from 'react';
-import { Filter, CheckCircle, Map } from 'lucide-react';
+import { Filter, CheckCircle } from 'lucide-react';
 
-interface HomeSearchBarProps {
-  isMapMode?: boolean;
-  onToggleMap?: () => void;
-}
-
-export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
-  isMapMode = false,
-  onToggleMap,
-}) => {
+export const HomeSearchBar: React.FC = () => {
   return (
     <div className="home-search-wrapper">
 
@@ -51,11 +43,7 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
           <option>Trên 200 m²</option>
         </select>
 
-        {/* NÚT TOGGLE BẢN ĐỒ / DANH SÁCH */}
-        <button className="hs-map-btn" onClick={onToggleMap}>
-          <Map size={14} />
-          {isMapMode ? 'Xem danh sách' : 'Xem bản đồ'}
-        </button>
+
       </div>
 
       {/* DẢI TAG ĐỊA ĐIỂM (Breadcrumb) */}

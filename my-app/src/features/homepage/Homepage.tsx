@@ -12,10 +12,7 @@ import { Header } from '../../components/Header';
 import { Footer } from '../../components/Footer';
 import { SidebarNav } from '../../components/SidebarNav';
 
-// 3 Component vừa chia nhỏ
-import { HomeSearchBar } from './components/HomeSearchBar';
 import { HomeListings } from './components/HomeListings';
-import { ScheduleSidebar } from './components/ScheduleSidebar';
 
 import './Homepage.css';
 
@@ -114,11 +111,6 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
           KHU VỰC TÌM KIẾM & DANH SÁCH
           ========================================= */}
       <div id="search-nav">
-        <HomeSearchBar
-          isMapMode={isMapMode}
-          onToggleMap={() => setIsMapMode((prev) => !prev)}
-        />
-
         {/* GRID LAYOUT CHIA ĐÔI MÀN HÌNH */}
         <div className={`listings-layout ${isMapMode ? 'map-active' : ''}`}>
 
@@ -126,20 +118,18 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
           <HomeListings
             selectedId={selectedVenueId}
             onCardClick={(id) => setSelectedVenueId(id)}
+            isMapMode={isMapMode}
+            onToggleMap={() => setIsMapMode((prev) => !prev)}
           />
 
-          {/* CỘT PHẢI: Sidebar hoặc Bản đồ */}
-          <div className="right-sidebar-column">
-            {isMapMode ? (
+          {/* CỘT PHẢI: Bản đồ (khi bật map) */}
+          {isMapMode && (
+            <div className="right-sidebar-column">
               <div className="map-view-container">
                 <MapComponent />
               </div>
-            ) : (
-              <div className="right-sidebar-content">
-                <ScheduleSidebar />
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
         </div>
       </div>
