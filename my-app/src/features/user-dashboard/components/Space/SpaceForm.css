@@ -51,7 +51,8 @@
   transition: all 0.15s ease;
 }
 
-.checkbox-item--checked .checkbox-indicator {
+.checkbox-item--checked .checkbox-indicator,
+.operating-day-row:not(.day-disabled) .checkbox-indicator {
   background: var(--color-accent);
   border-color: var(--color-accent);
 }
@@ -138,6 +139,11 @@
   outline: none;
   transition: all 0.2s ease;
   width: 100px;
+}
+
+.time-input::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
 }
 
 .time-input:focus:not(:disabled) {

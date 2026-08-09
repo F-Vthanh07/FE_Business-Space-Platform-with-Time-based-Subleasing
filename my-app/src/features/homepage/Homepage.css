@@ -371,7 +371,7 @@ html, body, #root {
 
 .dual-rental-grid {
   display: grid;
-  grid-template-columns: 1.35fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 24px;
   align-items: start;
 }
@@ -479,18 +479,10 @@ html, body, #root {
   border-color: #00d4a0;
 }
 
-/* Ảnh dài hạn to hơn (cột trái rộng hơn), ảnh theo giờ nhỏ gọn hơn */
-.rental-card--longterm .rental-card-img {
-  width: 130px;
-  height: 100px;
-}
-
-.rental-card--hourly .rental-card-img {
-  width: 96px;
-  height: 96px;
-}
-
+/* Make images same size for both columns to avoid misalignment */
 .rental-card-img {
+  width: 110px;
+  height: 110px;
   position: relative;
   flex-shrink: 0;
   border-radius: 10px;

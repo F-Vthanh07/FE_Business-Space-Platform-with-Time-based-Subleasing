@@ -256,27 +256,27 @@ export const MyContractsPage: React.FC = () => {
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.03);
-            color: rgba(255,255,255,0.65);
+            border: 1px solid var(--color-border);
+            background: var(--color-bg-card);
+            color: var(--color-text-secondary);
             transition: all .15s ease;
             white-space: nowrap;
           }
-          .mc-tab:hover { border-color: rgba(255,255,255,0.25); color: #fff; }
-          .mc-tab.active { background: #3B82F6; border-color: #3B82F6; color: #fff; }
+          .mc-tab:hover { border-color: var(--color-accent); color: var(--color-text-primary); }
+          .mc-tab.active { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
 
           .mc-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-border);
             border-radius: 14px;
             padding: 18px 20px;
             margin-bottom: 12px;
             transition: box-shadow .15s ease, border-color .15s ease, background .15s ease;
           }
           .mc-card:hover {
-            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-            border-color: rgba(255,255,255,0.16);
-            background: rgba(255,255,255,0.05);
+            box-shadow: var(--shadow-card-hover);
+            border-color: var(--color-accent);
+            background: var(--color-bg-hover);
           }
 
           .mc-view-btn {
@@ -290,7 +290,7 @@ export const MyContractsPage: React.FC = () => {
             cursor: pointer;
             border: none;
             background: #3B82F6;
-            color: #fff;
+            color: #fff !important;
             box-shadow: 0 4px 14px rgba(59,130,246,0.3);
           }
           .mc-view-btn:hover { background: #2563EB; }
@@ -304,11 +304,11 @@ export const MyContractsPage: React.FC = () => {
             font-size: 12.5px;
             font-weight: 600;
             cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.03);
-            color: rgba(255,255,255,0.75);
+            border: 1px solid var(--color-border);
+            background: var(--color-bg-card);
+            color: var(--color-text-secondary);
           }
-          .mc-refresh-btn:hover:not(:disabled) { border-color: rgba(255,255,255,0.25); color: #fff; }
+          .mc-refresh-btn:hover:not(:disabled) { border-color: var(--color-accent); color: var(--color-text-primary); }
           .mc-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         `}
       </style>
@@ -372,31 +372,31 @@ export const MyContractsPage: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>
                   <div style={{ flex: '1 1 200px', minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 700, fontSize: '14.5px', color: '#fff' }}>Hợp đồng #{id}</span>
+                      <span style={{ fontWeight: 700, fontSize: '14.5px', color: 'var(--color-text-primary)' }}>Hợp đồng #{id}</span>
                       <StatusBadge status={status} />
                       <span style={{
                         fontSize: '11px', fontWeight: 700,
-                        color: amILessor ? '#C4B5FD' : '#67E8F9',
-                        background: amILessor ? 'rgba(124,58,237,0.15)' : 'rgba(8,145,178,0.15)',
-                        border: `1px solid ${amILessor ? 'rgba(196,181,253,0.3)' : 'rgba(103,232,249,0.3)'}`,
+                        color: amILessor ? '#8b5cf6' : '#0891b2',
+                        background: amILessor ? 'rgba(139,92,246,0.15)' : 'rgba(8,145,178,0.15)',
+                        border: `1px solid ${amILessor ? 'rgba(139,92,246,0.3)' : 'rgba(8,145,178,0.3)'}`,
                         padding: '2px 8px', borderRadius: 999
                       }}>
                         {amILessor ? 'Bạn là Bên cho thuê' : 'Bạn là Bên thuê'}
                       </span>
                     </div>
 
-                    <div style={{ fontSize: '13px', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', color: 'var(--color-text-secondary)' }}>
                       <Building2 size={13} style={{ opacity: 0.6 }} /> {spaceNameOf(contract)}
                     </div>
 
-                    <div style={{ fontSize: '13px', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                    <div style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', color: 'var(--color-text-secondary)' }}>
                       <Users size={13} style={{ opacity: 0.6 }} />
-                      <span><strong style={{ color: '#fff' }}>{lessorName}</strong> &harr; <strong style={{ color: '#fff' }}>{lesseeName}</strong></span>
+                      <span><strong style={{ color: 'var(--color-text-primary)' }}>{lessorName}</strong> &harr; <strong style={{ color: 'var(--color-text-primary)' }}>{lesseeName}</strong></span>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '20px', fontSize: '12.5px', opacity: 0.75, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '20px', fontSize: '12.5px', flexWrap: 'wrap', color: 'var(--color-text-secondary)' }}>
                       <span>Giá thuê: <strong style={{ color: '#4ADE80' }}>{formatCurrency(contract.price)}</strong></span>
-                      <span>Thời hạn: <strong style={{ color: '#fff' }}>{contract.duration} {formatDurationUnit(contract.durationUnit)}</strong></span>
+                      <span>Thời hạn: <strong style={{ color: 'var(--color-text-primary)' }}>{contract.duration} {formatDurationUnit(contract.durationUnit)}</strong></span>
                     </div>
                   </div>
 

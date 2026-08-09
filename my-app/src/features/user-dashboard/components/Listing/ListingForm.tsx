@@ -90,7 +90,28 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
         if (res.ok) {
           const data = await res.json();
-          setMySpaces(Array.isArray(data) ? data : (data?.data || []));
+          const spaces = Array.isArray(data) ? data : (data?.data || []);
+          
+          let allSpacesAndParts: any[] = [];
+          
+          for (const space of spaces) {
+            allSpacesAndParts.push({ ...space, isPart: false });
+            try {
+              const partRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetByParent/${space.id || space.Id}`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+              });
+              if (partRes.ok) {
+                const partData = await partRes.json();
+                const parts = Array.isArray(partData) ? partData : (partData?.items || []);
+                parts.forEach((p: any) => {
+                  allSpacesAndParts.push({ ...p, isPart: true, parentName: space.name });
+                });
+              }
+            } catch (err) {
+              console.error("Lỗi lấy space part", err);
+            }
+          }
+          setMySpaces(allSpacesAndParts);
         }
       } catch (err) {
         console.error("Lỗi lấy danh sách mặt bằng:", err);
@@ -482,7 +503,10 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                   onChange={(v) => setSpaceId(Number(v))}
                   disabled={isLoading || !!initialData}
                   placeholder="-- Chọn mặt bằng --"
-                  options={mySpaces.map(s => ({ value: s.id || s.Id, label: s.name }))}
+                  options={mySpaces.map(s => ({ 
+                    value: s.id || s.Id, 
+                    label: s.isPart ? `↳ [Chia nhỏ] ${s.name} (thuộc ${s.parentName})` : s.name 
+                  }))}
                 />
               </div>
 

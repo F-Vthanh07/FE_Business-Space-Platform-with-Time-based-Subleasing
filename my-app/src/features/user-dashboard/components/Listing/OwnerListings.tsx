@@ -63,7 +63,31 @@ export const OwnerListings: React.FC = () => {
       let mySpaceIds: any[] = [];
       if (spaceRes.ok) {
         const spaceData = await spaceRes.json();
-        mySpaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+        const spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+        
+        mySpaces = [...spaces];
+        
+        for (const space of spaces) {
+          try {
+            const partRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetByParent/${space.id || space.Id}`, {
+              headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+            });
+            if (partRes.ok) {
+              const partData = await partRes.json();
+              const parts = Array.isArray(partData) ? partData : (partData?.items || []);
+              parts.forEach((p: any) => {
+                mySpaces.push({ 
+                  ...p, 
+                  isSpacePart: true, 
+                  parentName: space.name,
+                  parentCity: space.city, 
+                  parentAddress: space.address || space.location 
+                });
+              });
+            }
+          } catch(err) { console.error("Error fetching space parts", err); }
+        }
+        
         mySpaceIds = mySpaces.map((s: any) => s.id || s.Id);
       }
 
@@ -88,10 +112,11 @@ export const OwnerListings: React.FC = () => {
           return {
             ...l,
             // Móc địa chỉ từ Mặt bằng sang Bài đăng nếu bài đăng không có sẵn
-            address: l.location || l.address || l.spaceAddress || parentSpace?.address || parentSpace?.location || '',
+            address: l.location || l.address || l.spaceAddress || parentSpace?.address || parentSpace?.location || parentSpace?.parentAddress || '',
             area: l.area || parentSpace?.area || '',
-            spaceName: parentSpace?.name || '',
-            spaceCity: parentSpace?.city || ''
+            spaceName: parentSpace?.isSpacePart ? `${parentSpace?.name} (thuộc ${parentSpace?.parentName})` : (parentSpace?.name || ''),
+            spaceCity: parentSpace?.city || parentSpace?.parentCity || '',
+            isSpacePart: parentSpace?.isSpacePart || false
           };
         });
 
@@ -259,9 +284,16 @@ export const OwnerListings: React.FC = () => {
             <div key={currentId || index} className="glass-card listing-card">
 
               <div className="listing-card-top">
-                <div className="listing-type-tag" style={isShareListing(listing) ? { background: 'rgba(0,180,160,0.15)', color: 'var(--color-positive)' } : undefined}>
-                  {isShareListing(listing) ? <Users size={13} /> : <Building2 size={13} />}
-                  {isShareListing(listing) ? 'Chia sẻ' : 'Dài hạn'}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className="listing-type-tag" style={isShareListing(listing) ? { background: 'rgba(0,180,160,0.15)', color: 'var(--color-positive)' } : undefined}>
+                    {isShareListing(listing) ? <Users size={13} /> : <Building2 size={13} />}
+                    {isShareListing(listing) ? 'Chia sẻ' : 'Dài hạn'}
+                  </div>
+                  {listing.isSpacePart && (
+                    <div className="listing-type-tag" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#eab308' }}>
+                      Chia nhỏ
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span className={`badge ${statusConfig[listing.status]?.className || 'badge--neutral'}`}>
@@ -431,6 +463,11 @@ export const OwnerListings: React.FC = () => {
                     <span className="badge badge--neutral">
                       {isShareListing(viewingListing) ? 'Chia sẻ mặt bằng' : 'Cho thuê dài hạn'}
                     </span>
+                    {viewingListing.isSpacePart && (
+                      <span className="badge" style={{ background: '#fef9c3', color: '#854d0e', border: '1px solid #fef08a' }}>
+                        Không gian chia nhỏ
+                      </span>
+                    )}
                   </div>
                 </div>
 
