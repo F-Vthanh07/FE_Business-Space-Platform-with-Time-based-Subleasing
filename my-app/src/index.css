@@ -316,7 +316,7 @@ input, textarea, select {
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
-  padding: 16px;
+  padding: 0;
   background-color: var(--color-bg-global);
   box-sizing: border-box;
 }
@@ -327,6 +327,7 @@ input, textarea, select {
   min-height: 0;
   overflow: hidden;
   margin-top: 16px;
+  padding: 0 16px 16px 16px;
   gap: 16px;
 }
 
@@ -656,23 +657,11 @@ input, textarea, select {
 .light-theme .slot-price span,
 .light-theme .tab-btn-inset--active,
 .light-theme .filter-btn-inset--active,
-.light-theme .filter-tab--active,
-.light-theme .header-nav-item:hover,
-.light-theme .header-nav-item--active,
-.light-theme .header-icon-btn:hover {
+.light-theme .filter-tab--active {
   color: var(--color-text-primary) !important;
 }
 
-.light-theme .header-logo-text {
-  background: linear-gradient(135deg, var(--color-text-primary) 60%, var(--color-text-secondary)) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
-}
 
-.light-theme .header-nav-item--active::after {
-  background-color: var(--color-accent) !important;
-}
 
 .light-theme .text-secondary,
 .light-theme .label-caps,

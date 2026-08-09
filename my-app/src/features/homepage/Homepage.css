@@ -20,7 +20,7 @@ html, body, #root {
 
 .listings-layout {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: 1fr;
   gap: 24px;
   padding: 30px 24px;
   background: #F7F9FC; /* Nền xám xanh cực sang trọng */
@@ -323,15 +323,16 @@ html, body, #root {
 #how-it-works .timeline-step:hover .step-info-card { border-color: #00D4A0; background: #ffffff; box-shadow: 0 6px 16px rgba(0,0,0,0.05); }
 
 /* --- GIAO DIỆN LỌC CHUYÊN NGHIỆP (Batdongsan Style) --- */
-.home-search-wrapper { background: #fff; padding: 16px 24px; border-bottom: 1px solid #E5E7EB; }
+.home-search-wrapper { background: #fff; padding: 16px 20px; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); width: 100%; box-sizing: border-box; }
 
 .hs-filter-bar { 
   display: flex; 
   align-items: center; 
   gap: 12px; 
-  width: 100%;       /* Thêm width 100% */
-  margin: 0;         /* Đổi từ 0 auto thành 0 để sát trái */
-  padding: 0 24px;   /* Thêm padding cho nó không bị dính sát mép màn hình */
+  width: 100%;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
 }
 
 .hs-filter-btn { 
@@ -352,7 +353,7 @@ html, body, #root {
 
 /* --- BREADCRUMB --- */
 .hs-breadcrumb-bar { 
-  display: flex; align-items: center; gap: 12px; width: 1400px; margin: 16px 0 0 0; padding: 0 24px;
+  display: flex; align-items: center; gap: 12px; width: 100%; flex-wrap: wrap; margin: 16px 0 0 0; padding: 0;
 }
 .hs-text { font-size: 13px; color: #6B7280; }
 .hs-pills-list { display: flex; gap: 8px; }

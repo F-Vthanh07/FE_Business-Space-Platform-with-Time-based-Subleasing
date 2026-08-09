@@ -2,11 +2,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Eye, MapPin, MessageCircle, Bookmark, TrendingUp, ShieldCheck, Home, X,
+  Eye, MapPin, Bookmark, ShieldCheck, Home, X,
   ChevronLeft, ChevronRight, Building2, Clock3, User, Camera, Heart
 } from 'lucide-react';
 import { Header } from '../../components/Header'; // Chỉnh lại đường dẫn cho đúng nha
 import { useNavigate } from 'react-router-dom';
+import { HomeSearchBar } from '../homepage/components/HomeSearchBar';
+import '../homepage/Homepage.css';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyItem = any;
@@ -263,16 +265,6 @@ export const ListingFeed: React.FC = () => {
             <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#050505' }}>Lối tắt của bạn</h4>
 
             <div
-              onClick={() => navigate('/owner/listings')}
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 6px', borderRadius: '8px', cursor: 'pointer', color: '#050505', fontWeight: 500, transition: 'background-color .15s' }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F0F2F5')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Home size={18} color="var(--color-primary)" /></div>
-              Mặt bằng của tôi
-            </div>
-
-            <div
               onClick={() => { setOnlyMine(!onlyMine); setShowFavoritesOnly(false); }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '8px 6px', borderRadius: '8px', cursor: 'pointer', color: '#050505', fontWeight: 500, backgroundColor: onlyMine ? '#F0F2F5' : 'transparent' }}
               onMouseEnter={(e) => { if(!onlyMine) e.currentTarget.style.backgroundColor = '#F0F2F5'; }}
@@ -313,6 +305,8 @@ export const ListingFeed: React.FC = () => {
 
         {/* CỘT GIỮA: FEED BÀI ĐĂNG */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          <HomeSearchBar />
 
           {/* THANH BỘ LỌC */}
           <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -419,9 +413,6 @@ export const ListingFeed: React.FC = () => {
                         <Heart size={16} fill={isSaved ? '#E02424' : 'none'} color={isSaved ? '#E02424' : 'currentColor'} />
                         {isSaved ? 'Đã lưu' : 'Lưu tin'}
                       </button>
-                      <button onClick={() => alert('Chuẩn bị tích hợp API Chat!')} style={{ flex: 1, padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', fontSize: '14px', backgroundColor: '#E4E6EB', color: '#050505', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}>
-                        <MessageCircle size={16} /> Nhắn tin
-                      </button>
                       <button
                         onClick={() => navigate(`/listing/${item.id || item.Id}`)}
                         style={{ flex: 1, padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', backgroundColor: '#E4E6EB', color: '#050505', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
@@ -438,19 +429,6 @@ export const ListingFeed: React.FC = () => {
 
         {/* CỘT PHẢI */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '110px', height: 'fit-content' }}>
-          <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
-            <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#050505', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TrendingUp size={18} color="var(--color-positive, #2E7D32)" /> Đang thịnh hành
-            </h4>
-            <div style={{ fontSize: '14px', color: '#050505', marginBottom: '12px', fontWeight: 500, cursor: 'pointer' }}>
-              📍 Khu vực Quận 1 đang sốt giá
-              <div style={{ fontSize: '12px', color: '#65676B', fontWeight: 400 }}>1.2K lượt tìm kiếm</div>
-            </div>
-            <div style={{ fontSize: '14px', color: '#050505', fontWeight: 500, cursor: 'pointer' }}>
-              📍 Pop-up Store sinh viên
-              <div style={{ fontSize: '12px', color: '#65676B', fontWeight: 400 }}>Hot trend kinh doanh 2026</div>
-            </div>
-          </div>
 
           <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
             <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#050505', display: 'flex', alignItems: 'center', gap: '8px' }}>

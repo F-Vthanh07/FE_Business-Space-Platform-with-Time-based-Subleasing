@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import './Shuffle.css';
 
 export const Shuffle = ({ text }: { text: string }) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -8,18 +9,16 @@ export const Shuffle = ({ text }: { text: string }) => {
     <span 
       onMouseEnter={() => setIsHovered(true)} 
       onMouseLeave={() => setIsHovered(false)}
-      // Trong Shuffle.tsx, hãy chắc chắn style này của Shuffle khớp với chữ "Ether"
-    style={{ 
+      style={{ 
         display: 'inline-flex',
         fontFamily: "'Press Start 2P', cursive", 
         color: '#00D4A0',
         cursor: 'pointer',
-        lineHeight: 'inherit', // Dùng thừa hưởng từ cha
-        fontSize: 'inherit',   // Nhận size từ cha
-        alignItems: 'center',   // Căn giữa các ký tự
-
-        marginTop: '-4px' // Điều chỉnh nhẹ để căn giữa với "Ether"
-    }}
+        lineHeight: 'inherit',
+        fontSize: 'inherit',
+        alignItems: 'center',
+        marginTop: '2px'
+      }}
     >
       {text.split('').map((char, index) => (
         <LetterSlide 
@@ -35,18 +34,19 @@ export const Shuffle = ({ text }: { text: string }) => {
 
 const LetterSlide = ({ char, isHovered, delay }: { char: string, isHovered: boolean, delay: number }) => {
   return (
-    // Dùng width cố định để tránh bị mất chữ
-    <div style={{ position: 'relative', width: '25px', height: '30px', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', display: 'inline-block', overflow: 'hidden' }}>
+      <span style={{ visibility: 'hidden', display: 'inline-block' }}>{char === ' ' ? '\u00A0' : char}</span>
       <AnimatePresence mode="popLayout">
         {!isHovered ? (
           <motion.span
             key="old"
-            initial={{ x: 0 }}
+            initial={{ x: 0, opacity: 1 }}
+            animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
             transition={{ duration: 0.3, delay }}
-            style={{ position: 'absolute', display: 'inline-block' }}
+            style={{ position: 'absolute', top: 0, left: 0, display: 'inline-block' }}
           >
-            {char}
+            {char === ' ' ? '\u00A0' : char}
           </motion.span>
         ) : (
           <motion.span
@@ -54,9 +54,9 @@ const LetterSlide = ({ char, isHovered, delay }: { char: string, isHovered: bool
             initial={{ x: '-100%', opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.3, delay }}
-            style={{ position: 'absolute', display: 'inline-block' }}
+            style={{ position: 'absolute', top: 0, left: 0, display: 'inline-block' }}
           >
-            {char}
+            {char === ' ' ? '\u00A0' : char}
           </motion.span>
         )}
       </AnimatePresence>
