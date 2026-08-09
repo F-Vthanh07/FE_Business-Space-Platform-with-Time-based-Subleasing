@@ -489,16 +489,17 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
         {`
           .cv-scrollbar::-webkit-scrollbar { width: 6px; }
           .cv-scrollbar::-webkit-scrollbar-thumb { background-color: #CBD5E1; border-radius: 10px; }
-          .cv-card { background: #F8FAFC; border-radius: 10px; padding: 16px; border: 1px solid #E2E8F0; margin-bottom: 14px; }
-          .cv-card-header { font-size: 13px; font-weight: 700; color: #1E293B; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-          .cv-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; font-size: 13px; color: #334155; }
-          .cv-row p { margin: 0; }
+          .cv-card { background: #FFFFFF; border-radius: 12px; padding: 20px; border: 1px solid #E2E8F0; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+          .cv-card-header { font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+          .cv-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; font-size: 14px; color: #334155; }
+          .cv-row p { margin: 0; color: #334155 !important; }
+          .cv-row p strong { color: #0F172A !important; display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
           .cv-btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
-          .cv-btn-primary { background-color: #10B981; color: white; }
+          .cv-btn-primary { background-color: #10B981; color: white !important; }
           .cv-btn-primary:disabled { background-color: #A7F3D0; cursor: not-allowed; }
-          .cv-btn-secondary { background-color: #E2E8F0; color: #475569; }
-          .cv-terms-box { max-height: 320px; overflow-y: auto; }
-          .cv-input { padding: 12px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 16px; text-align: center; letter-spacing: 2px; outline: none; transition: border-color 0.2s; }
+          .cv-btn-secondary { background-color: #E2E8F0; color: #475569 !important; }
+          .cv-terms-box { max-height: 320px; overflow-y: auto; background-color: #F8FAFC; }
+          .cv-input { padding: 12px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 16px; text-align: center; letter-spacing: 2px; outline: none; transition: border-color 0.2s; background: #fff; color: #0F172A; }
           .cv-input:focus { border-color: #10B981; }
           .cv-action-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
           @media print {
@@ -728,7 +729,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
           {/* Chữ ký Placeholder */}
           <div style={{ marginTop: '30px', marginBottom: '40px', display: 'flex', justifyContent: 'space-between', textAlign: 'center', fontSize: '13px', color: '#334155' }}>
             <div style={{ width: '45%' }}>
-              Bên cho thuê{displayLessorName ? ` (${displayLessorName})` : ''}<br />
+              <span style={{ color: '#0F172A' }}>Bên cho thuê{displayLessorName ? ` (${displayLessorName})` : ''}</span><br />
               {lessorSignedFinal ? (
                 <>
                   <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '10px' }}>
@@ -745,7 +746,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
               )}
             </div>
             <div style={{ width: '45%' }}>
-              Bên thuê{displayLesseeName ? ` (${displayLesseeName})` : ''}<br />
+              <span style={{ color: '#0F172A' }}>Bên thuê{displayLesseeName ? ` (${displayLesseeName})` : ''}</span><br />
               {lesseeSignedFinal ? (
                 <>
                   <span style={{ color: '#10B981', fontWeight: 700, fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '10px' }}>

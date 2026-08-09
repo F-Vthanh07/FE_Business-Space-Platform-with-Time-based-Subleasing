@@ -96,6 +96,7 @@ export const OwnerTenants: React.FC = () => {
       case 'Draft': return language === 'en' ? 'Unsigned' : 'Chưa ký';
       case 'Expired': return language === 'en' ? 'Expired' : 'Hết hạn';
       case 'Cancelled': return language === 'en' ? 'Cancelled' : 'Đã huỷ';
+      default: return status || 'Unknown';
     }
   };
 
@@ -179,7 +180,7 @@ export const OwnerTenants: React.FC = () => {
         const extraSpaceEntries = await Promise.all(
           missingSpaceIds.map(async (id) => {
             try {
-              const res = await fetch(`${API_BASE}/api/Space/GetById${id}`, {
+              const res = await fetch(`${API_BASE}/api/Space/GetById/${id}`, {
                 headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
               });
               if (!res.ok) return [id, null] as const;
@@ -219,7 +220,7 @@ export const OwnerTenants: React.FC = () => {
           spaceAddress: space?.address || (language === 'en' ? 'Not updated' : 'Chưa cập nhật địa chỉ'),
           startDate: c.startDate ?? c.StartDate,
           endDate: c.endDate ?? c.EndDate,
-          monthlyRent: c.price ?? c.Price ?? 0,
+          monthlyRent: Number(c.price ?? c.Price ?? 0),
           status: (c.status ?? c.Status ?? 'Draft') as ContractStatus,
           contract: c,
           isLessor,
@@ -265,19 +266,20 @@ export const OwnerTenants: React.FC = () => {
 
   // Ưu tiên hợp đồng còn hiệu lực lên trên, hết hiệu lực xuống dưới:
   // Active (sắp hết hạn trước, để chủ nhà thấy ngay hợp đồng cần gia hạn) → Draft (chờ ký) → Expired → Cancelled.
-  const statusOrder: Record<ContractStatus, number> = { Active: 0, Draft: 1, Expired: 2, Cancelled: 3 };
+  const statusOrder: Record<string, number> = { Active: 0, Draft: 1, Expired: 2, Cancelled: 3 };
+  const getStatusOrder = (s: string) => statusOrder[s] ?? 99;
 
   const filtered = tenants
     .filter((tenant) => {
       const matchSearch =
-        tenant.name.toLowerCase().includes(search.toLowerCase()) ||
-        tenant.space.toLowerCase().includes(search.toLowerCase());
+        String(tenant.name || '').toLowerCase().includes(search.toLowerCase()) ||
+        String(tenant.space || '').toLowerCase().includes(search.toLowerCase());
       const matchFilter = filterStatus === 'all' || tenant.status === filterStatus;
       return matchSearch && matchFilter;
     })
     .sort((a, b) => {
-      const groupDiff = statusOrder[a.status] - statusOrder[b.status];
-      if (groupDiff !== 0) return groupDiff;
+      const groupDiff = getStatusOrder(a.status) - getStatusOrder(b.status);
+      if (groupDiff !== 0 && !Number.isNaN(groupDiff)) return groupDiff;
 
       if (a.status === 'Active') {
         // Trong nhóm Active, hợp đồng còn ít thời gian nhất (sắp hết hạn) lên đầu.
@@ -400,8 +402,8 @@ export const OwnerTenants: React.FC = () => {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className={`badge ${statusConfig[tenant.status].className}`}>
-                      {statusConfig[tenant.status].icon}
+                    <span className={`badge ${statusConfig[tenant.status]?.className || 'badge--neutral'}`}>
+                      {statusConfig[tenant.status]?.icon || <Clock size={11} />}
                       {getStatusLabel(tenant.status)}
                     </span>
                   </div>
@@ -546,8 +548,8 @@ export const OwnerTenants: React.FC = () => {
                 <div className="form-section">
                   <div className="form-section-title">{language === 'en' ? 'Contract status' : 'Trạng thái hợp đồng'}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className={`badge ${statusConfig[viewingTenant.status].className}`}>
-                      {statusConfig[viewingTenant.status].icon}
+                    <span className={`badge ${statusConfig[viewingTenant.status]?.className || 'badge--neutral'}`}>
+                      {statusConfig[viewingTenant.status]?.icon || <Clock size={11} />}
                       {getStatusLabel(viewingTenant.status)}
                     </span>
                     {viewingTenant.status === 'Active' && (

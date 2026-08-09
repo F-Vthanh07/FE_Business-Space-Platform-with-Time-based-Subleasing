@@ -91,7 +91,7 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
           fetchWalletAccount(token).then((a) => a.balance),
 
           // 2. My spaces (full array)
-          fetch(`${API_BASE_URL}/api/Space/owner`, {
+          fetch(`${API_BASE_URL}/api/Space/GetAll?OwnerId=${encodeURIComponent(currentUserId)}`, {
             headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
           }).then(async (r) => {
             if (!r.ok) return [] as DashboardSpace[];
@@ -99,18 +99,31 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
             return (Array.isArray(d) ? d : d?.data || d?.items || []) as DashboardSpace[];
           }),
 
-          // 3. My contracts count
-          fetch(`${API_BASE_URL}/api/PrimaryBookingRequest/user/my-contracts`, {
-            headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-          }).then(async (r) => {
-            if (!r.ok) return 0;
-            const d = await r.json();
-            const arr = Array.isArray(d) ? d : d?.data || d?.items || [];
-            return arr.length;
+          // 3. My contracts count (sum of lessor and lessee contracts)
+          Promise.all([
+            fetch(`${API_BASE_URL}/api/Contract/GetAll?LessorId=${encodeURIComponent(currentUserId)}`, {
+              headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+            }),
+            fetch(`${API_BASE_URL}/api/Contract/GetAll?LesseeId=${encodeURIComponent(currentUserId)}`, {
+              headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+            }),
+          ]).then(async ([resLessor, resLessee]) => {
+            let total = 0;
+            if (resLessor.ok) {
+              const d1 = await resLessor.json();
+              const arr1 = Array.isArray(d1) ? d1 : d1?.data || d1?.items || [];
+              total += arr1.length;
+            }
+            if (resLessee.ok) {
+              const d2 = await resLessee.json();
+              const arr2 = Array.isArray(d2) ? d2 : d2?.data || d2?.items || [];
+              total += arr2.length;
+            }
+            return total;
           }),
 
           // 4. My listings (full array)
-          fetch(`${API_BASE_URL}/api/Listing/mine`, {
+          fetch(`${API_BASE_URL}/api/Listing/GetAll`, {
             headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
           }).then(async (r) => {
             if (!r.ok) return [] as DashboardListing[];
@@ -141,10 +154,17 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
           }),
         ]);
 
+      const spaces = spacesResult.status === 'fulfilled' ? spacesResult.value : [];
       setWalletBalance(walletResult.status === 'fulfilled' ? walletResult.value : 0);
-      setSpacesData(spacesResult.status === 'fulfilled' ? spacesResult.value : []);
+      setSpacesData(spaces);
       setContractsCount(contractsResult.status === 'fulfilled' ? contractsResult.value : 0);
-      setListingsData(listingsResult.status === 'fulfilled' ? listingsResult.value : []);
+      
+      const allListings = listingsResult.status === 'fulfilled' ? listingsResult.value : [];
+      // Filter listings to only those belonging to the user's spaces
+      const spaceIds = new Set(spaces.map((s) => s.id || (s as any).Id));
+      const userListings = allListings.filter((l: any) => spaceIds.has(l.spaceId || l.SpaceId));
+      setListingsData(userListings);
+      
       setPendingBookings(bookingsResult.status === 'fulfilled' ? bookingsResult.value : []);
       setIsLoading(false);
     };
@@ -235,8 +255,7 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
                 <div className="skeleton skeleton-value" />
               ) : (
                 <span className="stat-card-value">
-                  {spacesCount}
-                  <span className="stat-card-unit">{t('overview.spacesUnit')}</span>
+                  {spacesCount} <span className="stat-card-unit">{t('overview.spacesUnit')}</span>
                 </span>
               )}
             </div>
@@ -251,8 +270,7 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
                 <div className="skeleton skeleton-value" />
               ) : (
                 <span className="stat-card-value">
-                  {contractsCount ?? 0}
-                  <span className="stat-card-unit">{t('overview.contractsUnit')}</span>
+                  {contractsCount ?? 0} <span className="stat-card-unit">{t('overview.contractsUnit')}</span>
                 </span>
               )}
             </div>
@@ -267,8 +285,7 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
                 <div className="skeleton skeleton-value" />
               ) : (
                 <span className="stat-card-value">
-                  {listingsCount}
-                  <span className="stat-card-unit">{t('overview.listingsUnit')}</span>
+                  {listingsCount} <span className="stat-card-unit">{t('overview.listingsUnit')}</span>
                 </span>
               )}
             </div>

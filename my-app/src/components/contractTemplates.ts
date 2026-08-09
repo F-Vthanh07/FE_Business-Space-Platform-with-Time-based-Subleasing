@@ -125,7 +125,6 @@ export function formatSchedule(schedules?: ContractSchedule[]): string {
 // -----------------------------------------------------------------------
 export interface ContractMergeData {
   // Liên kết / hệ thống
-  MA_HOP_DONG?: string;          // số hợp đồng, vd "015/2026"
   MA_YEU_CAU_THUE?: string;      // mã yêu cầu đặt thuê, vd "#1"
   NGAY_LAP_HD?: string;          // ngày lập hợp đồng, vd "19/07/2026"
   DIA_DIEM_KY?: string;          // nơi ký, vd "TP. Hồ Chí Minh"
@@ -176,7 +175,6 @@ export interface ContractMergeData {
 // thay vì dấu chấm chung chung, để (a) người soạn dễ biết còn thiếu chỗ nào,
 // và (b) hệ thống có thể "tìm - thay" chính xác từng ô khi dữ liệu thay đổi.
 const FIELD_LABELS: Record<string, string> = {
-  MA_HOP_DONG: 'Số hợp đồng',
   MA_YEU_CAU_THUE: 'Mã yêu cầu thuê',
   NGAY_LAP_HD: 'Ngày lập hợp đồng',
   DIA_DIEM_KY: 'Nơi ký',
@@ -244,7 +242,6 @@ const TPL_CONG_CHUNG = `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM
 -------------------------------
 
 HỢP ĐỒNG THUÊ MẶT BẰNG
-Số: {{MA_HOP_DONG}}
 
 - Căn cứ Bộ luật Dân sự số 91/2015/QH13 ngày 24/11/2015;
 - Căn cứ Luật Kinh doanh bất động sản số 29/2023/QH15 ngày 28/11/2023 (hiệu lực từ 01/8/2024);
@@ -344,7 +341,6 @@ const TPL_CHUAN = `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM
 -------------------------------
 
 HỢP ĐỒNG THUÊ MẶT BẰNG
-Số: {{MA_HOP_DONG}}
 
 - Căn cứ Bộ luật Dân sự số 91/2015/QH13 ngày 24/11/2015;
 - Căn cứ Luật Kinh doanh bất động sản số 29/2023/QH15 ngày 28/11/2023 (hiệu lực từ 01/8/2024);
@@ -418,7 +414,6 @@ const TPL_DON_GIAN = `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM
 -------------------------------
 
 HỢP ĐỒNG THUÊ MẶT BẰNG
-Số: {{MA_HOP_DONG}}
 
 - Căn cứ Bộ luật Dân sự số 91/2015/QH13 ngày 24/11/2015;
 - Căn cứ Luật Kinh doanh bất động sản số 29/2023/QH15 ngày 28/11/2023 (hiệu lực từ 01/8/2024);

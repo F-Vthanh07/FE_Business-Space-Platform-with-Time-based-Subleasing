@@ -90,7 +90,7 @@ export const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
 
         const [userRes, spaceRes] = await Promise.all([
           lesseeId ? fetch(`${API_BASE_URL}/api/User/${lesseeId}`, { headers }) : Promise.resolve(null),
-          spaceId != null ? fetch(`${API_BASE_URL}/api/Space/GetById${spaceId}`, { headers }) : Promise.resolve(null),
+          spaceId != null ? fetch(`${API_BASE_URL}/api/Space/GetById/${spaceId}`, { headers }) : Promise.resolve(null),
         ]);
 
         if (userRes?.ok) {

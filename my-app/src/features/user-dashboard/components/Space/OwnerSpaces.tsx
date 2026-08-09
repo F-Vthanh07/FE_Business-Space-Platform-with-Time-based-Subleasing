@@ -2,8 +2,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
-import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X } from 'lucide-react';
+import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X, Layers } from 'lucide-react';
 import { SpaceForm } from './SpaceForm';
+import { SpacePartForm } from './SpacePartForm';
+import { SpacePartListModal } from './SpacePartListModal';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import '../../../shared/ModalShell.css';
 import './OwnerSpaces.css';
@@ -30,6 +32,10 @@ export const OwnerSpaces: React.FC = () => {
   const [apiCategories, setApiCategories] = useState<any[]>([]); 
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSpacePartFormOpen, setIsSpacePartFormOpen] = useState(false);
+  const [isSpacePartListOpen, setIsSpacePartListOpen] = useState(false);
+  const [parentSpaceForPart, setParentSpaceForPart] = useState<Space | null>(null);
+  const [editingSpacePart, setEditingSpacePart] = useState<any | null>(null);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
   const [viewingSpace, setViewingSpace] = useState<Space | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -130,6 +136,23 @@ export const OwnerSpaces: React.FC = () => {
     setIsFormOpen(true);
   };
 
+  const handleOpenSpacePartForm = (space: Space) => {
+    setParentSpaceForPart(space);
+    setEditingSpacePart(null);
+    setIsSpacePartFormOpen(true);
+  };
+
+  const handleOpenSpacePartList = (space: Space) => {
+    setParentSpaceForPart(space);
+    setIsSpacePartListOpen(true);
+  };
+
+  const handleEditSpacePart = (part: any) => {
+    setEditingSpacePart(part);
+    setIsSpacePartListOpen(false);
+    setIsSpacePartFormOpen(true);
+  };
+
   // --- 3. API DELETE: XÓA MẶT BẰNG ---
   const handleDeleteSpace = async (spaceToDelete: Space) => {
     // Ép lấy đúng ID (Phòng trường hợp C# trả về 'Id' in hoa)
@@ -168,6 +191,13 @@ export const OwnerSpaces: React.FC = () => {
   const handleFormSubmit = () => {
     setIsFormOpen(false);
     setEditingSpace(null);
+    fetchSpaces();
+  };
+
+  const handleSpacePartSubmit = () => {
+    setIsSpacePartFormOpen(false);
+    setParentSpaceForPart(null);
+    // Có thể cần refresh lại danh sách nếu cần thiết, hoặc lấy thông tin các phần tử con
     fetchSpaces();
   };
 
@@ -277,6 +307,12 @@ export const OwnerSpaces: React.FC = () => {
                 </div>
 
                 <div className="space-card-actions">
+                  <button className="btn-ghost" onClick={() => handleOpenSpacePartList(space)}>
+                    <Layers size={13} /> D.sách chia nhỏ
+                  </button>
+                  <button className="btn-ghost" onClick={() => handleOpenSpacePartForm(space)}>
+                    <Plus size={13} /> {language === 'en' ? 'Divide' : 'Chia nhỏ'}
+                  </button>
                   <button className="btn-ghost" onClick={() => setViewingSpace(space)}>
                     <Eye size={13} /> {language === 'en' ? 'View' : 'Xem'}
                   </button>
@@ -295,6 +331,23 @@ export const OwnerSpaces: React.FC = () => {
 
       {isFormOpen && (
         <SpaceForm onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} initialData={editingSpace} />
+      )}
+
+      {isSpacePartFormOpen && parentSpaceForPart && (
+        <SpacePartForm 
+          onClose={() => { setIsSpacePartFormOpen(false); setParentSpaceForPart(null); setEditingSpacePart(null); }} 
+          onSubmit={() => { setIsSpacePartFormOpen(false); setParentSpaceForPart(null); setEditingSpacePart(null); }} 
+          parentSpace={parentSpaceForPart} 
+          initialData={editingSpacePart}
+        />
+      )}
+
+      {isSpacePartListOpen && parentSpaceForPart && (
+        <SpacePartListModal
+          parentSpace={parentSpaceForPart}
+          onClose={() => { setIsSpacePartListOpen(false); setParentSpaceForPart(null); }}
+          onEditPart={handleEditSpacePart}
+        />
       )}
 
       {viewingSpace && createPortal(

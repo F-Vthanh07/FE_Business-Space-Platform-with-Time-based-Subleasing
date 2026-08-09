@@ -9,7 +9,9 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, currentRole, children }) => {
-  if (!currentRole) {
+  const token = localStorage.getItem('portal_token');
+
+  if (!currentRole || !token) {
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 

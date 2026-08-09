@@ -1,15 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import { X, Building2, MapPin, Clock, Check, ShieldAlert, Briefcase } from 'lucide-react';
+import { X, Building2, Clock, Check, ShieldAlert, Briefcase } from 'lucide-react';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
 import '../../../shared/ModalShell.css';
 import './SpaceForm.css';
 
-interface SpaceFormProps {
+interface SpacePartFormProps {
   onClose: () => void;
   onSubmit: (data?: any) => void;
   initialData?: any;
+  parentSpace: any; // Dữ liệu space gốc, bắt buộc phải có để lấy parentSpace.id, latitude, longitude
 }
 
 const AMENITIES_IDS = ['wifi', 'ac', 'parking', 'wc', 'projector', 'sound'];
@@ -31,28 +32,11 @@ const getDayLabel = (id: number, lang: 'en' | 'vi') => {
   return days[id]?.[lang] || '';
 };
 
-// ĐỔI SANG EMAIL LIÊN HỆ THẬT CỦA BẠN — Nominatim dùng cái này để định danh app,
-// không dùng được header User-Agent tự set (trình duyệt chặn header đó).
-const NOMINATIM_CONTACT_EMAIL = 'contact@yourdomain.com';
-
-export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initialData }) => {
+export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit, initialData, parentSpace }) => {
   const { t, language } = useThemeLanguage();
   const { isVerified } = useIdentityVerification();
 
   const [name, setName] = useState(initialData?.name || '');
-  const [address, setAddress] = useState(initialData?.address || '');
-  const [provinces, setProvinces] = useState<{ value: string; label: string }[]>([]);
-  const [districts, setDistricts] = useState<{ value: string; label: string }[]>([]);
-  const [wards, setWards] = useState<{ value: string; label: string }[]>([]);
-
-  const [provinceCode, setProvinceCode] = useState('');
-  const [districtCode, setDistrictCode] = useState('');
-  const [wardCode, setWardCode] = useState('');
-
-  const [provinceLabel, setProvinceLabel] = useState(initialData?.city || '');
-  const [districtLabel, setDistrictLabel] = useState('');
-  const [wardLabel, setWardLabel] = useState('');
-
   const [area, setArea] = useState(initialData?.area?.toString().replace(/[^\d]/g, '') || '');
 
   const initialAmenities = (initialData?.amenities || []).map((a: any) => a.name || a);
@@ -72,25 +56,33 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  // Cảnh báo riêng cho việc geocode thất bại — KHÔNG chặn submit, chỉ để bạn biết chuyện gì đang xảy ra
-  const [geoWarning, setGeoWarning] = useState('');
+  const [existingPartsTotalArea, setExistingPartsTotalArea] = useState(0);
 
   useEffect(() => {
-    const fetchProvinces = async () => {
+    const fetchExistingParts = async () => {
       try {
-        const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/Space/GetAddress', {
-          headers: { 'accept': '*/*' }
+        const token = localStorage.getItem('portal_token');
+        const url = `https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetByParent/${parentSpace.id}`;
+        const res = await fetch(url, {
+          headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
         });
         if (res.ok) {
           const data = await res.json();
-          setProvinces(Array.isArray(data) ? data : []);
+          const parts = Array.isArray(data) ? data : (data?.items || []);
+          const totalArea = parts.reduce((sum: number, p: any) => sum + (p.isActive ? p.area : 0), 0);
+          setExistingPartsTotalArea(totalArea);
         }
       } catch (err) {
-        console.error("Lỗi lấy danh sách tỉnh/thành:", err);
+        console.error("Lỗi lấy thông tin space parts hiện tại:", err);
       }
     };
-    fetchProvinces();
-  }, []);
+    if (parentSpace?.id && !initialData) {
+      fetchExistingParts();
+    } else if (initialData) {
+      // If editing, we shouldn't count the current part's area against the limit,
+      // or we just skip this strict check on edit and rely on backend for now.
+    }
+  }, [parentSpace, initialData]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -127,7 +119,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
         }
         return { dayOfWeek: day.id, enabled: false, openTime: '08:00', closeTime: '22:00' };
       });
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOperatingHours(mappedHours);
     } else {
       setOperatingHours(
@@ -141,51 +132,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     }
   }, [initialData]);
 
-  const handleProvinceChange = async (value: string, label: string) => {
-    setProvinceCode(value);
-    setProvinceLabel(label);
-    setDistrictCode('');
-    setDistrictLabel('');
-    setWardCode('');
-    setWardLabel('');
-    setDistricts([]);
-    setWards([]);
-
-    try {
-      const res = await fetch(
-        `https://flexi-space-capstone-project.onrender.com/api/Space/GetAddress?provinceCode=${encodeURIComponent(value)}`,
-        { headers: { 'accept': '*/*' } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setDistricts(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error("Lỗi lấy danh sách quận/huyện:", err);
-    }
-  };
-
-  const handleDistrictChange = async (value: string, label: string) => {
-    setDistrictCode(value);
-    setDistrictLabel(label);
-    setWardCode('');
-    setWardLabel('');
-    setWards([]);
-
-    try {
-      const res = await fetch(
-        `https://flexi-space-capstone-project.onrender.com/api/Space/GetAddress?provinceCode=${encodeURIComponent(provinceCode)}&districtCode=${encodeURIComponent(value)}`,
-        { headers: { 'accept': '*/*' } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setWards(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error("Lỗi lấy danh sách phường/xã:", err);
-    }
-  };
-
   const handleAmenityToggle = (id: string) => {
     setSelectedAmenities(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
@@ -198,90 +144,39 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     setOperatingHours(prev => prev.map(item => item.dayOfWeek === dayOfWeek ? { ...item, [type]: value } : item));
   };
 
-  const cleanAddress = (text: string) => {
-    if (!text) return '';
-    return text.replace(/(Xã|Phường|Thị trấn|Huyện|Quận|Thành phố|Tỉnh|TP\.?)\s+/gi, '').trim();
-  };
-
-  // Gọi Nominatim 1 lần, trả về {lat,lng} hoặc null. Log rõ status/lý do fail ra console.
-  const tryGeocode = async (query: string): Promise<{ lat: number; lng: number } | null> => {
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=1&countrycodes=vn&email=${encodeURIComponent(NOMINATIM_CONTACT_EMAIL)}`;
-      const geoRes = await fetch(url, {
-        headers: { 'Accept-Language': 'vi' }
-        // Lưu ý: KHÔNG set 'User-Agent' ở đây — trình duyệt luôn chặn/ghi đè header này,
-        // set vào code cũ không có tác dụng gì và có thể khiến bạn lầm tưởng đã định danh app.
-      });
-
-      if (!geoRes.ok) {
-        console.error(`[Geocode] HTTP ${geoRes.status} cho query: "${query}"`);
-        return null;
-      }
-
-      const geoData = await geoRes.json();
-      if (Array.isArray(geoData) && geoData.length > 0) {
-        return { lat: parseFloat(geoData[0].lat), lng: parseFloat(geoData[0].lon) };
-      }
-      console.warn(`[Geocode] Không có kết quả cho query: "${query}"`);
-      return null;
-    } catch (err) {
-      // Lỗi kiểu "Failed to fetch" ở đây thường là do CORS bị chặn hoặc mất mạng —
-      // mở tab Network xem request tới nominatim.openstreetmap.org có màu đỏ không.
-      console.error(`[Geocode] Fetch lỗi cho query: "${query}"`, err);
-      return null;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setGeoWarning('');
 
-    if (!name || !address || !area) {
-      setError('Vui lòng điền đủ tên, địa chỉ và diện tích cơ bản!');
+    if (!name || !name.trim()) {
+      setError('Vui lòng nhập tên không gian.');
+      return;
+    }
+
+    const numArea = Number(area);
+    if (!area || isNaN(numArea) || numArea <= 0) {
+      setError('Diện tích phải là số lớn hơn 0.');
+      return;
+    }
+
+    if (!parentSpace || !parentSpace.id) {
+      setError('Lỗi: Không tìm thấy ID của space gốc.');
+      return;
+    }
+    
+    // Validate against parent area
+    const parentArea = Number(parentSpace.area);
+    const availableArea = parentArea - existingPartsTotalArea;
+    if (!isNaN(parentArea) && numArea > availableArea && !initialData) {
+      setError(`Diện tích không gian con (${numArea}m²) không được vượt quá diện tích còn lại của không gian gốc (${availableArea}m²).`);
+      return;
+    } else if (!isNaN(parentArea) && numArea > parentArea) {
+      setError(`Diện tích không gian con (${numArea}m²) không được vượt quá tổng diện tích không gian gốc (${parentArea}m²).`);
       return;
     }
 
     setIsLoading(true);
 
-    // 1. GEOCODING — lùi dần từ chi tiết đến tổng quát, log rõ từng bước
-    let lat = 0;
-    let lng = 0;
-    const cleanWard = cleanAddress(wardLabel);
-    const cleanDistrict = cleanAddress(districtLabel);
-    const cleanProvince = cleanAddress(provinceLabel);
-
-    const queriesToTry = [
-      `${address}, ${cleanWard}, ${cleanDistrict}, ${cleanProvince}`,
-      `${cleanWard}, ${cleanDistrict}, ${cleanProvince}`,
-      `${cleanDistrict}, ${cleanProvince}`,
-      cleanProvince
-    ].filter(q => q && q.trim() !== ',' && q.replace(/,/g, '').trim() !== '');
-
-    let found = false;
-    for (let i = 0; i < queriesToTry.length; i++) {
-      if (i > 0) await new Promise(resolve => setTimeout(resolve, 1000)); // tôn trọng rate-limit 1 req/s của Nominatim
-      const result = await tryGeocode(queriesToTry[i]);
-      if (result) {
-        lat = result.lat;
-        lng = result.lng;
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) {
-      console.warn("[Geocode] Đã thử hết các mức, không ra được toạ độ. Lưu mặc định 0,0.");
-      setGeoWarning(
-        'Không xác định được toạ độ chính xác cho địa chỉ này (toạ độ sẽ lưu tạm là 0,0). ' +
-        'Kiểm tra Console/Network (từ khoá "Geocode") để biết chi tiết lỗi.'
-      );
-    }
-
-    // 2. "city" gộp từ Phường/Quận/Tỉnh đã chọn
-    const city = [wardLabel, districtLabel, provinceLabel].filter(Boolean).join(', ');
-
-    // 3. CHUẨN BỊ PAYLOAD
     const token = localStorage.getItem('portal_token');
 
     const customAmenities = customAmenityChecked
@@ -294,12 +189,10 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
 
     const payload = {
       name: name,
-      address: address,
-      city: city,
       area: Number(area),
       isActive: true,
-      latitude: lat,
-      longitude: lng,
+      latitude: parentSpace.latitude || 0,
+      longitude: parentSpace.longitude || 0,
       amenities: allAmenities.map(am => ({
         name: am,
         quantity: 1,
@@ -315,12 +208,11 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
         : []
     };
 
-    // 4. GỌI API TẠO / CẬP NHẬT SPACE
     try {
       const isEditing = !!initialData;
       const url = isEditing
-        ? `https://flexi-space-capstone-project.onrender.com/api/Space/Update${initialData.id}`
-        : 'https://flexi-space-capstone-project.onrender.com/api/Space/Create';
+        ? `https://flexi-space-capstone-project.onrender.com/api/SpacePart/Update/${initialData.id}`
+        : `https://flexi-space-capstone-project.onrender.com/api/SpacePart/Create/${parentSpace.id}`;
 
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',
@@ -329,11 +221,18 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
           'Authorization': `Bearer ${token}`,
           'accept': '*/*'
         },
-        body: JSON.stringify(isEditing ? { ...payload, id: initialData.id } : payload)
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
-        throw new Error(`Lỗi khi ${isEditing ? 'cập nhật' : 'tạo'} mặt bằng.`);
+        const errData = await response.json().catch(() => ({}));
+        
+        // Dịch lỗi API (ví dụ: Total area of active space parts (24) cannot exceed parent space area (13).)
+        let errorMessage = errData.message || 'Có lỗi xảy ra, vui lòng thử lại.';
+        if (errorMessage.includes('cannot exceed parent space area')) {
+          errorMessage = 'Tổng diện tích các không gian chia nhỏ vượt quá diện tích không gian gốc.';
+        }
+        throw new Error(errorMessage);
       }
 
       onSubmit();
@@ -352,8 +251,8 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
           <div className="modal-title-area">
             <div className="modal-icon-wrap modal-icon-wrap--blue"><Building2 size={16} /></div>
             <div>
-              <h2 className="modal-title">{initialData ? t('spaceForm.editSpace') : t('spaceForm.registerSpace')}</h2>
-              <p className="modal-subtitle text-secondary">{t('spaceForm.spaceFormSubtitle')}</p>
+              <h2 className="modal-title">{initialData ? 'Chỉnh sửa không gian' : 'Tạo không gian con'}</h2>
+              <p className="modal-subtitle text-secondary">Thuộc không gian: {parentSpace?.name}</p>
             </div>
           </div>
           <button type="button" className="btn-icon" onClick={onClose} disabled={isLoading}>
@@ -375,75 +274,13 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
               </div>
             </div>
 
-            <div className="form-grid-2">
-              <div className="form-group">
-                <label className="form-label">Tỉnh/Thành</label>
-                <select
-                  className="form-select-input"
-                  value={provinceCode}
-                  onChange={(e) => {
-                    const label = provinces.find(p => p.value === e.target.value)?.label || '';
-                    handleProvinceChange(e.target.value, label);
-                  }}
-                  disabled={isLoading}
-                  required
-                >
-                  <option value="">-- Chọn Tỉnh/Thành --</option>
-                  {provinces.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Quận/Huyện</label>
-                <select
-                  className="form-select-input"
-                  value={districtCode}
-                  onChange={(e) => {
-                    const label = districts.find(d => d.value === e.target.value)?.label || '';
-                    handleDistrictChange(e.target.value, label);
-                  }}
-                  disabled={isLoading || !provinceCode}
-                  required
-                >
-                  <option value="">-- Chọn Quận/Huyện --</option>
-                  {districts.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Phường/Xã</label>
-              <select
-                className="form-select-input"
-                value={wardCode}
-                onChange={(e) => {
-                  const label = wards.find(w => w.value === e.target.value)?.label || '';
-                  setWardCode(e.target.value);
-                  setWardLabel(label);
-                }}
-                disabled={isLoading || !districtCode}
-                required
-              >
-                <option value="">-- Chọn Phường/Xã --</option>
-                {wards.map(w => <option key={w.value} value={w.value}>{w.label}</option>)}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">{t('spaceForm.formLabelAddress')} (Số nhà, tên đường)</label>
-              <div className="input-with-icon">
-                <MapPin size={14} className="input-icon" />
-                <input type="text" placeholder="Ví dụ: 120 Lê Lợi" value={address} onChange={(e) => setAddress(e.target.value)} className="form-input" disabled={isLoading} required />
-              </div>
-            </div>
-
             <div className="form-group">
               <label className="form-label">{t('spaceForm.formLabelArea') || 'Diện tích (m²)'}</label>
               <div className="input-with-icon">
                 <input
                   type="text"
                   inputMode="numeric"
-                  placeholder="Ví dụ: 50"
+                  placeholder={`Nhập diện tích${!initialData ? ` (Tối đa ${parentSpace.area - existingPartsTotalArea}m²)` : ''}`}
                   value={area}
                   onChange={(e) => setArea(e.target.value.replace(/[^\d]/g, ''))}
                   className="form-input"
@@ -529,7 +366,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
                 </div>
               </div>
               <p className="section-desc text-secondary" style={{ marginTop: '8px' }}>
-                Nếu chọn "Không", mặt bằng này sẽ không có ràng buộc ngành nghề khi tạo bài đăng cho thuê.
+                Nếu chọn "Không", mặt bằng này sẽ không có ràng buộc ngành nghề.
               </p>
             </div>
           </div>
@@ -562,13 +399,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
               ))}
             </div>
           </div>
-
-          {geoWarning && (
-            <div className="form-error-box" style={{ opacity: 0.85 }}>
-              <ShieldAlert size={16} />
-              <span>{geoWarning}</span>
-            </div>
-          )}
 
           {error && (
             <div className="form-error-box">
