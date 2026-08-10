@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { X, Layers, Clock, ShieldAlert, Edit3, Trash2 } from 'lucide-react';
-import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import '../../../shared/ModalShell.css';
 
 interface SpacePart {
@@ -19,7 +18,6 @@ interface SpacePartListModalProps {
 }
 
 export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSpace, onClose, onEditPart }) => {
-  const { t, language } = useThemeLanguage();
   const [spaceParts, setSpaceParts] = useState<SpacePart[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');

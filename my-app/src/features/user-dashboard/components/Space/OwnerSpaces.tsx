@@ -334,10 +334,10 @@ export const OwnerSpaces: React.FC = () => {
       )}
 
       {isSpacePartFormOpen && parentSpaceForPart && (
-        <SpacePartForm 
-          onClose={() => { setIsSpacePartFormOpen(false); setParentSpaceForPart(null); setEditingSpacePart(null); }} 
-          onSubmit={() => { setIsSpacePartFormOpen(false); setParentSpaceForPart(null); setEditingSpacePart(null); }} 
-          parentSpace={parentSpaceForPart} 
+        <SpacePartForm
+          onClose={() => { setIsSpacePartFormOpen(false); setParentSpaceForPart(null); setEditingSpacePart(null); }}
+          onSubmit={() => { setParentSpaceForPart(null); setEditingSpacePart(null); handleSpacePartSubmit(); }}
+          parentSpace={parentSpaceForPart}
           initialData={editingSpacePart}
         />
       )}

@@ -60,8 +60,6 @@ const normalizeList = (data: any) => (Array.isArray(data) ? data : data?.data ||
 const getInitials = (name: string) =>
   name.split(' ').filter(Boolean).slice(-2).map((w) => w[0]).join('').toUpperCase() || '??';
 
-const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString('vi-VN') : '...');
-
 const monthsBetween = (start?: string, end?: string) => {
   if (!start || !end) return 0;
   const s = new Date(start);
