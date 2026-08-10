@@ -7,7 +7,6 @@ import {
   Users,
   CalendarDays,
   Plus,
-  Globe,
   LogOut,
   Wallet,
   Inbox,
@@ -76,8 +75,8 @@ const getPageLabels = (id: string, lang: string) => {
   }
 };
 
-export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate, onNewSpaceClick, onNewSlotClick, onLogout }) => {
-  const { t, language, setLanguage } = useThemeLanguage();
+export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate, onNewSpaceClick, onLogout }) => {
+  const { t, language } = useThemeLanguage();
   const [pendingBookingCount, setPendingBookingCount] = useState(0);
 
   const getSeenBookingIds = (): Set<string | number> => {
@@ -208,20 +207,8 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
           <Plus size={16} />
           {language === 'en' ? 'NEW SPACE' : 'THÊM MẶT BẰNG'}
         </button>
-        <button className="user-sidebar-cta-secondary" onClick={onNewSlotClick || (() => onNavigate('calendar'))}>
-          <Plus size={14} />
-          {language === 'en' ? 'NEW SLOT' : 'THÊM KHUNG GIỜ'}
-        </button>
 
         <div className="user-sidebar-footer-actions">
-          <button
-            className="user-sidebar-action-btn"
-            title={t('sidebar.languageNetwork')}
-            onClick={() => setLanguage(language === 'en' ? 'vi' : 'en')}
-          >
-            <Globe size={16} />
-          </button>
-          <div className="user-sidebar-footer-divider" />
           <button
             className="user-sidebar-action-btn"
             title={t('sidebar.logout')}

@@ -100,15 +100,6 @@ export const OwnerTenants: React.FC = () => {
     }
   };
 
-  // Thời hạn hợp đồng còn lại theo % — dùng để đổi màu thanh tiến độ,
-  // càng gần hết hạn càng ngả từ vàng sang đỏ (cảnh báo cần gia hạn/xử lý).
-  const getUrgencyColor = (remainingRatio: number, status: ContractStatus) => {
-    if (status !== 'Active') return 'var(--color-text-muted)';
-    if (remainingRatio <= 0.15) return 'var(--color-negative)';
-    if (remainingRatio <= 0.4) return 'var(--color-gold)';
-    return 'var(--color-positive)';
-  };
-
   const fetchTenants = async () => {
     if (!token || !currentUserId) {
       setIsLoading(false);
@@ -207,6 +198,7 @@ export const OwnerTenants: React.FC = () => {
           ? (language === 'en' ? `Tenant #${partnerId}` : `Người thuê #${partnerId}`)
           : (language === 'en' ? `Owner #${partnerId}` : `Chủ nhà #${partnerId}`);
         const name = user?.profileFullName || user?.userName || fallbackName;
+        const fullAddress = [space?.address, space?.city].filter(Boolean).join(', ');
 
         return {
           contractId: c.id ?? c.Id,
@@ -217,7 +209,7 @@ export const OwnerTenants: React.FC = () => {
           email: user?.email || '',
           spaceId,
           space: space?.name || (language === 'en' ? `Space #${spaceId}` : `Mặt bằng #${spaceId}`),
-          spaceAddress: space?.address || (language === 'en' ? 'Not updated' : 'Chưa cập nhật địa chỉ'),
+          spaceAddress: fullAddress || (language === 'en' ? 'Not updated' : 'Chưa cập nhật địa chỉ'),
           startDate: c.startDate ?? c.StartDate,
           endDate: c.endDate ?? c.EndDate,
           monthlyRent: Number(c.price ?? c.Price ?? 0),
@@ -364,12 +356,6 @@ export const OwnerTenants: React.FC = () => {
       {!isLoading && filtered.length > 0 && (
         <div className="tenants-grid">
           {filtered.map((tenant, i) => {
-            const total = monthsBetween(tenant.startDate, tenant.endDate);
-            const elapsed = Math.min(total, monthsElapsed(tenant.startDate));
-            const remaining = Math.max(0, total - elapsed);
-            const remainingRatio = total > 0 ? remaining / total : 1;
-            const urgencyColor = getUrgencyColor(remainingRatio, tenant.status);
-
             return (
               <div key={tenant.contractId} className={`glass-card tenant-card animate-in delay-${Math.min(i + 1, 6)}`}>
                 {/* Card Header */}
@@ -406,29 +392,6 @@ export const OwnerTenants: React.FC = () => {
                       {statusConfig[tenant.status]?.icon || <Clock size={11} />}
                       {getStatusLabel(tenant.status)}
                     </span>
-                  </div>
-                </div>
-
-                {/* Contract Progress */}
-                <div className="tenant-progress-section">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span className="label-caps">{t('tenants.contractProgress')}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: urgencyColor }}>
-                      {t('tenants.remainingMonths', { rem: remaining, total })}
-                    </span>
-                  </div>
-                  <div className="progress-track">
-                    <div
-                      className="progress-fill"
-                      style={{
-                        width: `${Math.max(total > 0 ? (elapsed / total) * 100 : 0, 3)}%`,
-                        background: urgencyColor,
-                      }}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-                    <span className="text-secondary" style={{ fontSize: 11 }}>{t('tenants.contractStart', { date: formatDate(tenant.startDate) })}</span>
-                    <span className="text-secondary" style={{ fontSize: 11 }}>{t('tenants.contractEnd', { date: formatDate(tenant.endDate) })}</span>
                   </div>
                 </div>
 
@@ -520,12 +483,6 @@ export const OwnerTenants: React.FC = () => {
       )}
 
       {viewingTenant && (() => {
-        const total = monthsBetween(viewingTenant.startDate, viewingTenant.endDate);
-        const elapsed = Math.min(total, monthsElapsed(viewingTenant.startDate));
-        const remaining = Math.max(0, total - elapsed);
-        const remainingRatio = total > 0 ? remaining / total : 1;
-        const urgencyColor = getUrgencyColor(remainingRatio, viewingTenant.status);
-
         return createPortal(
           <div className="modal-backdrop" onClick={() => setViewingTenant(null)}>
             <div className="modal-shell" onClick={(e) => e.stopPropagation()}>
@@ -552,24 +509,6 @@ export const OwnerTenants: React.FC = () => {
                       {statusConfig[viewingTenant.status]?.icon || <Clock size={11} />}
                       {getStatusLabel(viewingTenant.status)}
                     </span>
-                    {viewingTenant.status === 'Active' && (
-                      <span className="text-secondary" style={{ fontSize: 12 }}>
-                        {t('tenants.remainingMonths', { rem: remaining, total })}
-                      </span>
-                    )}
-                  </div>
-                  <div className="progress-track">
-                    <div
-                      className="progress-fill"
-                      style={{
-                        width: `${Math.max(total > 0 ? (elapsed / total) * 100 : 0, 3)}%`,
-                        background: urgencyColor,
-                      }}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="text-secondary" style={{ fontSize: 11 }}>{t('tenants.contractStart', { date: formatDate(viewingTenant.startDate) })}</span>
-                    <span className="text-secondary" style={{ fontSize: 11 }}>{t('tenants.contractEnd', { date: formatDate(viewingTenant.endDate) })}</span>
                   </div>
                 </div>
 

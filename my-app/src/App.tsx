@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { MeshBackground } from './components/MeshBackground';
 import { Header } from './components/Header';
 import { UserDashboardPage } from './features/user-dashboard/UserDashboardPage';
@@ -27,6 +27,8 @@ import { clearLocalStorageForLogout } from './utils/preserveLocalStorage';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   // Persist role in localStorage so direct route access on refresh works properly
   const [role, setRole] = useState<PortalRole | null>(() => {
@@ -159,7 +161,7 @@ const App: React.FC = () => {
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
-      <FloatingChat />
+      {!isAdminRoute && <FloatingChat />}
     </>
   );
 };

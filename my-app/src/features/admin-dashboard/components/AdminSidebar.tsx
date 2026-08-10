@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Users,
   FileText,
-  Globe,
   LogOut,
   Tag,
   Wallet,
@@ -37,7 +36,7 @@ const navItems: NavItem[] = [
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNavigate, onLogout }) => {
-  const { language, setLanguage } = useThemeLanguage();
+  const { language } = useThemeLanguage();
 
   const getPageLabels = (id: AdminPage) => {
     const isEn = language === 'en';
@@ -92,17 +91,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNaviga
         <div className="sidebar-divider" />
 
         <div className="sidebar-footer-actions">
-          <button
-            className="sidebar-action-btn"
-            title={language === 'en' ? 'Tiếng Việt' : 'English'}
-            onClick={() => setLanguage(language === 'en' ? 'vi' : 'en')}
-          >
-            <Globe size={15} />
-            <span style={{ fontSize: '9px', fontWeight: 'bold', marginLeft: '2px' }}>
-              {language.toUpperCase()}
-            </span>
-          </button>
-          <div className="sidebar-footer-divider" />
           <button
             className="sidebar-action-btn logout-btn"
             title={language === 'en' ? 'Logout' : 'Đăng xuất'}
