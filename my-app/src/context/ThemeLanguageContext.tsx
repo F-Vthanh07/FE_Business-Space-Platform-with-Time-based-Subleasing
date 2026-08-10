@@ -1148,10 +1148,7 @@ interface ThemeLanguageContextType {
 const ThemeLanguageContext = createContext<ThemeLanguageContextType | undefined>(undefined);
 
 export const ThemeLanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('app-language');
-    return (saved as Language) || 'vi';
-  });
+  const [language, setLanguageState] = useState<Language>('vi');
 
   const theme: Theme = 'light';
 
