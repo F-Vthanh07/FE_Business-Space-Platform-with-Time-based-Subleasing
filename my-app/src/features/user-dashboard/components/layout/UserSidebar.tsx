@@ -8,7 +8,6 @@ import {
   CalendarDays,
   Plus,
   LogOut,
-  Wallet,
   Inbox,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
@@ -47,10 +46,6 @@ const spaceNavItems: NavItem[] = [
 
 const subleaseNavItems: NavItem[] = [
   { id: 'calendar', icon: <CalendarDays size={16} /> },
-];
-
-const walletNavItems: NavItem[] = [
-  { id: 'wallet', icon: <Wallet size={16} /> },
 ];
 
 const getPageLabels = (id: string, lang: string) => {
@@ -194,11 +189,6 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
           {language === 'en' ? 'SUBLEASING' : 'CHO THUÊ LẠI'}
         </span>
         {renderNavGroup(subleaseNavItems)}
-
-        <span className="user-sidebar-group-label">
-          {language === 'en' ? 'FINANCE' : 'TÀI CHÍNH'}
-        </span>
-        {renderNavGroup(walletNavItems)}
       </nav>
 
       <div className="user-sidebar-footer">
