@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Check, X, Zap, Edit3 } from 'lucide-react';
 import type { PriorityLevel } from '../types';
+import { RefreshButton } from './RefreshButton';
 
 interface PriorityLevelsModuleProps {
   priorityLevels: PriorityLevel[];
@@ -8,6 +9,8 @@ interface PriorityLevelsModuleProps {
   handleUpdatePriorityLevel: (id: number, name: string, price: number, isActive: boolean) => Promise<void>;
   isLoading: boolean;
   language: 'en' | 'vi';
+  onRefresh: () => void;
+  isRefreshing?: boolean;
 }
 
 export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
@@ -16,6 +19,8 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   handleUpdatePriorityLevel,
   isLoading,
   language,
+  onRefresh,
+  isRefreshing,
 }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -89,8 +94,11 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   return (
     <div className="admin-module animate-fade-in">
       <header className="module-header">
-        <h1>{language === 'en' ? 'Listing Priority Packages' : 'Gói giá đăng bài'}</h1>
-        <p>{language === 'en' ? 'Configure priority packages that boost listing visibility' : 'Quản lý các gói giá ưu tiên giúp tăng khả năng hiển thị của bài đăng'}</p>
+        <div>
+          <h1>{language === 'en' ? 'Listing Priority Packages' : 'Gói giá đăng bài'}</h1>
+          <p>{language === 'en' ? 'Configure priority packages that boost listing visibility' : 'Quản lý các gói giá ưu tiên giúp tăng khả năng hiển thị của bài đăng'}</p>
+        </div>
+        <RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} language={language} />
       </header>
 
       {/* Summary Stats Cards */}

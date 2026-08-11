@@ -1,17 +1,20 @@
 import React, { useMemo, useState } from 'react';
 import { Search, ArrowUpDown, Wallet, Edit3, X } from 'lucide-react';
 import type { AdminWalletAccount } from '../types';
+import { RefreshButton } from './RefreshButton';
 
 interface WalletsModuleProps {
   wallets: AdminWalletAccount[];
   language: 'en' | 'vi';
   handleUpdateWalletBalance: (userId: string, amount: number) => Promise<void>;
   isLoading?: boolean;
+  onRefresh: () => void;
+  isRefreshing?: boolean;
 }
 
 type SortOrder = 'desc' | 'asc';
 
-export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language, handleUpdateWalletBalance, isLoading }) => {
+export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language, handleUpdateWalletBalance, isLoading, onRefresh, isRefreshing }) => {
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -69,8 +72,11 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language,
   return (
     <div className="admin-module animate-fade-in">
       <header className="module-header">
-        <h1>{language === 'en' ? 'Wallet Management' : 'Quản lý Ví'}</h1>
-        <p>{language === 'en' ? 'Track user wallet balances across the platform' : 'Theo dõi số dư ví của người dùng trên toàn hệ thống'}</p>
+        <div>
+          <h1>{language === 'en' ? 'Wallet Management' : 'Quản lý Ví'}</h1>
+          <p>{language === 'en' ? 'Track user wallet balances across the platform' : 'Theo dõi số dư ví của người dùng trên toàn hệ thống'}</p>
+        </div>
+        <RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} language={language} />
       </header>
 
       {/* Summary Stats Cards */}

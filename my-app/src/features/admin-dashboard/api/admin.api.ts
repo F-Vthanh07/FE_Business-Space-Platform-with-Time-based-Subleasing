@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem, ListingReportDetail } from '../types';
+import type { AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem, ListingReportDetail, AdminContractItem, AdminDashboardStats, AdminUserProfile } from '../types';
 
 export const fetchUsers = async (token: string): Promise<any[]> => {
   const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/User', {
@@ -300,5 +300,45 @@ export const restoreListing = async (listingId: number, token: string): Promise<
   if (!response.ok) {
     throw new Error('Failed to restore listing');
   }
+};
+
+export const fetchUserProfile = async (userId: string, token: string): Promise<AdminUserProfile> => {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Profile/user/${userId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch user profile');
+  }
+  return response.json();
+};
+
+export const fetchDashboardStats = async (token: string): Promise<AdminDashboardStats> => {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Dashboard/stats', {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch dashboard stats');
+  }
+  return response.json();
+};
+
+export const fetchAllContracts = async (token: string): Promise<AdminContractItem[]> => {
+  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Contract/GetAll', {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch contracts');
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data?.data || data?.items || []);
 };
 
