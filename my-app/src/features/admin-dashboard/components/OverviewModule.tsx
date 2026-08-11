@@ -1,6 +1,11 @@
 import React, { useMemo } from 'react';
-import { Users, Building, FileText, Wallet, Activity, AlertTriangle, Zap, Tag } from 'lucide-react';
-import type { AdminListingItem, UserAccount, AdminSpaceItem, AdminWalletAccount, PriorityLevel, BusinessCategory, ListingReportItem } from '../types';
+import { Users, Building, FileText, Wallet, AlertTriangle, Zap, Tag, ScrollText, CalendarClock, TrendingUp, ChevronRight } from 'lucide-react';
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+} from 'recharts';
+import type { AdminListingItem, UserAccount, AdminSpaceItem, AdminWalletAccount, PriorityLevel, BusinessCategory, ListingReportItem, AdminContractItem, AdminDashboardStats } from '../types';
+import { RefreshButton } from './RefreshButton';
 
 interface OverviewModuleProps {
   users: UserAccount[];
@@ -10,8 +15,24 @@ interface OverviewModuleProps {
   priorityLevels: PriorityLevel[];
   categories: BusinessCategory[];
   reports: ListingReportItem[];
+  contracts: AdminContractItem[];
+  stats: AdminDashboardStats | null;
   language: 'en' | 'vi';
+  onNavigateToListingReports: () => void;
+  onRefresh: () => void;
+  isRefreshing?: boolean;
 }
+
+const CHART_COLORS = {
+  pending: '#D97706',
+  accepted: '#16A34A',
+  canceled: '#DC2626',
+  listing: '#4A72FF',
+  aiImage: '#8B5CF6',
+  active: '#2EEA82',
+  expired: '#A0AABC',
+  cancelled: '#FF4D6D',
+};
 
 export const OverviewModule: React.FC<OverviewModuleProps> = ({
   users,
@@ -21,9 +42,15 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
   priorityLevels,
   categories,
   reports,
+  contracts,
+  stats,
   language,
+  onNavigateToListingReports,
+  onRefresh,
+  isRefreshing,
 }) => {
-  const totalWalletBalance = useMemo(() => wallets.reduce((sum, w) => sum + (w.balance || 0), 0), [wallets]);
+  const walletsSum = useMemo(() => wallets.reduce((sum, w) => sum + (w.balance || 0), 0), [wallets]);
+  const totalWalletBalance = stats?.totalWalletBalance ?? walletsSum;
 
   const pendingListingsCount = useMemo(
     () => listings.filter(l => (l.status || 'Pending').toLowerCase() === 'pending').length,
@@ -38,47 +65,58 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
   const activePriorityCount = useMemo(() => priorityLevels.filter(p => p.isActive).length, [priorityLevels]);
   const activeCategoryCount = useMemo(() => categories.filter(c => c.isActive).length, [categories]);
 
-  const statusBreakdown = useMemo(() => {
-    const counts = { pending: 0, accepted: 0, canceled: 0 };
-    listings.forEach(l => {
-      const status = (l.status || 'Pending').toLowerCase();
-      if (status === 'pending') counts.pending++;
-      else if (status === 'accepted') counts.accepted++;
-      else if (status === 'canceled') counts.canceled++;
-    });
-    const total = listings.length || 1;
-    return [
-      {
-        key: 'pending',
-        label: language === 'en' ? 'Pending' : 'Chờ duyệt',
-        count: counts.pending,
-        percent: Math.round((counts.pending / total) * 100),
-        className: '',
-      },
-      {
-        key: 'accepted',
-        label: language === 'en' ? 'Accepted' : 'Đã duyệt',
-        count: counts.accepted,
-        percent: Math.round((counts.accepted / total) * 100),
-        className: 'active',
-      },
-      {
-        key: 'canceled',
-        label: language === 'en' ? 'Canceled' : 'Từ chối',
-        count: counts.canceled,
-        percent: Math.round((counts.canceled / total) * 100),
-        className: '',
-      },
-    ];
-  }, [listings, language]);
+  const activeContractsCount = useMemo(
+    () => contracts.filter(c => (c.status || '').toLowerCase() === 'active').length,
+    [contracts]
+  );
 
-  const hasAlerts = pendingListingsCount > 0 || unresolvedReportsCount > 0;
+  const expiringContractsCount = useMemo(() => {
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    return contracts.filter(c => {
+      if ((c.status || '').toLowerCase() !== 'active') return false;
+      const end = new Date(c.endDate).getTime();
+      return !isNaN(end) && end - now <= THIRTY_DAYS && end - now > 0;
+    }).length;
+  }, [contracts]);
+
+  const spendingChartData = useMemo(() => {
+    if (!stats) return [];
+    return [
+      { key: 'listing', name: language === 'en' ? 'Listings' : 'Đăng tin', value: stats.totalListingSpent, color: CHART_COLORS.listing },
+      { key: 'aiImage', name: language === 'en' ? 'AI Images' : 'Ảnh AI', value: stats.totalAiImageSpent, color: CHART_COLORS.aiImage },
+    ].filter(d => d.value > 0);
+  }, [stats, language]);
+
+  const contractStatusChartData = useMemo(() => {
+    const counts = { pending: 0, active: 0, expired: 0, cancelled: 0 };
+    contracts.forEach(c => {
+      const status = (c.status || '').toLowerCase();
+      if (status === 'pending') counts.pending++;
+      else if (status === 'active') counts.active++;
+      else if (status === 'expired') counts.expired++;
+      else if (status === 'cancelled') counts.cancelled++;
+    });
+    return [
+      { key: 'pending', name: language === 'en' ? 'Pending' : 'Chờ hiệu lực', count: counts.pending, color: CHART_COLORS.pending },
+      { key: 'active', name: language === 'en' ? 'Active' : 'Đang hiệu lực', count: counts.active, color: CHART_COLORS.active },
+      { key: 'expired', name: language === 'en' ? 'Expired' : 'Hết hạn', count: counts.expired, color: CHART_COLORS.expired },
+      { key: 'cancelled', name: language === 'en' ? 'Cancelled' : 'Đã hủy', count: counts.cancelled, color: CHART_COLORS.cancelled },
+    ];
+  }, [contracts, language]);
+
+  const formatMoney = (n: number) => `${n.toLocaleString('vi-VN')}đ`;
+
+  const hasAlerts = pendingListingsCount > 0 || unresolvedReportsCount > 0 || expiringContractsCount > 0;
 
   return (
     <div className="admin-module animate-fade-in">
       <header className="module-header">
-        <h1>{language === 'en' ? 'System Overview' : 'Tổng quan Hệ thống'}</h1>
-        <p>{language === 'en' ? 'Live analytics and system monitoring' : 'Thông số hoạt động và phân tích trực tiếp'}</p>
+        <div>
+          <h1>{language === 'en' ? 'System Overview' : 'Tổng quan Hệ thống'}</h1>
+          <p>{language === 'en' ? 'Live analytics and system monitoring' : 'Thông số hoạt động và phân tích trực tiếp'}</p>
+        </div>
+        <RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} language={language} />
       </header>
 
       {/* Stats Cards */}
@@ -111,7 +149,7 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
           <div className="stat-icon-wrapper purple"><Wallet size={20} /></div>
           <div className="stat-data">
             <span className="stat-label">{language === 'en' ? 'TOTAL WALLET BALANCE' : 'TỔNG SỐ DƯ VÍ HỆ THỐNG'}</span>
-            <h2 className="stat-value">{totalWalletBalance.toLocaleString('vi-VN')} đ</h2>
+            <h2 className="stat-value">{formatMoney(totalWalletBalance)}</h2>
           </div>
         </div>
       </div>
@@ -134,11 +172,26 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
               </div>
             )}
             {unresolvedReportsCount > 0 && (
-              <div className="admin-stat-card glass-card--inset">
+              <button
+                type="button"
+                className="admin-stat-card glass-card--inset"
+                onClick={onNavigateToListingReports}
+                style={{ cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
+              >
                 <div className="stat-icon-wrapper orange"><AlertTriangle size={18} /></div>
-                <div className="stat-data">
-                  <span className="stat-label">{language === 'en' ? 'UNRESOLVED REPORTS' : 'TIN BỊ BÁO CÁO CHƯA XỬ LÝ'}</span>
+                <div className="stat-data" style={{ flex: 1 }}>
+                  <span className="stat-label">{language === 'en' ? 'REPORTED LISTINGS AWAITING REVIEW' : 'TIN ĐĂNG BỊ BÁO CÁO CHỜ XỬ LÝ'}</span>
                   <h2 className="stat-value">{unresolvedReportsCount}</h2>
+                </div>
+                <ChevronRight size={18} className="text-secondary" />
+              </button>
+            )}
+            {expiringContractsCount > 0 && (
+              <div className="admin-stat-card glass-card--inset">
+                <div className="stat-icon-wrapper orange"><CalendarClock size={18} /></div>
+                <div className="stat-data">
+                  <span className="stat-label">{language === 'en' ? 'CONTRACTS EXPIRING SOON' : 'HỢP ĐỒNG SẮP HẾT HẠN'}</span>
+                  <h2 className="stat-value">{expiringContractsCount}</h2>
                 </div>
               </div>
             )}
@@ -146,38 +199,92 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
         </div>
       )}
 
-      {/* Listings status breakdown */}
-      <div className="admin-activity-section glass-card">
-        <div className="section-title-row">
-          <Activity size={18} className="text-neon-green" />
-          <h3>{language === 'en' ? 'Listings Status Breakdown' : 'Phân bổ trạng thái tin đăng'}</h3>
-        </div>
-        {listings.length === 0 ? (
-          <p className="text-secondary" style={{ padding: '12px 0' }}>
-            {language === 'en' ? 'No listings data available yet.' : 'Chưa có dữ liệu tin đăng.'}
-          </p>
-        ) : (
-          <div className="status-breakdown-list">
-            {statusBreakdown.map(item => (
-              <div key={item.key} className="status-breakdown-row">
-                <div className="status-breakdown-label">
-                  <span>{item.label}</span>
-                  <span className="status-breakdown-count">{item.count} ({item.percent}%)</span>
-                </div>
-                <div className="status-breakdown-track">
-                  <div
-                    className={`status-breakdown-fill ${item.className}`}
-                    style={{ width: `${item.percent}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+      {/* Charts Row */}
+      <div className="admin-charts-grid">
+        {/* Spending breakdown pie */}
+        <div className="admin-chart-card glass-card">
+          <div className="section-title-row">
+            <TrendingUp size={18} className="text-neon-green" />
+            <h3>{language === 'en' ? 'Platform Spending' : 'Chi tiêu trên nền tảng'}</h3>
           </div>
-        )}
+          {!stats || spendingChartData.length === 0 ? (
+            <p className="text-secondary" style={{ padding: '24px 0', textAlign: 'center' }}>
+              {language === 'en' ? 'No spending data available yet.' : 'Chưa có dữ liệu chi tiêu.'}
+            </p>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={spendingChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={60}
+                    outerRadius={95}
+                    paddingAngle={3}
+                  >
+                    {spendingChartData.map(entry => (
+                      <Cell key={entry.key} fill={entry.color} stroke="none" />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value) => formatMoney(Number(value))}
+                    contentStyle={{ background: 'rgba(20,24,32,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
+                    labelStyle={{ color: '#fff' }}
+                  />
+                  <Legend verticalAlign="bottom" height={32} iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <p className="text-secondary" style={{ textAlign: 'center', fontSize: 13, marginTop: 12 }}>
+                {language === 'en' ? 'Total spent: ' : 'Tổng chi tiêu: '}
+                <strong className="text-neon-green">{formatMoney(stats.totalSpent)}</strong>
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* Contract status bar chart */}
+        <div className="admin-chart-card glass-card">
+          <div className="section-title-row">
+            <ScrollText size={18} className="text-neon-green" />
+            <h3>{language === 'en' ? 'Contracts by Status' : 'Hợp đồng theo trạng thái'}</h3>
+          </div>
+          {contracts.length === 0 ? (
+            <p className="text-secondary" style={{ padding: '24px 0', textAlign: 'center' }}>
+              {language === 'en' ? 'No contracts data available yet.' : 'Chưa có dữ liệu hợp đồng.'}
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={contractStatusChartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: 'var(--color-text-secondary)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fill: 'var(--color-text-secondary)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip
+                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                  contentStyle={{ background: 'rgba(20,24,32,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
+                  labelStyle={{ color: '#fff' }}
+                />
+                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                  {contractStatusChartData.map(entry => (
+                    <Cell key={entry.key} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
       </div>
 
       {/* Priority packages & categories summary */}
       <div className="admin-stats-grid" style={{ marginTop: '24px', marginBottom: 0 }}>
+        <div className="admin-stat-card glass-card">
+          <div className="stat-icon-wrapper blue"><ScrollText size={20} /></div>
+          <div className="stat-data">
+            <span className="stat-label">{language === 'en' ? 'ACTIVE CONTRACTS' : 'HỢP ĐỒNG ĐANG HIỆU LỰC'}</span>
+            <h2 className="stat-value">{activeContractsCount} / {contracts.length}</h2>
+          </div>
+        </div>
+
         <div className="admin-stat-card glass-card">
           <div className="stat-icon-wrapper blue"><Zap size={20} /></div>
           <div className="stat-data">
