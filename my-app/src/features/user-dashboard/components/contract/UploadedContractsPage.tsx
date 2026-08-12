@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, FileCheck, FileImage, ExternalLink, Calendar, MapPin, CheckCircle2, Users } from 'lucide-react';
-import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import './UploadedContractsPage.css'; // Sẽ tạo file css sau
 
 const API_BASE = 'https://flexi-space-capstone-project.onrender.com';
 
 export const UploadedContractsPage: React.FC = () => {
-  const { t } = useThemeLanguage();
   const [contracts, setContracts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pending' | 'confirmed'>('pending');

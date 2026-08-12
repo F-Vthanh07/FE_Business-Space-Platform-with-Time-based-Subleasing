@@ -18,7 +18,8 @@ export type UserPage =
   | 'my-booking-requests'
   | 'change-password'
   | 'forgot-password'
-  | 'contracts';
+  | 'contracts'
+  | 'external-contracts';
 
 export interface SubSlot {
   id: string;
