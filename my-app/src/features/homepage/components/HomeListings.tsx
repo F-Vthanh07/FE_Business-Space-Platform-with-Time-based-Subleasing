@@ -324,7 +324,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <h3 style={{ margin: 0 }}>Cho Thuê Mặt Bằng, Kiot TP.HCM Giá Tốt Nhất</h3>
+          <h3 style={{ margin: 0 }}>Cho Thuê Mặt Bằng, Kiot TP.HCM</h3>
           <button
             className="btn-primary"
             onClick={() => navigate('/feed')}

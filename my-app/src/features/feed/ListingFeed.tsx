@@ -363,12 +363,22 @@ export const ListingFeed: React.FC = () => {
                 <div key={item.id || index} style={{ backgroundColor: '#FFFFFF', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
 
                   <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff', flexShrink: 0 }}>
+                    <div
+                      onClick={(e) => { e.stopPropagation(); navigate(`/profile/${item.creatorId || item.CreatorId}`); }}
+                      style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff', flexShrink: 0, cursor: 'pointer' }}
+                    >
                       {(item.lessorName || 'CH').substring(0, 2).toUpperCase()}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: '15px', color: '#050505', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        Chủ nhà {item.lessorName || 'Ẩn danh'}
+                        <span
+                          onClick={(e) => { e.stopPropagation(); navigate(`/profile/${item.creatorId || item.CreatorId}`); }}
+                          style={{ cursor: 'pointer' }}
+                          onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                          onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                        >
+                          Chủ nhà {item.lessorName || 'Ẩn danh'}
+                        </span>
                         {isMine && (
                           <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', backgroundColor: 'rgba(0,0,0,0.05)', padding: '1px 8px', borderRadius: '10px' }}>Bài của bạn</span>
                         )}

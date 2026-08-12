@@ -1,7 +1,6 @@
 ﻿import React from 'react';
 import {
   IdCard,
-  Wallet,
   KeyRound,
   HelpCircle,
   Globe,
@@ -26,7 +25,6 @@ interface NavItem {
 
 const profileNavItems: NavItem[] = [
   { id: 'profile', icon: <IdCard size={16} /> },
-  { id: 'wallet', icon: <Wallet size={16} /> },
   { id: 'change-password', icon: <KeyRound size={16} /> },
   { id: 'forgot-password', icon: <HelpCircle size={16} /> },
 ];
@@ -67,7 +65,6 @@ export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ activePage, onNa
   return (
     <aside className="user-sidebar glass-card">
       <div className="user-sidebar-header">
-        <h2 className="user-sidebar-title">Ether UI</h2>
         <p className="user-sidebar-subtitle">
           {language === 'en' ? 'Account Settings' : 'Cài đặt tài khoản'}
         </p>

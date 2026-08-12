@@ -8,6 +8,7 @@ import { AccessDeniedPage } from './components/AccessDeniedPage';
 import { Homepage } from './features/homepage/Homepage';
 import { ListingFeed } from './features/feed/ListingFeed';
 import { ListingDetail } from './features/feed/ListingDetail';
+import { UserPublicProfile } from './features/feed/UserPublicProfile';
 import { LoginPage } from './features/auth/LoginPage';
 import { RegisterPage } from './features/auth/RegisterPage';
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
@@ -68,6 +69,8 @@ const App: React.FC = () => {
         />
 
         <Route path="/listing/:id" element={<ListingDetail />} />
+
+        <Route path="/profile/:userId" element={<UserPublicProfile />} />
 
         <Route
           path="/ai-image-editor"
