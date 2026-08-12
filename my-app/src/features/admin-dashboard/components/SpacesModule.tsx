@@ -2,12 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Building2, MapPin, Eye, X, User, Ruler, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { AdminSpaceItem, UserAccount, AdminListingItem } from '../types';
 import { getPictureUrl } from '../utils/listingPicture';
+import { RefreshButton } from './RefreshButton';
 
 interface SpacesModuleProps {
   spaces: AdminSpaceItem[];
   users: UserAccount[];
   listings: AdminListingItem[];
   language: 'en' | 'vi';
+  onRefresh: () => void;
+  isRefreshing?: boolean;
 }
 
 const ITEMS_PER_PAGE = 8; // 2 hàng x 4 cột
@@ -43,7 +46,7 @@ const dayLabels: Record<number, { en: string; vi: string }> = {
   6: { en: 'Sat', vi: 'T7' },
 };
 
-export const SpacesModule: React.FC<SpacesModuleProps> = ({ spaces, users, listings, language }) => {
+export const SpacesModule: React.FC<SpacesModuleProps> = ({ spaces, users, listings, language, onRefresh, isRefreshing }) => {
   const [search, setSearch] = useState('');
   const [selectedSpace, setSelectedSpace] = useState<AdminSpaceItem | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -80,8 +83,11 @@ export const SpacesModule: React.FC<SpacesModuleProps> = ({ spaces, users, listi
   return (
     <div className="admin-module animate-fade-in">
       <header className="module-header">
-        <h1>{language === 'en' ? 'Space Management' : 'Quản lý Mặt bằng'}</h1>
-        <p>{language === 'en' ? 'All registered physical spaces across the platform' : 'Toàn bộ mặt bằng đã đăng ký trên hệ thống'}</p>
+        <div>
+          <h1>{language === 'en' ? 'Space Management' : 'Quản lý Mặt bằng'}</h1>
+          <p>{language === 'en' ? 'All registered physical spaces across the platform' : 'Toàn bộ mặt bằng đã đăng ký trên hệ thống'}</p>
+        </div>
+        <RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} language={language} />
       </header>
 
       {/* Summary Stats Cards */}

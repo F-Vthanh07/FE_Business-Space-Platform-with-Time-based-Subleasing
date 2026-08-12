@@ -30,6 +30,8 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
   const { language, setLanguage } = useThemeLanguage();
+  setLanguage('vi'); // Mặc định là tiếng Việt, bạn có thể thay đổi theo nhu cầu
+
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -174,11 +176,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         {/* FORM PANEL */}
         <div className="auth-form-panel">
           
-          <div className="auth-top-controls">
+          {/* <div className="auth-top-controls">
             <button className="auth-lang-btn" onClick={() => setLanguage(language === 'en' ? 'vi' : 'en')}>
               {language === 'en' ? 'VI / EN' : 'EN / VI'}
             </button>
-          </div>
+          </div> */}
 
           <div ref={formContainerRef} className="auth-anim-wrapper">
             

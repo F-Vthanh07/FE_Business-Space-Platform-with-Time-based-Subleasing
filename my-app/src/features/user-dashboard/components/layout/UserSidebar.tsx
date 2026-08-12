@@ -8,8 +8,8 @@ import {
   CalendarDays,
   Plus,
   LogOut,
-  Wallet,
   Inbox,
+  Wallet,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import { clearLocalStorageForLogout } from '../../../../utils/preserveLocalStorage';
@@ -31,6 +31,7 @@ interface NavItem {
 
 const dashboardNavItems: NavItem[] = [
   { id: 'overview', icon: <LayoutDashboard size={16} /> },
+  { id: 'wallet', icon: <Wallet size={16} /> },
 ];
 
 const requestNavItems: NavItem[] = [
@@ -48,10 +49,6 @@ const spaceNavItems: NavItem[] = [
 
 const subleaseNavItems: NavItem[] = [
   { id: 'calendar', icon: <CalendarDays size={16} /> },
-];
-
-const walletNavItems: NavItem[] = [
-  { id: 'wallet', icon: <Wallet size={16} /> },
 ];
 
 const getPageLabels = (id: string, lang: string) => {
@@ -175,7 +172,6 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
   return (
     <aside className="user-sidebar glass-card">
       <div className="user-sidebar-header">
-        <h2 className="user-sidebar-title">Ether UI</h2>
         <p className="user-sidebar-subtitle">System Console</p>
       </div>
 
@@ -196,11 +192,6 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
           {language === 'en' ? 'SUBLEASING' : 'CHO THUÊ LẠI'}
         </span>
         {renderNavGroup(subleaseNavItems)}
-
-        <span className="user-sidebar-group-label">
-          {language === 'en' ? 'FINANCE' : 'TÀI CHÍNH'}
-        </span>
-        {renderNavGroup(walletNavItems)}
       </nav>
 
       <div className="user-sidebar-footer">

@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AdminSidebar } from './components/AdminSidebar';
 import { Check, X } from 'lucide-react';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './AdminDashboardPage.css';
 
 // Types & API imports
-import type { AdminPage, UserAccount, AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem } from './types';
+import type { AdminPage, UserAccount, AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem, AdminContractItem, AdminDashboardStats } from './types';
 import {
   fetchListings,
   approveListing,
@@ -27,7 +28,9 @@ import {
   fetchListingReports,
   softDeleteListing,
   fetchSoftDeletedListings,
-  restoreListing
+  restoreListing,
+  fetchAllContracts,
+  fetchDashboardStats
 } from './api/admin.api';
 
 // Components imports
@@ -38,10 +41,21 @@ import { CategoriesModule } from './components/CategoriesModule';
 import { WalletsModule } from './components/WalletsModule';
 import { PriorityLevelsModule } from './components/PriorityLevelsModule';
 import { SpacesModule } from './components/SpacesModule';
+import { ContractsModule } from './components/ContractsModule';
+
+const VALID_ADMIN_PAGES: AdminPage[] = ['overview', 'users', 'listings', 'contracts', 'wallets', 'priorityLevels', 'categories', 'spaces'];
 
 export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { language } = useThemeLanguage();
-  const [activeTab, setActiveTab] = useState<AdminPage>('overview');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Derive active tab from URL, e.g. /admin/listings -> listings
+  const pathParts = location.pathname.split('/');
+  const pathTab = pathParts[2] as AdminPage | undefined;
+  const activeTab: AdminPage = pathTab && VALID_ADMIN_PAGES.includes(pathTab) ? pathTab : 'overview';
+
+  const goToTab = (tab: AdminPage) => navigate(tab === 'overview' ? '/admin' : `/admin/${tab}`);
 
   // States dữ liệu
   const [users, setUsers] = useState<UserAccount[]>([]);
@@ -50,6 +64,8 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   const [wallets, setWallets] = useState<AdminWalletAccount[]>([]);
   const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
   const [spaces, setSpaces] = useState<AdminSpaceItem[]>([]);
+  const [contracts, setContracts] = useState<AdminContractItem[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats | null>(null);
   const [listingReports, setListingReports] = useState<ListingReportItem[]>([]);
   const [deletedListings, setDeletedListings] = useState<AdminListingItem[]>([]);
   const [deletedListingType, setDeletedListingType] = useState<'EntireSpace' | 'SharedSpace'>('EntireSpace');
@@ -57,6 +73,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   
   // Loading & Notification states
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Lấy API Token từ localStorage
@@ -102,7 +119,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       const listingsData = await fetchListings(token);
       setListings(listingsData);
     } catch (e) {
-      console.warn("Không kết nối được API thật cho Listings, đang sử dụng dữ liệu mô phỏng local.", e);
+      console.warn("Không kết nối được API thật cho Listings.", e);
     }
 
     try {
@@ -139,6 +156,32 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     } catch (e) {
       console.warn("Không kết nối được API thật cho Listing Reports.", e);
     }
+
+    try {
+      const contractsData = await fetchAllContracts(token);
+      setContracts(contractsData);
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Contracts.", e);
+    }
+
+    try {
+      const statsData = await fetchDashboardStats(token);
+      setDashboardStats(statsData);
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Dashboard Stats.", e);
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchRealAdminData();
+      if (activeTab === 'listings') {
+        await fetchDeletedListings(deletedListingType);
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const fetchDeletedListings = async (listingType: 'EntireSpace' | 'SharedSpace') => {
@@ -171,8 +214,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       fetchRealAdminData();
     } catch (err) {
       console.error(err);
-      setDeletedListings(prev => prev.filter(l => l.id !== listingId));
-      showNotification(language === 'en' ? "Listing restored (Demo mode)" : "Khôi phục tin đăng thành công (Chế độ mô phỏng)");
+      showNotification(language === 'en' ? "Failed to restore listing. Please try again." : "Khôi phục tin đăng thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -185,10 +227,10 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       await approveListing(listingId, token || '');
       setListings(prev => prev.map(item => item.id === listingId ? { ...item, status: 'Accepted' } : item));
       showNotification(language === 'en' ? "Rental listing approved!" : "Đã phê duyệt bài đăng cho thuê!");
+      fetchRealAdminData();
     } catch (err) {
       console.error(err);
-      setListings(prev => prev.map(item => item.id === listingId ? { ...item, status: 'Accepted' } : item));
-      showNotification(language === 'en' ? "Listing approved (Demo mode)" : "Phê duyệt tin đăng thành công (Chế độ mô phỏng)");
+      showNotification(language === 'en' ? "Failed to approve listing. Please try again." : "Phê duyệt tin đăng thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -200,10 +242,10 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       await rejectListing(listingId, reason, token || '');
       setListings(prev => prev.map(item => item.id === listingId ? { ...item, status: 'Canceled', cancelReason: reason } : item));
       showNotification(language === 'en' ? "Rental listing rejected." : "Đã từ chối tin đăng.", 'error');
+      fetchRealAdminData();
     } catch (err) {
       console.error(err);
-      setListings(prev => prev.map(item => item.id === listingId ? { ...item, status: 'Canceled', cancelReason: reason } : item));
-      showNotification(language === 'en' ? "Listing rejected (Demo mode)" : "Từ chối tin đăng (Chế độ mô phỏng)", 'error');
+      showNotification(language === 'en' ? "Failed to reject listing. Please try again." : "Từ chối tin đăng thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -216,11 +258,10 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       setListingReports(prev => prev.filter(r => r.listingId !== listingId));
       setListings(prev => prev.filter(l => l.id !== listingId));
       showNotification(language === 'en' ? "Listing deleted successfully!" : "Đã xóa tin đăng vi phạm thành công!");
+      fetchRealAdminData();
     } catch (err) {
       console.error(err);
-      setListingReports(prev => prev.filter(r => r.listingId !== listingId));
-      setListings(prev => prev.filter(l => l.id !== listingId));
-      showNotification(language === 'en' ? "Listing deleted (Demo mode)" : "Xóa tin đăng thành công (Chế độ mô phỏng)", 'error');
+      showNotification(language === 'en' ? "Failed to delete listing. Please try again." : "Xóa tin đăng thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -233,10 +274,11 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       await changeUserStatus(userId, newStatus, token || '');
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus as 'Active' | 'Suspended' | 'Banned' } : u));
       showNotification(
-        language === 'en' 
-          ? `User status updated to ${newStatus}` 
+        language === 'en'
+          ? `User status updated to ${newStatus}`
           : `Đã cập nhật trạng thái người dùng thành ${newStatus === 'Active' ? 'Hoạt động' : newStatus === 'Suspended' ? 'Đình chỉ' : 'Cấm'}`
       );
+      fetchRealAdminData();
     } catch (err) {
       console.error(err);
       showNotification(language === 'en' ? "Failed to update user status" : "Không thể cập nhật trạng thái", 'error');
@@ -254,18 +296,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       fetchRealAdminData();
     } catch (err) {
       console.error(err);
-      // Fallback
-      const newCat: BusinessCategory = {
-        id: categories.length > 0 ? Math.max(...categories.map(c => c.id)) + 1 : 1,
-        name,
-        isActive,
-        createdBy: 'US004', // Super admin mock
-        createdAt: new Date().toISOString(),
-        updatedBy: null,
-        updatedAt: '0001-01-01T00:00:00'
-      };
-      setCategories(prev => [...prev, newCat]);
-      showNotification(language === 'en' ? "Category created (Demo mode)" : "Tạo ngành nghề thành công (Chế độ mô phỏng)");
+      showNotification(language === 'en' ? "Failed to create category. Please try again." : "Tạo ngành nghề thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -279,9 +310,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       fetchRealAdminData();
     } catch (err) {
       console.error(err);
-      // Fallback
-      setCategories(prev => prev.map(c => c.id === id ? { ...c, name, isActive, updatedAt: new Date().toISOString() } : c));
-      showNotification(language === 'en' ? "Category updated (Demo mode)" : "Cập nhật ngành nghề thành công (Chế độ mô phỏng)");
+      showNotification(language === 'en' ? "Failed to update category. Please try again." : "Cập nhật ngành nghề thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -295,9 +324,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       fetchRealAdminData();
     } catch (err) {
       console.error(err);
-      // Fallback
-      setCategories(prev => prev.filter(c => c.id !== id));
-      showNotification(language === 'en' ? "Category deleted (Demo mode)" : "Xóa ngành nghề thành công (Chế độ mô phỏng)", 'error');
+      showNotification(language === 'en' ? "Failed to delete category. Please try again." : "Xóa ngành nghề thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -312,9 +339,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       fetchRealAdminData();
     } catch (err) {
       console.error(err);
-      // Fallback
-      setWallets(prev => prev.map(w => w.user?.userId === userId ? { ...w, balance: w.balance + amountToAdd, updatedAt: new Date().toISOString() } : w));
-      showNotification(language === 'en' ? "Funds added to wallet (Demo mode)" : "Cộng tiền vào ví thành công (Chế độ mô phỏng)");
+      showNotification(language === 'en' ? "Failed to add funds. Please try again." : "Cộng tiền vào ví thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -329,19 +354,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       fetchRealAdminData();
     } catch (err) {
       console.error(err);
-      // Fallback
-      const newLevel: PriorityLevel = {
-        id: priorityLevels.length > 0 ? Math.max(...priorityLevels.map(p => p.id)) + 1 : 1,
-        name,
-        price,
-        isActive,
-        createdBy: 'US004', // Super admin mock
-        createdAt: new Date().toISOString(),
-        updatedBy: null,
-        updatedAt: '0001-01-01T00:00:00'
-      };
-      setPriorityLevels(prev => [...prev, newLevel]);
-      showNotification(language === 'en' ? "Priority package created (Demo mode)" : "Tạo gói giá thành công (Chế độ mô phỏng)");
+      showNotification(language === 'en' ? "Failed to create priority package. Please try again." : "Tạo gói giá đăng bài thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -355,9 +368,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       fetchRealAdminData();
     } catch (err) {
       console.error(err);
-      // Fallback
-      setPriorityLevels(prev => prev.map(p => p.id === id ? { ...p, name, price, isActive, updatedAt: new Date().toISOString() } : p));
-      showNotification(language === 'en' ? "Priority package updated (Demo mode)" : "Cập nhật gói giá thành công (Chế độ mô phỏng)");
+      showNotification(language === 'en' ? "Failed to update priority package. Please try again." : "Cập nhật gói giá đăng bài thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -366,10 +377,10 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   return (
     <div className="admin-dashboard-container">
       {/* Sidebar */}
-      <AdminSidebar 
-        activePage={activeTab} 
-        onNavigate={(tab) => setActiveTab(tab)} 
-        onLogout={onLogout} 
+      <AdminSidebar
+        activePage={activeTab}
+        onNavigate={goToTab}
+        onLogout={onLogout}
       />
 
       {/* Main Content Area */}
@@ -393,13 +404,18 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
             priorityLevels={priorityLevels}
             categories={categories}
             reports={listingReports}
+            contracts={contracts}
+            stats={dashboardStats}
             language={language}
+            onNavigateToListingReports={() => navigate('/admin/listings?tab=reports')}
+            onRefresh={handleManualRefresh}
+            isRefreshing={isRefreshing}
           />
         )}
 
         {/* --- MODULE 2: USERS --- */}
         {activeTab === 'users' && (
-          <UsersModule users={users} updateUserStatus={updateUserStatus} language={language} />
+          <UsersModule users={users} updateUserStatus={updateUserStatus} language={language} onRefresh={handleManualRefresh} isRefreshing={isRefreshing} />
         )}
 
         {/* --- MODULE 3: LISTINGS APPROVAL --- */}
@@ -418,17 +434,25 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
             onChangeDeletedListingType={setDeletedListingType}
             isLoadingDeleted={isLoadingDeleted}
             handleRestoreListing={handleRestoreListing}
+            initialTab={new URLSearchParams(location.search).get('tab') === 'reports' ? 'reports' : undefined}
+            onRefresh={handleManualRefresh}
+            isRefreshing={isRefreshing}
           />
         )}
 
         {/* --- MODULE 7: SPACES --- */}
         {activeTab === 'spaces' && (
-          <SpacesModule spaces={spaces} users={users} listings={listings} language={language} />
+          <SpacesModule spaces={spaces} users={users} listings={listings} language={language} onRefresh={handleManualRefresh} isRefreshing={isRefreshing} />
+        )}
+
+        {/* --- MODULE 8: CONTRACTS --- */}
+        {activeTab === 'contracts' && (
+          <ContractsModule contracts={contracts} spaces={spaces} users={users} language={language} onRefresh={handleManualRefresh} isRefreshing={isRefreshing} />
         )}
 
         {/* --- MODULE 4: WALLETS --- */}
         {activeTab === 'wallets' && (
-          <WalletsModule wallets={wallets} language={language} handleUpdateWalletBalance={handleUpdateWalletBalance} isLoading={isLoading} />
+          <WalletsModule wallets={wallets} language={language} handleUpdateWalletBalance={handleUpdateWalletBalance} isLoading={isLoading} onRefresh={handleManualRefresh} isRefreshing={isRefreshing} />
         )}
 
         {/* --- MODULE 5: PRIORITY LEVELS (LISTING PACKAGES) --- */}
@@ -439,6 +463,8 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
             handleUpdatePriorityLevel={handleUpdatePriorityLevel}
             isLoading={isLoading}
             language={language}
+            onRefresh={handleManualRefresh}
+            isRefreshing={isRefreshing}
           />
         )}
 
@@ -451,6 +477,8 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
             handleDeleteCategory={handleDeleteCategory}
             isLoading={isLoading}
             language={language}
+            onRefresh={handleManualRefresh}
+            isRefreshing={isRefreshing}
           />
         )}
 

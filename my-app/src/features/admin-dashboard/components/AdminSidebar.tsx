@@ -8,11 +8,12 @@ import {
   Wallet,
   Zap,
   Building2,
+  ScrollText,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import './AdminSidebar.css';
 
-export type AdminPage = 'overview' | 'users' | 'listings' | 'categories' | 'wallets' | 'priorityLevels' | 'spaces';
+export type AdminPage = 'overview' | 'users' | 'listings' | 'categories' | 'wallets' | 'priorityLevels' | 'spaces' | 'contracts';
 
 interface AdminSidebarProps {
   activePage: AdminPage;
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { id: 'users', icon: <Users size={16} /> },
   { id: 'spaces', icon: <Building2 size={16} /> },
   { id: 'listings', icon: <FileText size={16} /> },
+  { id: 'contracts', icon: <ScrollText size={16} /> },
   { id: 'wallets', icon: <Wallet size={16} /> },
   { id: 'priorityLevels', icon: <Zap size={16} /> },
   { id: 'categories', icon: <Tag size={16} /> },
@@ -49,6 +51,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNaviga
         return { title: isEn ? 'Spaces' : 'Mặt bằng', sub: isEn ? 'All registered spaces' : 'Tất cả mặt bằng đã đăng ký' };
       case 'listings':
         return { title: isEn ? 'Listings Approval' : 'Duyệt tin đăng', sub: isEn ? 'Market offers' : 'Tin thuê chờ duyệt' };
+      case 'contracts':
+        return { title: isEn ? 'Contracts' : 'Hợp đồng', sub: isEn ? 'Primary rental agreements' : 'Hợp đồng thuê sơ cấp' };
       case 'wallets':
         return { title: isEn ? 'Wallets' : 'Ví', sub: isEn ? 'User balances' : 'Số dư người dùng' };
       case 'priorityLevels':

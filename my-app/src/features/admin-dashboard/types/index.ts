@@ -148,4 +148,48 @@ export interface ListingReportDetail {
   reasonBreakdown: ListingReportReasonBreakdown[];
 }
 
+export interface AdminUserProfile {
+  userId: string;
+  citizenIDNumber: string | null;
+  identityCardNumber: string | null;
+  fullName: string | null;
+  gender: string | null;
+  dob: string | null;
+  permanentResidence: string | null;
+  dateOfIssue: string | null;
+  isVerified: boolean;
+  avatarUrl: string | null;
+  bio: string | null;
+  socialLink: string | null;
+}
+
+export interface AdminDashboardStats {
+  totalWalletBalance: number;
+  totalSpent: number;
+  totalListingSpent: number;
+  totalAiImageSpent: number;
+  totalListingCount: number;
+  totalAiImageCount: number;
+}
+
+export interface AdminContractItem {
+  id: number;
+  spaceId: number;
+  primaryBookingRequestId: number;
+  lessorId?: string;
+  lesseeId?: string;
+  lessorNumberCard: string | null;
+  lesseeNumberCard: string | null;
+  description: string | null;
+  acreage: number;
+  duration: number;
+  startDate: string;
+  endDate: string;
+  depositAmount: number;
+  price: number;
+  status: string; // ContractStatusEnum: "Pending" | "Active" | "Expired" | "Cancelled"
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export type { AdminPage };

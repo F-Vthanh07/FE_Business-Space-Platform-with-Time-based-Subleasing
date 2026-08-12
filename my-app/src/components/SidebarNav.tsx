@@ -15,7 +15,6 @@ export const SidebarNav: React.FC = () => {
     { id: 'search-nav', label: language === 'en' ? 'Search' : 'Tìm kiếm' },
     { id: 'features', label: language === 'en' ? 'Features' : 'Tính năng' },
     { id: 'how-it-works', label: language === 'en' ? 'How it Works' : 'Quy trình' },
-    { id: 'pricing', label: language === 'en' ? 'Pricing' : 'Bảng giá' },
   ];
 
   useEffect(() => {

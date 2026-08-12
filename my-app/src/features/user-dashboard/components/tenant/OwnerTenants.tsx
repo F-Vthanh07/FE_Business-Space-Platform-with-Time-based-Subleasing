@@ -169,7 +169,7 @@ export const OwnerTenants: React.FC = () => {
         const extraSpaceEntries = await Promise.all(
           missingSpaceIds.map(async (id) => {
             try {
-              const res = await fetch(`${API_BASE}/api/Space/GetById/${id}`, {
+              const res = await fetch(`${API_BASE}/api/Space/GetById${id}`, {
                 headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
               });
               if (!res.ok) return [id, null] as const;

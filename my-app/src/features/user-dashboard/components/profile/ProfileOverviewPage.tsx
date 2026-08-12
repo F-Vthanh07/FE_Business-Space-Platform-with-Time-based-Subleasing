@@ -19,8 +19,8 @@ export const ProfileOverviewPage: React.FC = () => {
   const isEn = language === 'en';
   const { isVerified, profile, isLoading, refetch } = useIdentityVerification();
 
+  const [activeTab, setActiveTab] = useState<'info' | 'additional'>('info');
   const [isEditing, setIsEditing] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState('');
   const [bio, setBio] = useState('');
   const [socialLink, setSocialLink] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -60,7 +60,6 @@ export const ProfileOverviewPage: React.FC = () => {
   ];
 
   const handleStartEdit = () => {
-    setAvatarUrl(profile?.avatarUrl || '');
     setBio(profile?.bio || '');
     setSocialLink(profile?.socialLink || '');
     setError('');
@@ -80,7 +79,6 @@ export const ProfileOverviewPage: React.FC = () => {
       const token = localStorage.getItem('portal_token') || '';
       await updateProfile(
         {
-          avatarUrl: avatarUrl || undefined,
           bio: bio || undefined,
           socialLink: socialLink || undefined,
         },
@@ -151,7 +149,7 @@ export const ProfileOverviewPage: React.FC = () => {
               <h3 className="profile-info-name">{displayName}</h3>
               <span className="badge badge--positive">{isEn ? 'Verified' : 'Đã xác thực'}</span>
             </div>
-            {!isEditing && (
+            {activeTab === 'additional' && !isEditing && (
               <button type="button" className="btn-ghost profile-info-edit-btn" onClick={handleStartEdit}>
                 <Pencil size={13} />
                 {isEn ? 'Edit' : 'Chỉnh sửa'}
@@ -159,75 +157,85 @@ export const ProfileOverviewPage: React.FC = () => {
             )}
           </div>
 
-          <table className="cccd-review-table">
-            <tbody>
-              {infoRows.map(([label, value]) => (
-                <tr key={label}>
-                  <td className="text-secondary">{label}</td>
-                  <td>{value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="profile-tabs">
+            <button
+              type="button"
+              className={`profile-tab-btn ${activeTab === 'info' ? 'profile-tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('info')}
+            >
+              {isEn ? 'Personal Info' : 'Thông tin cá nhân'}
+            </button>
+            <button
+              type="button"
+              className={`profile-tab-btn ${activeTab === 'additional' ? 'profile-tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('additional')}
+            >
+              {isEn ? 'Additional Info' : 'Thông tin bổ sung'}
+            </button>
+          </div>
 
-          {isEditing ? (
-            <form className="profile-edit-form" onSubmit={handleSave}>
-              <div className="profile-edit-field">
-                <label className="profile-edit-label">{isEn ? 'Avatar URL' : 'Ảnh đại diện (URL)'}</label>
-                <input
-                  type="text"
-                  className="profile-edit-input"
-                  placeholder="https://..."
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                />
-              </div>
-
-              <div className="profile-edit-field">
-                <label className="profile-edit-label">{isEn ? 'Bio' : 'Giới thiệu bản thân'}</label>
-                <textarea
-                  className="profile-edit-input profile-edit-textarea"
-                  rows={3}
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                />
-              </div>
-
-              <div className="profile-edit-field">
-                <label className="profile-edit-label">{isEn ? 'Social Link' : 'Liên kết mạng xã hội'}</label>
-                <input
-                  type="text"
-                  className="profile-edit-input"
-                  placeholder="https://facebook.com/..."
-                  value={socialLink}
-                  onChange={(e) => setSocialLink(e.target.value)}
-                />
-              </div>
-
-              {error && <p className="text-negative" style={{ fontSize: 13 }}>{error}</p>}
-
-              <div className="profile-edit-actions">
-                <button type="button" className="btn-ghost" onClick={handleCancelEdit} disabled={isSaving}>
-                  {isEn ? 'Cancel' : 'Hủy'}
-                </button>
-                <button type="submit" className="btn-primary" disabled={isSaving}>
-                  {isSaving ? (isEn ? 'Saving...' : 'Đang lưu...') : (isEn ? 'Save' : 'Lưu')}
-                </button>
-              </div>
-            </form>
-          ) : (
+          {activeTab === 'info' && (
             <table className="cccd-review-table">
               <tbody>
-                <tr>
-                  <td className="text-secondary">{isEn ? 'Bio' : 'Giới thiệu'}</td>
-                  <td>{profile?.bio || placeholder}</td>
-                </tr>
-                <tr>
-                  <td className="text-secondary">{isEn ? 'Social Link' : 'Liên kết mạng xã hội'}</td>
-                  <td>{profile?.socialLink || placeholder}</td>
-                </tr>
+                {infoRows.map(([label, value]) => (
+                  <tr key={label}>
+                    <td className="text-secondary">{label}</td>
+                    <td>{value}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
+          )}
+
+          {activeTab === 'additional' && (
+            isEditing ? (
+              <form className="profile-edit-form" onSubmit={handleSave}>
+                <div className="profile-edit-field">
+                  <label className="profile-edit-label">{isEn ? 'Bio' : 'Giới thiệu bản thân'}</label>
+                  <textarea
+                    className="profile-edit-input profile-edit-textarea"
+                    rows={3}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                  />
+                </div>
+
+                <div className="profile-edit-field">
+                  <label className="profile-edit-label">{isEn ? 'Social Link' : 'Liên kết mạng xã hội'}</label>
+                  <input
+                    type="text"
+                    className="profile-edit-input"
+                    placeholder="https://facebook.com/..."
+                    value={socialLink}
+                    onChange={(e) => setSocialLink(e.target.value)}
+                  />
+                </div>
+
+                {error && <p className="text-negative" style={{ fontSize: 13 }}>{error}</p>}
+
+                <div className="profile-edit-actions">
+                  <button type="button" className="btn-ghost" onClick={handleCancelEdit} disabled={isSaving}>
+                    {isEn ? 'Cancel' : 'Hủy'}
+                  </button>
+                  <button type="submit" className="btn-primary" disabled={isSaving}>
+                    {isSaving ? (isEn ? 'Saving...' : 'Đang lưu...') : (isEn ? 'Save' : 'Lưu')}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <table className="cccd-review-table">
+                <tbody>
+                  <tr>
+                    <td className="text-secondary">{isEn ? 'Bio' : 'Giới thiệu'}</td>
+                    <td>{profile?.bio || placeholder}</td>
+                  </tr>
+                  <tr>
+                    <td className="text-secondary">{isEn ? 'Social Link' : 'Liên kết mạng xã hội'}</td>
+                    <td>{profile?.socialLink || placeholder}</td>
+                  </tr>
+                </tbody>
+              </table>
+            )
           )}
         </div>
       )}

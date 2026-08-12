@@ -4,6 +4,7 @@ import type { AdminListingItem, BusinessCategory, ListingReportItem, ListingRepo
 import { ListingDetailModal } from './ListingDetailModal';
 import { getPictureUrl } from '../utils/listingPicture';
 import { fetchListingReportDetail } from '../api/admin.api';
+import { RefreshButton } from './RefreshButton';
 
 export const REPORT_REASON_LABELS: Record<string, { en: string; vi: string }> = {
   ScamOrFraud: { en: 'Scam / Fraud', vi: 'Lừa đảo / Gian lận' },
@@ -34,6 +35,9 @@ interface ListingsModuleProps {
   onChangeDeletedListingType: (type: DeletedListingType) => void;
   isLoadingDeleted: boolean;
   handleRestoreListing: (listingId: number) => void;
+  initialTab?: ListingsTab;
+  onRefresh: () => void;
+  isRefreshing?: boolean;
 }
 
 type ListingsTab = 'all' | 'reports' | 'deleted';
@@ -83,8 +87,16 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
   onChangeDeletedListingType,
   isLoadingDeleted,
   handleRestoreListing,
+  initialTab,
+  onRefresh,
+  isRefreshing,
 }) => {
-  const [activeListingsTab, setActiveListingsTab] = useState<ListingsTab>('all');
+  const [activeListingsTab, setActiveListingsTab] = useState<ListingsTab>(initialTab || 'all');
+
+  useEffect(() => {
+    if (initialTab) setActiveListingsTab(initialTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTab]);
   const [selectedListing, setSelectedListing] = useState<AdminListingItem | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
@@ -155,8 +167,11 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
   return (
     <div className="admin-module animate-fade-in">
       <header className="module-header">
-        <h1>{language === 'en' ? 'Listings Verification' : 'Phê duyệt Tin đăng'}</h1>
-        <p>{language === 'en' ? 'Review lease and time-sharing offers before publishing' : 'Kiểm tra và duyệt các gói tin đăng cho thuê trước khi công khai lên sàn giao dịch'}</p>
+        <div>
+          <h1>{language === 'en' ? 'Listings Verification' : 'Phê duyệt Tin đăng'}</h1>
+          <p>{language === 'en' ? 'Review lease and time-sharing offers before publishing' : 'Kiểm tra và duyệt các gói tin đăng cho thuê trước khi công khai lên sàn giao dịch'}</p>
+        </div>
+        <RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} language={language} />
       </header>
 
       {/* Tabs */}

@@ -51,6 +51,19 @@
 /* Module Header */
 .module-header {
   margin-bottom: 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-refresh-btn .spin {
+  animation: admin-refresh-spin 0.8s linear infinite;
+}
+
+@keyframes admin-refresh-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .module-header h1 {
@@ -205,50 +218,19 @@
   font-weight: 600;
 }
 
-/* Listings status breakdown (Overview) — dữ liệu thật thay cho biểu đồ tháng giả */
-.status-breakdown-list {
-  display: flex;
-  flex-direction: column;
+/* Overview charts (recharts) */
+.admin-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 16px;
+  margin-bottom: 24px;
 }
 
-.status-breakdown-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.status-breakdown-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.status-breakdown-count {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-}
-
-.status-breakdown-track {
-  height: 10px;
-  border-radius: 999px;
-  background: var(--color-bg-hover);
-  overflow: hidden;
-}
-
-.status-breakdown-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: rgba(217, 119, 6, 0.6);
-  transition: width 0.4s ease;
-}
-
-.status-breakdown-fill.active {
-  background: linear-gradient(90deg, rgba(22, 163, 74, 0.5) 0%, rgba(22, 163, 74, 0.85) 100%);
+.admin-chart-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 20px;
 }
 
 /* Tables style */

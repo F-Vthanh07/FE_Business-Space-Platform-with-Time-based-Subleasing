@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Edit3, Check, X, Tag } from 'lucide-react';
 import type { BusinessCategory } from '../types';
+import { RefreshButton } from './RefreshButton';
 
 interface CategoriesModuleProps {
   categories: BusinessCategory[];
@@ -9,6 +10,8 @@ interface CategoriesModuleProps {
   handleDeleteCategory: (id: number) => Promise<void>;
   isLoading: boolean;
   language: 'en' | 'vi';
+  onRefresh: () => void;
+  isRefreshing?: boolean;
 }
 
 export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
@@ -18,6 +21,8 @@ export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
   handleDeleteCategory,
   isLoading,
   language,
+  onRefresh,
+  isRefreshing,
 }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -84,8 +89,11 @@ export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
   return (
     <div className="admin-module animate-fade-in">
       <header className="module-header">
-        <h1>{language === 'en' ? 'Business Categories' : 'Quản lý Ngành nghề'}</h1>
-        <p>{language === 'en' ? 'Configure available business niches allowed for sub-leasing' : 'Quản lý các ngành hàng kinh doanh được phép đăng ký thuê lại mặt bằng'}</p>
+        <div>
+          <h1>{language === 'en' ? 'Business Categories' : 'Quản lý Ngành nghề'}</h1>
+          <p>{language === 'en' ? 'Configure available business niches allowed for sub-leasing' : 'Quản lý các ngành hàng kinh doanh được phép đăng ký thuê lại mặt bằng'}</p>
+        </div>
+        <RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} language={language} />
       </header>
 
       {/* Summary Stats Cards */}
