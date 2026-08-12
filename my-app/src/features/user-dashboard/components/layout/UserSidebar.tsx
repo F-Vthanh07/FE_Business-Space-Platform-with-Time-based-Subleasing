@@ -9,6 +9,7 @@ import {
   Plus,
   LogOut,
   Inbox,
+  Wallet,
 } from 'lucide-react';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import { clearLocalStorageForLogout } from '../../../../utils/preserveLocalStorage';
@@ -30,6 +31,7 @@ interface NavItem {
 
 const dashboardNavItems: NavItem[] = [
   { id: 'overview', icon: <LayoutDashboard size={16} /> },
+  { id: 'wallet', icon: <Wallet size={16} /> },
 ];
 
 const requestNavItems: NavItem[] = [
@@ -168,7 +170,6 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
   return (
     <aside className="user-sidebar glass-card">
       <div className="user-sidebar-header">
-        <h2 className="user-sidebar-title">Ether UI</h2>
         <p className="user-sidebar-subtitle">System Console</p>
       </div>
 

@@ -662,10 +662,16 @@ export const ListingDetail: React.FC = () => {
           <div style={{ position: 'sticky', top: '90px', height: 'fit-content' }}>
             <div style={{ backgroundColor: '#fff', padding: '24px 20px', borderRadius: '8px', border: '1px solid #E0E0E0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
               
-              <div style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold', color: '#333', marginBottom: '12px', border: '2px solid var(--color-primary)' }}>
+              <div
+                onClick={() => listing.creatorId && navigate(`/profile/${listing.creatorId}`)}
+                style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold', color: '#333', marginBottom: '12px', border: '2px solid var(--color-primary)', cursor: listing.creatorId ? 'pointer' : 'default' }}
+              >
                 {ownerName.substring(0, 2).toUpperCase()}
               </div>
-              <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px', color: '#2C2C2C' }}>
+              <div
+                onClick={() => listing.creatorId && navigate(`/profile/${listing.creatorId}`)}
+                style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px', color: '#2C2C2C', cursor: listing.creatorId ? 'pointer' : 'default' }}
+              >
                 Chủ nhà {ownerName}
               </div>
 

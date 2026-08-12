@@ -58,13 +58,13 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
   const pathParts = location.pathname.split('/');
   const activePage = (pathParts[2] || 'overview') as UserPage;
 
-  // Profile, Wallet, Change Password and Forgot Password share a dedicated
+  // Profile, Change Password and Forgot Password share a dedicated
   // account-settings sidebar instead of the main space-management one.
+  // Wallet lives in the main sidebar, so it is excluded here.
   const isProfileSection =
     activePage === 'profile' ||
     activePage === 'change-password' ||
-    activePage === 'forgot-password' ||
-    activePage.startsWith('wallet');
+    activePage === 'forgot-password';
 
   useEffect(() => {
     const userId = localStorage.getItem('current_user_id');
