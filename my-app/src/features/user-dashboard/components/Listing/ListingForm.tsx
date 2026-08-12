@@ -60,6 +60,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<any[]>(initialData?.listingPictures || []);
 
   const [allowedStartTime, setAllowedStartTime] = useState(() => getSafeDateOnly(initialData?.allowedStartTime));
   const [allowedEndTime, setAllowedEndTime] = useState(() => {
@@ -73,9 +74,44 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const [isLegalCommitted, setIsLegalCommitted] = useState<boolean>(initialData?.shareSpaceDetailIsLegalCommitted ?? false);
   const [availabilities, setAvailabilities] = useState<any[]>(
     initialData?.shareSpaceDetailAvailabilitiesTimes?.length
-      ? initialData.shareSpaceDetailAvailabilitiesTimes
+      ? initialData.shareSpaceDetailAvailabilitiesTimes.map((slot: any) => ({
+          ...slot,
+          specificdate: (slot.specificdate && String(slot.specificdate).startsWith('0001')) ? '' : slot.specificdate
+        }))
       : [{ daysOfWeek: [], specificdate: '', startTime: '08:00', endTime: '12:00', validFrom: getSafeDateOnly(null), validTo: getSafeDateOnly(null) }]
   );
+  
+  const [timePolicy, setTimePolicy] = useState<any>(null);
+
+  useEffect(() => {
+    if (!spaceId) {
+      setTimePolicy(null);
+      return;
+    }
+    const fetchTimePolicy = async () => {
+      try {
+        const token = localStorage.getItem('portal_token') || '';
+        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/ShareListing/TimePolicy/${spaceId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTimePolicy(data);
+          if (data && data.allowedStartTime) {
+            setAllowedStartTime(getSafeDateOnly(data.allowedStartTime));
+          }
+          if (data && data.allowedEndTime) {
+            setAllowedEndTime(getSafeDateOnly(data.allowedEndTime));
+          }
+        } else {
+          setTimePolicy(null);
+        }
+      } catch (err) {
+        setTimePolicy(null);
+      }
+    };
+    fetchTimePolicy();
+  }, [spaceId]);
 
   useEffect(() => {
     const fetchSpaces = async () => {
@@ -111,6 +147,27 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
               console.error("Lỗi lấy space part", err);
             }
           }
+            const usageRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpaceUsageRight/Mine`, {
+              headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+            });
+            if (usageRes.ok) {
+              const usageData = await usageRes.json();
+              const rights = Array.isArray(usageData) ? usageData : usageData?.data || [];
+              const shareableRights = rights.filter((r: any) => r.canShare === true);
+              const spacePromises = shareableRights.map((r: any) =>
+                  fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetById/${r.spaceId}`, {
+                      headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+                  }).then(r => r.ok ? r.json() : null)
+              );
+              const resolvedSpaces = await Promise.all(spacePromises);
+              const validUsageSpaces = resolvedSpaces.filter(Boolean);
+              for (const space of validUsageSpaces) {
+                if (!allSpacesAndParts.some(s => (s.id || s.Id) === (space.id || space.Id))) {
+                   allSpacesAndParts.push({ ...space, isPart: false });
+                }
+              }
+            }
+
           setMySpaces(allSpacesAndParts);
         }
       } catch (err) {
@@ -162,6 +219,37 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       newUrls.splice(indexToRemove, 1);
       return newUrls;
     });
+  };
+
+  const handleRemoveExistingImage = async (index: number) => {
+    const imgToRemove = existingImages[index];
+    const publicId = imgToRemove?.publicId || imgToRemove?.id;
+    
+    if (publicId) {
+      try {
+        setIsLoading(true);
+        const token = localStorage.getItem('portal_token');
+        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Picture/${publicId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'accept': '*/*'
+          }
+        });
+        
+        if (res.ok) {
+          setExistingImages(prev => prev.filter((_, i) => i !== index));
+        } else {
+          setError('Không thể xóa ảnh này trên hệ thống!');
+        }
+      } catch (err) {
+        setError('Lỗi khi xóa ảnh');
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (typeof imgToRemove === 'string') {
+      setExistingImages(prev => prev.filter((_, i) => i !== index));
+    }
   };
 
   const toggleDayInSlot = (slotIndex: number, day: string) => {
@@ -252,15 +340,36 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     if (mode === 'share') {
       const allowedEnd = new Date(allowedEndTime);
       const allowedStart = new Date(allowedStartTime);
+      allowedEnd.setHours(23, 59, 59, 999);
+      allowedStart.setHours(0, 0, 0, 0);
+
       const badSlot = availabilities.find(slot => {
+        if (!slot.validFrom || !slot.validTo) return false;
         const vFrom = new Date(slot.validFrom);
         const vTo = new Date(slot.validTo);
+        vFrom.setHours(0, 0, 0, 0);
+        vTo.setHours(23, 59, 59, 999);
         return vTo > allowedEnd || vFrom < allowedStart || vFrom > vTo;
       });
       if (badSlot) {
         setError(
-          `Khung giờ "Áp dụng từ ${badSlot.validFrom} đến ${badSlot.validTo}" phải nằm trong khoảng thời gian hiệu lực bài đăng (${allowedStartTime} → ${allowedEndTime})!`
+          `Khung giờ chia sẻ (Áp dụng từ / đến) phải hợp lệ và nằm trong khoảng thời gian hiệu lực bài đăng!`
         );
+        return;
+      }
+
+      const badSpecific = availabilities.find(slot => {
+        if (slot.specificdate && slot.specificdate.trim() !== '' && !slot.specificdate.startsWith('0001')) {
+          const s = new Date(slot.specificdate);
+          if (!isNaN(s.getTime())) {
+            s.setHours(0, 0, 0, 0);
+            return s < allowedStart || s > allowedEnd;
+          }
+        }
+        return false;
+      });
+      if (badSpecific) {
+        setError('Ngày cụ thể của khung giờ chia sẻ phải nằm trong khoảng thời gian hiệu lực bài đăng!');
         return;
       }
 
@@ -296,7 +405,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         shareSpaceDetailShareSpaceAmenities: [],
         shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => ({
           ...slot,
-          specificdate: slot.specificdate || null
+          specificdate: (slot.specificdate && !String(slot.specificdate).startsWith('0001')) ? slot.specificdate : null
         })),
         shareSpaceDetailShareSpaceCategories: []
       };
@@ -573,7 +682,10 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                       onChange={e => setIsLegalCommitted(e.target.checked)}
                       disabled={isLoading}
                     />
-                    <ShieldCheck size={14} /> Cam kết pháp lý <span className="required-mark">*</span>
+                    <ShieldCheck size={14} style={{ flexShrink: 0 }} />
+                    <span style={{ textAlign: 'left', lineHeight: '1.4' }}>
+                      Tôi cam kết khoảng thời gian được chia sẻ hoàn toàn dựa trên cơ sở pháp lý và quy định của hợp đồng. <span className="required-mark">*</span>
+                    </span>
                   </label>
                 </div>
               </div>
@@ -602,15 +714,32 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                       <Plus size={14} /> Chọn ảnh từ máy
                     </label>
                   </div>
-                  {previewUrls.length > 0 && (
+                  {(existingImages.length > 0 || previewUrls.length > 0) && (
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '4px' }}>
+                      {existingImages.map((img: any, index: number) => {
+                        const url = typeof img === 'string' ? img : (img.imageUrl || img.url);
+                        return (
+                          <div key={`existing-${index}`} className="listing-image-preview">
+                            <img src={url} alt={`existing-${index}`} />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveExistingImage(index)}
+                              className="listing-image-remove-btn"
+                              disabled={isLoading}
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          </div>
+                        );
+                      })}
                       {previewUrls.map((url, index) => (
-                        <div key={index} className="listing-image-preview">
+                        <div key={`new-${index}`} className="listing-image-preview">
                           <img src={url} alt={`preview-${index}`} />
                           <button
                             type="button"
                             onClick={() => handleRemoveFile(index)}
                             className="listing-image-remove-btn"
+                            disabled={isLoading}
                           >
                             <Trash2 size={10} />
                           </button>
@@ -630,7 +759,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 <DatePicker
                   value={allowedStartTime}
                   onChange={setAllowedStartTime}
-                  disabled={isLoading}
+                  disabled={isLoading || !!(timePolicy && timePolicy.allowedStartTime)}
                 />
               </div>
               <div className="form-group">
@@ -638,11 +767,16 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 <DatePicker
                   value={allowedEndTime}
                   onChange={setAllowedEndTime}
-                  disabled={isLoading}
+                  disabled={isLoading || !!(timePolicy && timePolicy.allowedEndTime)}
                   min={allowedStartTime}
                 />
               </div>
             </div>
+            {mode === 'share' && timePolicy && timePolicy.message && (
+              <p style={{ fontSize: '13px', color: '#059669', marginTop: '8px', fontStyle: 'italic' }}>
+                * {timePolicy.message}
+              </p>
+            )}
           </div>
 
           {/* Khung giờ chia sẻ — chỉ hiện ở mode share */}
@@ -665,6 +799,16 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                       </button>
                     ))}
                   </div>
+                  <div className="form-group" style={{ marginBottom: '10px' }}>
+                    <label className="form-label">Ngày cụ thể (tùy chọn)</label>
+                    <DatePicker
+                      value={slot.specificdate || ''}
+                      min={allowedStartTime}
+                      max={allowedEndTime}
+                      onChange={(v: any) => updateSlotField(idx, 'specificdate', v)}
+                      disabled={isLoading}
+                    />
+                  </div>
                   <div className="form-grid-2">
                     <div className="form-group">
                       <label className="form-label">Giờ bắt đầu</label>
@@ -680,15 +824,22 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                   <div className="form-grid-2">
                     <div className="form-group">
                       <label className="form-label">Áp dụng từ</label>
-                      <input type="date" className="form-input" value={slot.validFrom}
+                      <DatePicker
+                        value={slot.validFrom}
                         min={allowedStartTime}
-                        onChange={e => updateSlotField(idx, 'validFrom', e.target.value)} disabled={isLoading} />
+                        onChange={(v: any) => updateSlotField(idx, 'validFrom', v)}
+                        disabled={isLoading}
+                      />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Áp dụng đến</label>
-                      <input type="date" className="form-input" value={slot.validTo}
-                      max={allowedEndTime}
-                        onChange={e => updateSlotField(idx, 'validTo', e.target.value)} disabled={isLoading} />
+                      <DatePicker
+                        value={slot.validTo}
+                        max={allowedEndTime}
+                        min={slot.validFrom || allowedStartTime}
+                        onChange={(v: any) => updateSlotField(idx, 'validTo', v)}
+                        disabled={isLoading}
+                      />
                     </div>
                   </div>
                   {availabilities.length > 1 && (

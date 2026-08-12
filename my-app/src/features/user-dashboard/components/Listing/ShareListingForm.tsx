@@ -73,6 +73,37 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
   }, [isEditingListing]);
 
   const [spaceId, setSpaceId] = useState<number | ''>(initialData?.spaceId || '');
+  const [timePolicy, setTimePolicy] = useState<any>(null);
+
+  useEffect(() => {
+    if (!spaceId) {
+      setTimePolicy(null);
+      return;
+    }
+    const fetchTimePolicy = async () => {
+      try {
+        const token = localStorage.getItem('portal_token') || '';
+        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/ShareListing/TimePolicy/${spaceId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTimePolicy(data);
+          if (data && data.allowedStartTime) {
+            setAllowedStartTime(getSafeDateString(data.allowedStartTime));
+          }
+          if (data && data.allowedEndTime) {
+            setAllowedEndTime(getSafeDateString(data.allowedEndTime));
+          }
+        } else {
+          setTimePolicy(null);
+        }
+      } catch (err) {
+        setTimePolicy(null);
+      }
+    };
+    fetchTimePolicy();
+  }, [spaceId]);
   const [name, setName] = useState(initialData?.name || '');
   const [price, setPrice] = useState<number>(initialData?.price || 0);
   const [description, setDescription] = useState(initialData?.description || '');
@@ -117,7 +148,10 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
 
   const [availabilities, setAvailabilities] = useState<any[]>(
     initialData?.shareSpaceDetailAvailabilitiesTimes?.length
-      ? initialData.shareSpaceDetailAvailabilitiesTimes
+      ? initialData.shareSpaceDetailAvailabilitiesTimes.map((slot: any) => ({
+          ...slot,
+          specificdate: (slot.specificdate && String(slot.specificdate).startsWith('0001')) ? '' : slot.specificdate
+        }))
       : [{ daysOfWeek: [], specificdate: '', startTime: '08:00', endTime: '12:00', validFrom: getSafeDateString(null), validTo: getSafeDateString(null) }]
   );
 
@@ -234,6 +268,41 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       return;
     }
 
+    const minTime = new Date(allowedStartTime);
+    const maxTime = new Date(allowedEndTime);
+    minTime.setHours(0, 0, 0, 0);
+    maxTime.setHours(23, 59, 59, 999);
+
+    const outOfBoundsRange = availabilities.find(slot => {
+      if (!slot.validFrom || !slot.validTo) return false;
+      const vFrom = new Date(slot.validFrom);
+      const vTo = new Date(slot.validTo);
+      vFrom.setHours(0, 0, 0, 0);
+      vTo.setHours(23, 59, 59, 999);
+      return vFrom < minTime || vTo > maxTime;
+    });
+
+    if (outOfBoundsRange) {
+      setError('Khung giờ chia sẻ (Áp dụng từ / đến) phải nằm trong khoảng thời gian hiệu lực bài chia sẻ!');
+      return;
+    }
+
+    const outOfBoundsSpecific = availabilities.find(slot => {
+      if (slot.specificdate && slot.specificdate.trim() !== '' && !slot.specificdate.startsWith('0001')) {
+        const sDate = new Date(slot.specificdate);
+        if (!isNaN(sDate.getTime())) {
+          sDate.setHours(0, 0, 0, 0);
+          return sDate < minTime || sDate > maxTime;
+        }
+      }
+      return false;
+    });
+
+    if (outOfBoundsSpecific) {
+      setError('Ngày cụ thể của khung giờ chia sẻ phải nằm trong khoảng thời gian hiệu lực bài chia sẻ!');
+      return;
+    }
+
     if (!isLegalCommitted) {
       setError('Vui lòng tích "Cam kết pháp lý" để xác nhận thỏa thuận!');
       return;
@@ -267,7 +336,7 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
         .map(([amenityId, v]) => ({ amenityId: Number(amenityId), isIncluded: true, price: Number(v.price) || 0 })),
       shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => ({
         ...slot,
-        specificdate: slot.specificdate || null
+        specificdate: (slot.specificdate && !String(slot.specificdate).startsWith('0001')) ? slot.specificdate : null
       })),
       shareSpaceDetailShareSpaceCategories: Object.entries(selectedCategories)
         .filter(([, v]) => v.included)
@@ -418,7 +487,10 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                     onChange={e => setIsLegalCommitted(e.target.checked)}
                     disabled={isLoading}
                   />
-                  <ShieldCheck size={14} /> Cam kết pháp lý (có hợp đồng ràng buộc) <span className="required-mark">*</span>
+                  <ShieldCheck size={14} style={{ flexShrink: 0 }} />
+                  <span style={{ textAlign: 'left', lineHeight: '1.4' }}>
+                    Tôi cam kết khoảng thời gian được chia sẻ hoàn toàn dựa trên cơ sở pháp lý và quy định của hợp đồng. <span className="required-mark">*</span>
+                  </span>
                 </label>
               </div>
             </div>
@@ -431,10 +503,11 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                 <label className="form-label">Bắt đầu</label>
                 <input
                   type="date"
+                  lang="vi-VN"
                   className="form-input"
                   value={allowedStartTime}
                   onChange={e => setAllowedStartTime(e.target.value)}
-                  disabled={isLoading}
+                  disabled={isLoading || !!(timePolicy && timePolicy.allowedStartTime)}
                   min={!initialData ? todayStr : undefined}
                 />
               </div>
@@ -442,14 +515,20 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                 <label className="form-label">Kết thúc</label>
                 <input
                   type="date"
+                  lang="vi-VN"
                   className="form-input"
                   value={allowedEndTime}
                   onChange={e => setAllowedEndTime(e.target.value)}
-                  disabled={isLoading}
+                  disabled={isLoading || !!(timePolicy && timePolicy.allowedEndTime)}
                   min={allowedStartTime || todayStr}
                 />
               </div>
             </div>
+            {timePolicy && timePolicy.message && (
+              <p style={{ fontSize: '13px', color: '#059669', marginTop: '8px', fontStyle: 'italic' }}>
+                * {timePolicy.message}
+              </p>
+            )}
           </div>
 
           <div className="form-section">
@@ -475,6 +554,7 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                   <label className="form-label">Ngày cụ thể (tùy chọn)</label>
                   <input
                     type="date"
+                    lang="vi-VN"
                     className="form-input"
                     value={slot.specificdate || ''}
                     onChange={e => updateSlotField(idx, 'specificdate', e.target.value)}
@@ -498,13 +578,13 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                 <div className="form-grid-2">
                   <div className="form-group">
                     <label className="form-label">Áp dụng từ</label>
-                    <input type="date" className="form-input" value={slot.validFrom}
+                    <input type="date" lang="vi-VN" className="form-input" value={slot.validFrom}
                       onChange={e => updateSlotField(idx, 'validFrom', e.target.value)} disabled={isLoading}
                       min={!initialData ? todayStr : undefined} />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Áp dụng đến</label>
-                    <input type="date" className="form-input" value={slot.validTo}
+                    <input type="date" lang="vi-VN" className="form-input" value={slot.validTo}
                       onChange={e => updateSlotField(idx, 'validTo', e.target.value)} disabled={isLoading}
                       min={slot.validFrom || todayStr} />
                   </div>

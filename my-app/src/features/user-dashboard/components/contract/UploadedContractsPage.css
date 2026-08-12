@@ -1,0 +1,11 @@
+.uploaded-contracts-page {
+  /* You can add custom styles for UploadedContractsPage here */
+}
+
+.uploaded-contracts-page button {
+  transition: all 0.2s ease-in-out;
+}
+
+.uploaded-contracts-page button:hover {
+  opacity: 0.9;
+}

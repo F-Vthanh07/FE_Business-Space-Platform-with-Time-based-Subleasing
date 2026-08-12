@@ -17,6 +17,9 @@ interface ContractDetail {
   endDate: string;
   status: string;
   acreage?: number;
+  primaryBookingRequestId?: number;
+  description?: string;
+  canShare?: boolean;
 }
 
 interface TenantUser {
@@ -32,6 +35,12 @@ interface SpaceDetail {
   address: string;
   city: string;
   area: number;
+}
+
+interface BookingReqDetail {
+  id: number;
+  offeredPrice: number;
+  message: string;
 }
 
 interface ContractDetailModalProps {
@@ -66,6 +75,7 @@ export const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
   const [contract, setContract] = useState<ContractDetail | null>(null);
   const [tenant, setTenant] = useState<TenantUser | null>(null);
   const [space, setSpace] = useState<SpaceDetail | null>(null);
+  const [bookingRequest, setBookingRequest] = useState<BookingReqDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -88,9 +98,10 @@ export const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
         const lesseeId = contractData.lesseeId;
         const spaceId = contractData.spaceId;
 
-        const [userRes, spaceRes] = await Promise.all([
+        const [userRes, spaceRes, bookingRes] = await Promise.all([
           lesseeId ? fetch(`${API_BASE_URL}/api/User/${lesseeId}`, { headers }) : Promise.resolve(null),
-          spaceId != null ? fetch(`${API_BASE_URL}/api/Space/GetById${spaceId}`, { headers }) : Promise.resolve(null),
+          spaceId != null ? fetch(`${API_BASE_URL}/api/Space/GetById/${spaceId}`, { headers }) : Promise.resolve(null),
+          contractData.primaryBookingRequestId ? fetch(`${API_BASE_URL}/api/PrimaryBookingRequest/${contractData.primaryBookingRequestId}`, { headers }).then(r => r.ok ? r : fetch(`${API_BASE_URL}/api/PrimaryBookingRequest/GetById/${contractData.primaryBookingRequestId}`, { headers })) : Promise.resolve(null),
         ]);
 
         if (userRes?.ok) {
@@ -100,6 +111,10 @@ export const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
         if (spaceRes?.ok) {
           const spaceData = await spaceRes.json();
           if (!cancelled) setSpace(spaceData);
+        }
+        if (bookingRes?.ok) {
+          const bookingData = await bookingRes.json();
+          if (!cancelled) setBookingRequest(bookingData);
         }
       } catch {
         if (!cancelled) {
@@ -245,6 +260,49 @@ export const ContractDetailModal: React.FC<ContractDetailModalProps> = ({
                   {contract.status}
                 </span>
               </div>
+
+              {contract.primaryBookingRequestId && (
+                <div>
+                  <p className="label-caps" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Briefcase size={12} /> Yêu cầu đặt thuê
+                  </p>
+                  <p style={{ fontSize: 13, margin: '0 0 4px 0' }}>
+                    <strong>Mã YC:</strong> #{contract.primaryBookingRequestId}
+                  </p>
+                  {bookingRequest && (
+                    <>
+                      <p style={{ fontSize: 13, margin: '0 0 4px 0' }}>
+                        <strong>Giá thương lượng:</strong> {Number(bookingRequest.offeredPrice).toLocaleString('vi-VN')} VNĐ
+                      </p>
+                      <p style={{ fontSize: 13, margin: 0, color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
+                        "{bookingRequest.message}"
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {contract.canShare !== undefined && (
+                <div>
+                  <p className="label-caps" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Briefcase size={12} /> Quyền lợi mặt bằng
+                  </p>
+                  <p style={{ fontSize: 13, margin: 0 }}>
+                    <strong>Được phép cho thuê lại:</strong> {contract.canShare ? 'Có' : 'Không'}
+                  </p>
+                </div>
+              )}
+
+              {contract.description && (
+                <div>
+                  <p className="label-caps" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Briefcase size={12} /> Nội dung hợp đồng
+                  </p>
+                  <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap', background: 'var(--color-bg-secondary)', padding: '12px', borderRadius: '8px' }}>
+                    {contract.description}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

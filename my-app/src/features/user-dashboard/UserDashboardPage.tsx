@@ -22,6 +22,7 @@ import type { UserPage, SubSlot } from './types';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './UserDashboardPage.css';
 import MyContractsPage from './components/contract/Mycontractspage';
+import { UploadedContractsPage } from './components/contract/UploadedContractsPage';
 import { RenterBookingRequests } from './components/booking/RenterBookingRequests';
 import { SharedSpaceManagement } from './components/Space/SharedSpaceManagement';
 import { OwnerListings } from './components/Listing/OwnerListings';
@@ -127,6 +128,7 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
       case 'booking-requests': return <OwnerBookingRequests />;
       case 'my-booking-requests': return <RenterBookingRequests />;
       case 'contracts': return <MyContractsPage />;
+      case 'external-contracts': return <UploadedContractsPage />;
       case 'calendar':
         
         return (

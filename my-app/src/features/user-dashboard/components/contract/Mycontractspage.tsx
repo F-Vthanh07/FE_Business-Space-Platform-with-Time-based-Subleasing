@@ -140,9 +140,14 @@ export const MyContractsPage: React.FC = () => {
     const asLessor = asLessorRes.ok ? normalizeList(await asLessorRes.json()) : [];
     const asLessee = asLesseeRes.ok ? normalizeList(await asLesseeRes.json()) : [];
 
-    // Gộp và loại trùng theo id
+    // Gộp và loại trùng theo id và chỉ lấy hợp đồng nguồn "Platform"
     const map = new Map<string, any>();
-    [...asLessor, ...asLessee].forEach((c) => map.set(String(c.id ?? c.Id), c));
+    [...asLessor, ...asLessee].forEach((c) => {
+      const source = c.source || c.Source;
+      if (source !== 'External') {
+        map.set(String(c.id ?? c.Id), c);
+      }
+    });
 
     return Array.from(map.values()).sort((a, b) => {
       const idA = Number(a.id ?? a.Id ?? 0);

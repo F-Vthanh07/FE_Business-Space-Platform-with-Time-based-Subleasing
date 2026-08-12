@@ -65,6 +65,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   existingContract,
 }) => {
   const [mySpaces, setMySpaces] = useState<any[]>([]);
+  const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
   const [matchedBookingRequests, setMatchedBookingRequests] = useState<any[]>([]);
   const [isLoadingBookingRequests, setIsLoadingBookingRequests] = useState(false);
   const [isCreatingContract, setIsCreatingContract] = useState(false);
@@ -109,6 +110,9 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
     contractSchedules: [],
   });
 
+  const [canShareSpace, setCanShareSpace] = useState(false);
+  const [canShowShareCheckbox, setCanShowShareCheckbox] = useState(false);
+
   const lessorId = activeChat?.lessorId || activeChat?.LessorId;
   const lesseeId = activeChat?.lesseeId || activeChat?.LesseeId;
 
@@ -139,6 +143,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
             ? existingContract.contractSchedules
             : [],
       });
+      setCanShareSpace(existingContract.canShare || false);
     } else {
       // --- CHẾ ĐỘ TẠO MỚI: reset trắng như cũ ---
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -157,6 +162,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         businessPurpose: '',
         contractSchedules: [],
       }));
+      setCanShareSpace(false);
     }
   }, [isOpen, existingContract, activeChat?.id, activeChat?.conversationId]);
 
@@ -169,16 +175,74 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         const res = await fetch(`${API_BASE}/api/Space/GetAll?OwnerId=${currentUserId}`, {
           headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
         });
+        let ownerSpaces: any[] = [];
         if (res.ok) {
           const data = await res.json();
-          setMySpaces(Array.isArray(data) ? data : data?.data || data?.items || []);
+          ownerSpaces = Array.isArray(data) ? data : data?.data || data?.items || [];
         }
+
+        const resUsage = await fetch(`${API_BASE}/api/SpaceUsageRight/Mine`, {
+            headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+        });
+        let usageSpaces: any[] = [];
+        if (resUsage.ok) {
+            const usageData = await resUsage.json();
+            const rights = Array.isArray(usageData) ? usageData : usageData?.data || [];
+            const shareableRights = rights.filter((r: any) => r.canShare === true);
+            const spacePromises = shareableRights.map((r: any) =>
+                fetch(`${API_BASE}/api/Space/GetById/${r.spaceId}`, {
+                    headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+                }).then(r => r.ok ? r.json() : null)
+            );
+            const resolvedSpaces = await Promise.all(spacePromises);
+            usageSpaces = resolvedSpaces.filter(Boolean);
+        }
+
+        const allSpaces = [...ownerSpaces, ...usageSpaces];
+        const uniqueSpaces = Array.from(new Map(allSpaces.map((item) => [item.id || item.Id, item])).values());
+        
+        setMySpaces(uniqueSpaces);
+
+        const ownerIds = Array.from(new Set(uniqueSpaces.map(s => s.ownerId || s.OwnerId).filter(Boolean)));
+        const ownerPromises = ownerIds.map(async (id: any) => {
+           try {
+               const resp = await fetch(`${API_BASE}/api/User/${id}`, { headers: { 'Authorization': `Bearer ${token}` }});
+               if (resp.ok) {
+                   const data = await resp.json();
+                   return { id, name: data.profileFullName || data.userName || data.email };
+               }
+           } catch {}
+           return { id, name: 'Unknown' };
+        });
+        const resolvedOwners = await Promise.all(ownerPromises);
+        const ownerMap: Record<string, string> = {};
+        resolvedOwners.forEach(o => { ownerMap[o.id] = o.name; });
+        setOwnerNames(ownerMap);
+
       } catch (err) {
         console.error(err);
       }
     };
     fetchMySpaces();
   }, [isOpen, token]);
+
+  useEffect(() => {
+    const checkSpaceRight = async () => {
+      if (!contractData.spaceId || !token || !isOpen) {
+        setCanShowShareCheckbox(false);
+        if (!existingContract) setCanShareSpace(false);
+        return;
+      }
+      const currentUserId = localStorage.getItem('current_user_id');
+      const selectedSpace = mySpaces.find((s) => String(s.id || s.Id) === String(contractData.spaceId));
+      let isOwner = false;
+      if (selectedSpace) {
+        isOwner = String(selectedSpace.ownerId || selectedSpace.OwnerId || selectedSpace.userId) === String(currentUserId);
+      }
+      setCanShowShareCheckbox(isOwner);
+    };
+    checkSpaceRight();
+  }, [contractData.spaceId, token, mySpaces, isOpen, existingContract]);
 
   useEffect(() => {
   if (!isOpen || !token) return;
@@ -341,6 +405,9 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
       DIEN_TICH: contractData.acreage ? `${contractData.acreage} m2` : '',
       MUC_DICH_KINH_DOANH: contractData.businessPurpose || '',
       LICH_HOAT_DONG: formatSchedule(contractData.contractSchedules),
+      QUYEN_CHO_THUE_LAI: canShareSpace 
+        ? 'Bên B ĐƯỢC PHÉP cho bên thứ ba thuê lại mặt bằng này trong thời hạn hợp đồng.'
+        : 'Bên B KHÔNG ĐƯỢC PHÉP cho bên thứ ba thuê lại mặt bằng này dưới mọi hình thức, trừ khi có sự đồng ý bằng văn bản của Bên A.',
 
       GIA_THUE: contractData.price ? `${contractData.price.toLocaleString('vi-VN')} VNĐ/tháng` : '',
       TIEN_COC: contractData.depositAmount ? `${contractData.depositAmount.toLocaleString('vi-VN')} VNĐ` : '',
@@ -400,7 +467,41 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
       });
       return { ...prev, description: newDesc };
     });
-    rememberRenderedValues(merge);
+  };
+
+  const handlePrintOrPdf = () => {
+    if (!contractData.description) return;
+    const { header, body } = splitContractHeaderBody(contractData.description);
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>In Hợp Đồng</title>
+            <style>
+              body { font-family: 'Times New Roman', serif; font-size: 14pt; padding: 40px; line-height: 1.5; color: #000; }
+              .header { text-align: center; margin-bottom: 20px; font-weight: bold; }
+              .body { text-align: justify; }
+              @media print {
+                @page { margin: 2cm; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">${header.replace(/\n/g, '<br/>')}</div>
+            <div class="body">${body.replace(/\n/g, '<br/>')}</div>
+            <script>
+              window.onload = () => {
+                window.print();
+                window.onafterprint = () => window.close();
+              }
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
   };
 
   const handleSelectTemplate = (templateId: string) => {
@@ -427,6 +528,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
     contractData.spaceId,
     contractData.primaryBookingRequestId,
     JSON.stringify(contractData.contractSchedules),
+    canShareSpace,
     mySpaces,
     lessorProfile,   // thêm
     lesseeProfile,   // thêm
@@ -480,6 +582,8 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
       businessPurpose: contractData.businessPurpose,
       // Có thể là mảng rỗng nếu không chọn ngày nào -> BE nhận null/[] đều ok
       contractSchedules: contractData.contractSchedules,
+      canShare: canShareSpace,
+      canGrantSharePermission: canShareSpace,
     };
 
     try {
@@ -689,11 +793,14 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                   <option value="" disabled>
                     -- Chọn mặt bằng --
                   </option>
-                  {mySpaces.map((space) => (
-                    <option key={space.id || space.Id} value={space.id || space.Id}>
-                      {space.name}
-                    </option>
-                  ))}
+                  {mySpaces.map((space) => {
+                const ownerName = ownerNames[space.ownerId || space.OwnerId];
+                return (
+                  <option key={space.id || space.Id} value={space.id || space.Id}>
+                    {space.name || `Mặt bằng #${space.id || space.Id}`} {ownerName ? ` (Chủ: ${ownerName})` : ''}
+                  </option>
+                );
+              })}
                 </select>
               </div>
             </div>
@@ -846,6 +953,20 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
               />
             </div>
 
+            {canShowShareCheckbox && (
+              <div className="cc-card" style={{ padding: '12px 16px', backgroundColor: '#ECFDF5', borderColor: '#10B981' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', color: '#065F46', fontSize: '13px', fontWeight: 600 }}>
+                  <input
+                    type="checkbox"
+                    checked={canShareSpace}
+                    onChange={(e) => setCanShareSpace(e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#10B981' }}
+                  />
+                  Cho phép bên thuê (Bên B) tạo hợp đồng cho thuê lại mặt bằng này (Sublease)
+                </label>
+              </div>
+            )}
+
             {/* CHỌN MẪU HỢP ĐỒNG */}
             <div className="cc-card">
               <div className="cc-card-header">
@@ -941,7 +1062,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
               style={{
                 width: '100%',
                 marginTop: '4px',
-                marginBottom: '20px',
+                marginBottom: '10px',
                 padding: '14px',
                 background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                 color: '#fff',
@@ -958,6 +1079,29 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                 ? (isEditMode ? 'Đang cập nhật...' : 'Đang tạo & Gửi...')
                 : (isEditMode ? 'Cập Nhật Hợp Đồng' : 'Phát Hành Hợp Đồng (Online)')}
             </button>
+
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+              <button
+                type="button"
+                onClick={handlePrintOrPdf}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#F8FAFC',
+                  color: '#334155',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#F1F5F9'}
+                onMouseOut={(e) => e.currentTarget.style.background = '#F8FAFC'}
+              >
+                In / Lưu PDF (Offline)
+              </button>
+            </div>
           </form>
 
           {/* CỘT PHẢI: PREVIEW LIVE */}
@@ -1015,6 +1159,11 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
               <p style={{ margin: 0 }}>
                 <strong>Lịch hoạt động:</strong> {formatSchedule(contractData.contractSchedules) || '...'}
               </p>
+              {canShowShareCheckbox && (
+                <p style={{ margin: 0, gridColumn: 'span 2' }}>
+                  <strong>Quyền cho thuê lại:</strong> {canShareSpace ? <span style={{ color: '#10B981', fontWeight: 600 }}>Được phép</span> : <span style={{ color: '#EF4444' }}>Không được phép</span>}
+                </p>
+              )}
             </div>
 
             <div

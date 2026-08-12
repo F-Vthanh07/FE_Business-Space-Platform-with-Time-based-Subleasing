@@ -164,6 +164,8 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
   // giống hệt cách ContractCreateModal đang làm.
   const [lessorProfile, setLessorProfile] = useState<UserProfile | null>(null);
   const [lesseeProfile, setLesseeProfile] = useState<UserProfile | null>(null);
+  const [spaceDetail, setSpaceDetail] = useState<any>(null);
+  const [bookingReq, setBookingReq] = useState<any>(null);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
 
   const status = contract?.status || contract?.Status;
@@ -252,25 +254,62 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
       }
     };
 
+    const fetchSpace = async (sId: string) => {
+      try {
+        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetAll`, {
+          headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const items = Array.isArray(data) ? data : (data?.data || data?.items || []);
+          const matchedSpace = items.find((s: any) => String(s.id || s.Id) === String(sId));
+          if (matchedSpace) {
+            setSpaceDetail(matchedSpace);
+          }
+        }
+      } catch (err) {}
+    };
+
+    const fetchBooking = async (bId: string) => {
+      try {
+        let res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/${bId}`, {
+          headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+        });
+        if (!res.ok) {
+           res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetById/${bId}`, {
+             headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+           });
+        }
+        if (res.ok) {
+           const bData = await res.json();
+           setBookingReq(bData?.data || bData);
+        }
+      } catch (err) {}
+    };
+
     const run = async () => {
       setIsLoadingProfiles(true);
-      const [lessor, lessee] = await Promise.all([
-        lessorId ? fetchProfile(String(lessorId)) : Promise.resolve(null),
-        lesseeId ? fetchProfile(String(lesseeId)) : Promise.resolve(null),
-      ]);
-      setLessorProfile(lessor);
-      setLesseeProfile(lessee);
+      const promises: any[] = [];
+      
+      if (lessorId) promises.push(fetchProfile(String(lessorId)).then(setLessorProfile));
+      if (lesseeId) promises.push(fetchProfile(String(lesseeId)).then(setLesseeProfile));
+      if (contract?.spaceId) promises.push(fetchSpace(String(contract.spaceId)));
+      if (contract?.primaryBookingRequestId) promises.push(fetchBooking(String(contract.primaryBookingRequestId)));
+      
+      await Promise.all(promises);
       setIsLoadingProfiles(false);
     };
 
     run();
-  }, [contract?.id, lessorId, lesseeId]);
+  }, [contract?.id, lessorId, lesseeId, contract?.spaceId, contract?.primaryBookingRequestId]);
 
   if (!contract) return null;
 
   // Mặt bằng: ưu tiên Snapshot, sau đó dữ liệu sống với nhiều khả năng đặt tên
   // field khác nhau của BE (camelCase / PascalCase / object lồng nhau).
-  const spaceName =
+  const displaySpaceName =
+    spaceDetail?.name ||
+    spaceDetail?.Name ||
     snapshot?.SpaceName ||
     snapshot?.Space?.Name ||
     snapshot?.SpaceInfo?.Name ||
@@ -593,9 +632,22 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
               </span>
             </div>
             <div className="cv-row">
-              <p><strong>Mặt bằng:</strong> {spaceName}</p>
+              <p><strong>Mặt bằng:</strong> {displaySpaceName}</p>
               <p><strong>Mã mặt bằng:</strong> #{contract.spaceId ?? '...'}</p>
-              <p><strong>Mã yêu cầu đặt thuê:</strong> #{contract.primaryBookingRequestId || '...'}</p>
+              {contract.canShare !== undefined && (
+                <p><strong>Được phép cho thuê lại:</strong> {contract.canShare ? 'Có' : 'Không'}</p>
+              )}
+              {contract.primaryBookingRequestId && (
+                <>
+                  <p><strong>Mã yêu cầu đặt thuê:</strong> #{contract.primaryBookingRequestId}</p>
+                  {bookingReq && (
+                    <>
+                      <p><strong>Mục đích sử dụng:</strong> {bookingReq.purpose || '...'}</p>
+                      <p><strong>Ghi chú cho chủ nhà:</strong> <em>{bookingReq.note || '...'}</em></p>
+                    </>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
