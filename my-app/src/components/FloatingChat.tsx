@@ -5,6 +5,7 @@ import { MessageCircle, X, Minus, Send, Image as ImageIcon, ArrowLeft, BellRing,
 import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr';
 import { ContractViewModal } from './Contract/ContractViewModal';
 import { ContractCreateModal } from './Contract/ContractCreateModal';
+import { ExternalContractCreateModal } from './Contract/ExternalContractCreateModal';
 
 export const FloatingChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -40,19 +41,29 @@ export const FloatingChat: React.FC = () => {
   // STATE MỚI: Dùng để lưu trữ data của hợp đồng cần sửa
   const [editingContract, setEditingContract] = useState<any>(null);
 
+  // Thêm state cho popup chọn loại hợp đồng
+  const [showContractTypeMenu, setShowContractTypeMenu] = useState(false);
+  const [isExternalContractModalOpen, setIsExternalContractModalOpen] = useState(false);
+
   // Tên hiển thị của "người kia" trong khung chat (dùng cho tiêu đề chat, avatar...).
   // Field thật từ BE là lessorUserName/lesseeUserName (xem GET /api/Conversation/User/{id}),
   // vẫn giữ thêm vài field dự phòng (lessorName/LessorName...) phòng khi BE đổi tên field.
   const getOtherPersonName = (room: any) => {
     if (!room) return 'Khách';
-    const nameFromRoom =
-      room.lesseeUserName || room.LesseeUserName ||
+    
+    const rLessorId = room.lessorId || room.LessorId;
+    const rLesseeId = room.lesseeId || room.LesseeId;
+
+    if (String(rLessorId) === String(currentUserId)) {
+      return room.lesseeUserName || room.LesseeUserName || room.lesseeName || room.LesseeName || 'Khách thuê';
+    } else if (String(rLesseeId) === String(currentUserId)) {
+      return room.lessorUserName || room.LessorUserName || room.lessorName || room.LessorName || 'Chủ nhà';
+    }
+
+    return room.lesseeUserName || room.LesseeUserName ||
       room.lessorUserName || room.LessorUserName ||
       room.lesseeName || room.LesseeName ||
-      room.lessorName || room.LessorName;
-    if (nameFromRoom) return nameFromRoom;
-    const rLessorId = room.lessorId || room.LessorId;
-    return String(rLessorId) === String(currentUserId) ? "Khách thuê" : "Chủ nhà";
+      room.lessorName || room.LessorName || 'Khách';
   };
 
   // Lấy riêng tên của TỪNG bên (không phải "người kia") để truyền vào ContractViewModal,
@@ -429,9 +440,35 @@ export const FloatingChat: React.FC = () => {
 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   {isLessor && (
-                    <button onClick={() => setIsContractModalOpen(true)} title="Tạo Hợp Đồng" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
-                      <FileSignature size={16} />
-                    </button>
+                    <div style={{ position: 'relative' }}>
+                      <button 
+                        onClick={() => setShowContractTypeMenu(!showContractTypeMenu)} 
+                        title="Tạo Hợp Đồng" 
+                        style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
+                        <FileSignature size={16} />
+                      </button>
+                      
+                      {showContractTypeMenu && (
+                        <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '8px', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 50, width: '180px', overflow: 'hidden' }}>
+                          <button 
+                            onClick={() => { setIsContractModalOpen(true); setShowContractTypeMenu(false); }}
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '12px 16px', background: 'none', border: 'none', borderBottom: '1px solid #F0F0F0', color: '#1E293B', cursor: 'pointer', fontSize: '13px' }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            Tạo hợp đồng online
+                          </button>
+                          <button 
+                            onClick={() => { setIsExternalContractModalOpen(true); setShowContractTypeMenu(false); }}
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '12px 16px', background: 'none', border: 'none', color: '#1E293B', cursor: 'pointer', fontSize: '13px' }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            Tải ảnh hợp đồng lên
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                   <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '4px' }}><X size={20} /></button>
                 </div>
@@ -513,6 +550,17 @@ export const FloatingChat: React.FC = () => {
         /* TRUYỀN CỤC DATA CŨ VÀO ĐỂ FORM TỰ BIẾT ĐÂY LÀ CHẾ ĐỘ CHỈNH SỬA */
         existingContract={editingContract} 
       />
+
+      {/* MODAL TẠO HỢP ĐỒNG NGOẠI (TẢI ẢNH) */}
+      {isExternalContractModalOpen && (
+        <ExternalContractCreateModal
+          isOpen={isExternalContractModalOpen}
+          onClose={() => setIsExternalContractModalOpen(false)}
+          activeChat={activeChat}
+          token={token}
+          onCreated={(msg) => handleSendMessage(undefined, msg)}
+        />
+      )}
     </div>
   );
 };

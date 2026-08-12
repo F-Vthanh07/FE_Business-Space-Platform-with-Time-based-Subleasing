@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
@@ -42,6 +42,7 @@ const spaceNavItems: NavItem[] = [
   { id: 'spaces', icon: <Building2 size={16} /> },
   { id: 'listings', icon: <FileText size={16} /> },
   { id: 'contracts', icon: <FileText size={16} /> },
+  { id: 'external-contracts', icon: <FileText size={16} /> },
   { id: 'tenants', icon: <Users size={16} /> },
 ];
 
@@ -62,6 +63,7 @@ const getPageLabels = (id: string, lang: string) => {
     case 'booking-requests': return { title: isEn ? 'Booking Requests' : 'Yêu cầu chờ duyệt', sub: isEn ? 'Manage applications' : 'Duyệt đơn khách thuê' };
     case 'my-booking-requests': return { title: isEn ? 'My Requests' : 'Đơn thuê đã gửi', sub: isEn ? 'Track your requests' : 'Theo dõi yêu cầu thuê' };
     case 'contracts': return { title: isEn ? 'My Contracts' : 'Hợp đồng của bạn', sub: isEn ? 'View & sign' : 'Xem & ký hợp đồng' };
+    case 'external-contracts': return { title: isEn ? 'Uploaded Contracts' : 'Hợp đồng tải lên', sub: isEn ? 'External image contracts' : 'Hợp đồng ngoại' };
     case 'tenants': return { title: isEn ? 'Contracts & Tenants' : 'Hợp đồng & Khách thuê', sub: isEn ? 'Manage contracts' : 'Quản lý hợp đồng' };
     case 'calendar': return { title: isEn ? 'Calendar' : 'Lịch cho thuê lại', sub: isEn ? 'Sublease slots' : 'Khung giờ cho thuê lại' };
     case 'sublease-listings': return { title: isEn ? 'Sublease Market' : 'Chợ cho thuê lại', sub: isEn ? 'Your sublease ads' : 'Tin cho thuê lại' };

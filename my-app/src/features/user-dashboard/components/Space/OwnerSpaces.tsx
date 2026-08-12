@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
-import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X, Layers } from 'lucide-react';
+import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X, Layers, Briefcase, User as UserIcon } from 'lucide-react';
 import { SpaceForm } from './SpaceForm';
 import { SpacePartForm } from './SpacePartForm';
 import { SpacePartListModal } from './SpacePartListModal';
@@ -29,6 +29,7 @@ interface Space {
 
 export const OwnerSpaces: React.FC = () => {
   const [spaces, setSpaces] = useState<Space[]>([]);
+  const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
   const [apiCategories, setApiCategories] = useState<any[]>([]); 
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -77,13 +78,49 @@ export const OwnerSpaces: React.FC = () => {
         }
       });
 
+      let ownerSpaces: Space[] = [];
       if (response.ok) {
         const data = await response.json();
-        const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-        setSpaces(safeData);
-      } else {
-        setSpaces([]);
+        ownerSpaces = Array.isArray(data) ? data : (data?.data || data?.items || []);
       }
+
+      const resUsage = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpaceUsageRight/Mine`, {
+         headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+      });
+      let usageSpaces: Space[] = [];
+      if (resUsage.ok) {
+         const usageData = await resUsage.json();
+         const rights = Array.isArray(usageData) ? usageData : usageData?.data || [];
+         const spacePromises = rights.map((r: any) =>
+            fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetById/${r.spaceId}`, {
+                headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+            }).then(res => res.ok ? res.json() : null)
+         );
+         const resolvedSpaces = await Promise.all(spacePromises);
+         usageSpaces = resolvedSpaces.filter(Boolean) as Space[];
+      }
+
+      const allSpaces = [...ownerSpaces, ...usageSpaces];
+      const uniqueSpaces = Array.from(new Map(allSpaces.map((item) => [(item as any).id || (item as any).Id, item])).values());
+      
+      setSpaces(uniqueSpaces as Space[]);
+
+      const ownerIds = Array.from(new Set(uniqueSpaces.map(s => (s as any).ownerId || (s as any).OwnerId).filter(Boolean)));
+      const ownerPromises = ownerIds.map(async (id: any) => {
+         try {
+             const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/User/${id}`, { headers: { 'Authorization': `Bearer ${token}` }});
+             if (res.ok) {
+                 const data = await res.json();
+                 return { id, name: data.profileFullName || data.userName || data.email };
+             }
+         } catch {}
+         return { id, name: 'Unknown' };
+      });
+      const resolvedOwners = await Promise.all(ownerPromises);
+      const ownerMap: Record<string, string> = {};
+      resolvedOwners.forEach(o => { ownerMap[o.id] = o.name; });
+      setOwnerNames(ownerMap);
+
     } catch (error) {
       console.error("Lỗi khi tải danh sách mặt bằng:", error);
       setSpaces([]);
@@ -249,8 +286,10 @@ export const OwnerSpaces: React.FC = () => {
               <div key={currentId || index} className="glass-card space-card">
                 <div className="space-card-top">
                   <div className="space-card-type">
-                    <Building2 size={14} />
-                    <span>{t('spaces.physicalSpace') || 'Không gian vật lý'}</span>
+                    <Briefcase size={12} />
+                    {safeCategories.length > 0
+                      ? (apiCategories.find(cat => cat.id === safeCategories[0].businessCategoryId)?.name || '...')
+                      : t('spaces.notSpecified') || 'Chưa xác định'}
                   </div>
                   <span className={`badge ${space.isActive !== false ? 'badge--positive' : 'badge--warning'}`}>
                     {space.isActive !== false ? <CheckCircle2 size={11} /> : <Clock size={11} />}
@@ -260,10 +299,14 @@ export const OwnerSpaces: React.FC = () => {
 
                 <div className="space-card-info">
                   <h3 className="space-name">{space?.name || 'Mặt bằng chưa có tên'}</h3>
-                  <p className="space-address text-secondary">
-                    <MapPin size={12} />
-                    {space?.address || 'Chưa cập nhật địa chỉ'}
-                  </p>
+                  <div className="space-address text-secondary">
+                    <MapPin size={12} style={{ flexShrink: 0 }} />
+                    <span className="truncate">{space?.address || 'Chưa cập nhật địa chỉ'}</span>
+                  </div>
+                  <div className="space-address text-secondary" style={{ marginTop: '2px' }}>
+                    <UserIcon size={12} style={{ flexShrink: 0 }} />
+                    <span className="truncate">Chủ mặt bằng: {ownerNames[(space as any).ownerId || (space as any).OwnerId] || 'Unknown'}</span>
+                  </div>
                   <p className="space-area text-secondary">
                     {space?.area || 'N/A'} m²
                   </p>
