@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Edit3,
   Trash2,
@@ -10,7 +11,8 @@ import {
   DollarSign,
   Hash,
   StickyNote,
-  User
+  User,
+  Star
 } from 'lucide-react';
 import '../../../shared/ModalShell.css';
 
@@ -46,6 +48,13 @@ export const RenterBookingRequests: React.FC = () => {
   const [editForm, setEditForm] = useState<BookingRequestEditData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const [reviewingRequest, setReviewingRequest] = useState<any | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewDescription, setReviewDescription] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewedRequestIds, setReviewedRequestIds] = useState<number[]>([]);
 
   const currentUserId = localStorage.getItem('current_user_id');
   const token = localStorage.getItem('portal_token');
@@ -133,6 +142,70 @@ export const RenterBookingRequests: React.FC = () => {
     }
   };
 
+  const openReviewForm = (req: any) => {
+    setReviewError('');
+    setReviewRating(5);
+    setReviewDescription('');
+    setReviewingRequest(req);
+  };
+
+  const closeReviewForm = () => {
+    setReviewingRequest(null);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewingRequest) return;
+    setIsSubmittingReview(true);
+    setReviewError('');
+    try {
+      // API BOOKING REQUEST KHÔNG TRẢ SẴN spaceId NÊN PHẢI LẤY QUA LISTING
+      const listingRes = await fetch(
+        `https://flexi-space-capstone-project.onrender.com/api/Listing/GetById/${reviewingRequest.listingId}`,
+        { headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' } }
+      );
+      if (!listingRes.ok) {
+        setReviewError('Không thể lấy thông tin mặt bằng để đánh giá!');
+        return;
+      }
+      const listingData = await listingRes.json();
+      const spaceId = listingData?.spaceId || listingData?.SpaceId;
+      if (!spaceId) {
+        setReviewError('Không tìm thấy mặt bằng liên kết với tin đăng này!');
+        return;
+      }
+
+      const requestId = reviewingRequest.id || reviewingRequest.Id;
+      const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/Review/Create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'accept': '*/*' },
+        body: JSON.stringify({
+          bookingRequestId: requestId,
+          spaceId,
+          rating: reviewRating,
+          description: reviewDescription
+        })
+      });
+
+      if (!res.ok) {
+        const rawMessage = (await res.text().catch(() => '')).trim();
+        if (rawMessage.includes('chỉ có thể đánh giá khi đã có hợp đồng thuê')) {
+          setReviewError('Bạn chỉ có thể đánh giá khi đã có hợp đồng thuê');
+        } else {
+          setReviewError(rawMessage || 'Lỗi khi gửi đánh giá!');
+        }
+        return;
+      }
+
+      setReviewedRequestIds((prev) => [...prev, requestId]);
+      closeReviewForm();
+    } catch (error) {
+      console.error('Lỗi gửi đánh giá:', error);
+      setReviewError('Lỗi kết nối máy chủ!');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   const handleDelete = async (requestId: number) => {
     if (!window.confirm('Bạn có chắc muốn xoá yêu cầu thuê này không?')) return;
     try {
@@ -184,6 +257,8 @@ export const RenterBookingRequests: React.FC = () => {
                 {requests.map((req) => {
                   const st = statusLabel(req.status);
                   const canEdit = req.status === 'Pending';
+                  const reqId = req.id || req.Id;
+                  const canReview = req.status === 'Approved' && !reviewedRequestIds.includes(reqId);
                   return (
                     <tr key={req.id || req.Id} style={{ borderBottom: '1px solid rgba(128, 128, 128, 0.1)' }}>
                       <td style={{ padding: '16px 12px', fontWeight: 500 }}>#{req.listingId}</td>
@@ -225,6 +300,17 @@ export const RenterBookingRequests: React.FC = () => {
                               <Trash2 size={16} /> Xoá
                             </button>
                           </div>
+                        ) : canReview ? (
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                              onClick={() => openReviewForm(req)}
+                              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #F59E0B', backgroundColor: 'transparent', color: '#F59E0B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                            >
+                              <Star size={16} /> Đánh giá
+                            </button>
+                          </div>
+                        ) : req.status === 'Approved' ? (
+                          <span style={{ fontSize: '12px', opacity: 0.5, color: '#16A34A' }}>Đã đánh giá</span>
                         ) : (
                           <span style={{ fontSize: '12px', opacity: 0.5 }}>Không thể chỉnh sửa</span>
                         )}
@@ -239,7 +325,7 @@ export const RenterBookingRequests: React.FC = () => {
       </div>
 
       {/* MODAL SỬA YÊU CẦU THUÊ — DÙNG ĐÚNG KHUNG CỦA SPACEFORM */}
-      {editingRequest && editForm && (
+      {editingRequest && editForm && createPortal(
         <div className="modal-backdrop" onClick={closeEditForm}>
           <div className="modal-shell" onClick={(e) => e.stopPropagation()}>
 
@@ -363,7 +449,83 @@ export const RenterBookingRequests: React.FC = () => {
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL ĐÁNH GIÁ MẶT BẰNG */}
+      {reviewingRequest && createPortal(
+        <div className="modal-backdrop" onClick={closeReviewForm}>
+          <div className="modal-shell" onClick={(e) => e.stopPropagation()}>
+
+            <div className="modal-header">
+              <div className="modal-title-area">
+                <div className="modal-icon-wrap modal-icon-wrap--blue"><Star size={16} /></div>
+                <div>
+                  <h2 className="modal-title">Đánh giá mặt bằng</h2>
+                  <p className="modal-subtitle text-secondary">Mã tin #{reviewingRequest.listingId}</p>
+                </div>
+              </div>
+              <button type="button" className="btn-icon" onClick={closeReviewForm} disabled={isSubmittingReview}>
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-section">
+                <div className="form-group">
+                  <label className="form-label">Số sao đánh giá</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setReviewRating(star)}
+                        disabled={isSubmittingReview}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 0 }}
+                      >
+                        <Star
+                          size={28}
+                          color="#F59E0B"
+                          fill={star <= reviewRating ? '#F59E0B' : 'none'}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label"><StickyNote size={14} /> Nhận xét</label>
+                  <textarea
+                    className="form-textarea form-textarea--flat"
+                    rows={4}
+                    placeholder="Chia sẻ trải nghiệm của bạn về mặt bằng này..."
+                    value={reviewDescription}
+                    onChange={(e) => setReviewDescription(e.target.value)}
+                    disabled={isSubmittingReview}
+                  />
+                </div>
+              </div>
+
+              {reviewError && (
+                <div className="form-error-box">
+                  <span>{reviewError}</span>
+                </div>
+              )}
+
+              <div className="modal-actions-footer">
+                <button type="button" className="btn-ghost cancel-btn" onClick={closeReviewForm} disabled={isSubmittingReview}>
+                  Hủy
+                </button>
+                <button type="button" className="btn-primary submit-btn" onClick={handleSubmitReview} disabled={isSubmittingReview}>
+                  {isSubmittingReview ? 'Đang gửi...' : 'Gửi đánh giá'}
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

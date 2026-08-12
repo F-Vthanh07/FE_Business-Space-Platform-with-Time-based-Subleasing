@@ -190,9 +190,10 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       try {
         const token = localStorage.getItem('portal_token') || '';
         const wallet = await fetchWalletAccount(token);
-        setWalletBalance(wallet.balance);
+        setWalletBalance(wallet?.balance ?? 0);
       } catch (err) {
         console.error("Lỗi lấy số dư ví:", err);
+        setWalletBalance(0);
       }
     };
     loadWalletBalance();

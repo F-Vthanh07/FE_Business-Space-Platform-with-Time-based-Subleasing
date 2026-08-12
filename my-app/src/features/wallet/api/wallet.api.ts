@@ -7,13 +7,18 @@ export interface CreateDepositRequest {
   cancelUrl: string;
 }
 
-export const fetchWalletAccount = async (token: string): Promise<WalletAccount> => {
+export const fetchWalletAccount = async (token: string): Promise<WalletAccount | null> => {
   const response = await fetch(`${API_BASE_URL}/api/Wallet/own`, {
     headers: {
       Authorization: `Bearer ${token}`,
       accept: '*/*',
     },
   });
+
+  if (response.status === 404) {
+    // Người dùng chưa từng nạp tiền nên ví chưa được tạo — không phải lỗi.
+    return null;
+  }
 
   if (!response.ok) {
     throw new Error('Không thể tải thông tin ví. Vui lòng thử lại.');

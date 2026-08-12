@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Share2, Heart, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Clock, Tag, Flag } from 'lucide-react';
+import { MapPin, Share2, Heart, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Clock, Tag, Flag, Star } from 'lucide-react';
 import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
@@ -85,6 +85,21 @@ const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 const formatTime = (t: string) => (t ? t.substring(0, 5) : '');
 
+// --- REVIEW / ĐÁNH GIÁ ---
+interface SpaceReview {
+  id: number;
+  bookingRequestId: number;
+  reviewerId: string;
+  reviewerName: string;
+  targetUserId: string;
+  targetUserName: string;
+  spaceId: number;
+  spaceAddress: string;
+  rating: number;
+  description: string;
+  createdAt: string;
+}
+
 // --- LÝ DO BÁO CÁO BÀI ĐĂNG VI PHẠM (ReportReasonEnum) ---
 const REPORT_REASONS: { value: string; label: string }[] = [
   { value: 'ScamOrFraud', label: 'Lừa đảo / Gian lận' },
@@ -127,7 +142,11 @@ export const ListingDetail: React.FC = () => {
   const [reportDetails, setReportDetails] = useState('');
   const [reportSuccess, setReportSuccess] = useState(false);
 
-  const currentUserId = localStorage.getItem('current_user_id'); 
+  const [reviews, setReviews] = useState<SpaceReview[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
+  const [reviewStarFilter, setReviewStarFilter] = useState<number | 'all'>('all');
+
+  const currentUserId = localStorage.getItem('current_user_id');
   const token = localStorage.getItem('portal_token');
 
   useEffect(() => {
@@ -216,6 +235,33 @@ export const ListingDetail: React.FC = () => {
     };
     fetchDetail();
   }, [id, token]);
+
+  useEffect(() => {
+    const spaceId = listing?.spaceId || listing?.SpaceId;
+    if (!spaceId) return;
+
+    const fetchReviews = async () => {
+      setIsLoadingReviews(true);
+      try {
+        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Review/GetBySpaceId/${spaceId}`, {
+          headers: { accept: '*/*' }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const safeData: SpaceReview[] = Array.isArray(data) ? data : (data?.data || data?.items || []);
+          setReviews(safeData);
+        } else {
+          setReviews([]);
+        }
+      } catch (error) {
+        console.error("Lỗi tải đánh giá:", error);
+        setReviews([]);
+      } finally {
+        setIsLoadingReviews(false);
+      }
+    };
+    fetchReviews();
+  }, [listing?.spaceId, listing?.SpaceId]);
 
   useEffect(() => {
     if (isShareModalOpen) {
@@ -383,6 +429,18 @@ export const ListingDetail: React.FC = () => {
   const activeAmenities = amenities.filter((a: any) => a.isActive !== false);
   const operatingHours: any[] = listing.operatingHours || [];
   const allowedCategories: any[] = listing.allowedCategories || [];
+
+  const reviewCount = reviews.length;
+  const averageRating = reviewCount > 0
+    ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewCount
+    : 0;
+  const ratingCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  reviews.forEach((r) => {
+    if (r.rating >= 1 && r.rating <= 5) ratingCounts[r.rating] += 1;
+  });
+  const filteredReviews = reviewStarFilter === 'all'
+    ? reviews
+    : reviews.filter((r) => r.rating === reviewStarFilter);
 
   return (
     <div style={{ backgroundColor: '#F9F9F9', minHeight: '100vh', color: '#333', fontFamily: 'system-ui, sans-serif' }}>
@@ -572,10 +630,111 @@ export const ListingDetail: React.FC = () => {
                </div>
                <div>
                   <div style={{ color: '#777', fontSize: '13px', marginBottom: '8px' }}>Đánh giá thị trường</div>
-                  <div style={{ fontSize: '15px', color: '#333', fontWeight: 500 }}>
-                    ⭐ Giá phổ biến khu vực
+                  <div style={{ fontSize: '15px', color: '#333', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Star size={16} color="#F5A623" fill="#F5A623" />
+                    {reviewCount > 0
+                      ? `${averageRating.toFixed(1)}/5 (${reviewCount} đánh giá)`
+                      : 'Chưa có đánh giá'}
                   </div>
                </div>
+            </div>
+
+            {/* ĐÁNH GIÁ & NHẬN XÉT */}
+            <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Star size={18} /> Đánh giá & Nhận xét {reviewCount > 0 && `(${reviewCount})`}
+            </h3>
+            <div style={{ border: '1px solid #E0E0E0', borderRadius: '8px', padding: '20px', marginBottom: '40px', backgroundColor: '#fff' }}>
+              {isLoadingReviews ? (
+                <div style={{ textAlign: 'center', color: '#777', padding: '20px 0' }}>Đang tải đánh giá...</div>
+              ) : reviewCount === 0 ? (
+                <div style={{ textAlign: 'center', color: '#777', padding: '20px 0' }}>Chưa có đánh giá nào cho mặt bằng này.</div>
+              ) : (
+                <>
+                  {/* TỔNG QUAN RATING */}
+                  <div style={{ display: 'flex', gap: '32px', paddingBottom: '20px', marginBottom: '20px', borderBottom: '1px solid #F0F0F0' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: '90px' }}>
+                      <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#2C2C2C' }}>{averageRating.toFixed(1)}</div>
+                      <div style={{ display: 'flex', gap: '2px', marginBottom: '4px' }}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star key={star} size={14} color="#F5A623" fill={star <= Math.round(averageRating) ? '#F5A623' : 'none'} />
+                        ))}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#777' }}>{reviewCount} đánh giá</div>
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', justifyContent: 'center' }}>
+                      {[5, 4, 3, 2, 1].map((star) => {
+                        const count = ratingCounts[star];
+                        const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
+                        return (
+                          <div key={star} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#555' }}>
+                            <span style={{ width: '40px' }}>{star} sao</span>
+                            <div style={{ flex: 1, height: '6px', borderRadius: '3px', backgroundColor: '#F0F0F0', overflow: 'hidden' }}>
+                              <div style={{ width: `${pct}%`, height: '100%', backgroundColor: '#F5A623' }} />
+                            </div>
+                            <span style={{ width: '24px', textAlign: 'right', color: '#999' }}>{count}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* FILTER THEO SỐ SAO */}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                    {(['all', 5, 4, 3, 2, 1] as const).map((opt) => {
+                      const isActive = reviewStarFilter === opt;
+                      const label = opt === 'all' ? `Tất cả (${reviewCount})` : `${opt} sao (${ratingCounts[opt]})`;
+                      return (
+                        <button
+                          key={opt}
+                          onClick={() => setReviewStarFilter(opt)}
+                          style={{
+                            padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 500,
+                            border: isActive ? '1px solid var(--color-primary)' : '1px solid #E0E0E0',
+                            backgroundColor: isActive ? 'var(--color-primary)' : '#fff',
+                            color: isActive ? '#fff' : '#555',
+                            cursor: 'pointer', transition: 'all 0.15s'
+                          }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* DANH SÁCH REVIEW */}
+                  {filteredReviews.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: '#999', padding: '16px 0', fontSize: '14px' }}>
+                      Không có đánh giá nào ở mức lọc này.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {filteredReviews.map((review) => (
+                        <div key={review.id} style={{ display: 'flex', gap: '12px', paddingBottom: '16px', borderBottom: '1px solid #F5F5F5' }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 'bold', color: '#333', flexShrink: 0 }}>
+                            {(review.reviewerName || '?').substring(0, 2).toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <span style={{ fontWeight: 600, fontSize: '14px', color: '#2C2C2C' }}>{review.reviewerName || 'Ẩn danh'}</span>
+                              <span style={{ fontSize: '12px', color: '#999' }}>
+                                {review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : ''}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '2px', marginBottom: '6px' }}>
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star key={star} size={12} color="#F5A623" fill={star <= review.rating ? '#F5A623' : 'none'} />
+                              ))}
+                            </div>
+                            {review.description && (
+                              <div style={{ fontSize: '14px', color: '#444', lineHeight: '1.6' }}>{review.description}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Xem trên bản đồ</h3>

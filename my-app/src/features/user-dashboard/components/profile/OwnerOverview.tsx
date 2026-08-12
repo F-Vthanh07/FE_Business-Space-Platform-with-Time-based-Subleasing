@@ -88,7 +88,7 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
       const [walletResult, spacesResult, contractsResult, listingsResult, bookingsResult] =
         await Promise.allSettled([
           // 1. Wallet balance
-          fetchWalletAccount(token).then((a) => a.balance),
+          fetchWalletAccount(token).then((a) => a?.balance ?? 0),
 
           // 2. My spaces (full array)
           fetch(`${API_BASE_URL}/api/Space/GetAll?OwnerId=${encodeURIComponent(currentUserId)}`, {
