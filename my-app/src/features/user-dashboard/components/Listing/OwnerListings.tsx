@@ -102,8 +102,7 @@ export const OwnerListings: React.FC = () => {
 
         // BƯỚC 3: LỌC & GHÉP DATA MẶT BẰNG
         const myListings = safeData.filter((l: any) => {
-          const currentSpaceId = l.spaceId || l.SpaceId;
-          return mySpaceIds.includes(currentSpaceId) || l.ownerId === ownerId || l.createdBy === ownerId || l.creatorId === ownerId;
+          return l.ownerId === ownerId || l.createdBy === ownerId || l.creatorId === ownerId;
         }).map((l: any) => {
           // BƯỚC 4: Tìm mặt bằng gốc của bài đăng này
           const currentSpaceId = l.spaceId || l.SpaceId;
