@@ -27,6 +27,39 @@ const DAYS_LABEL_VI: Record<string, string> = {
   Friday: 'T6', Saturday: 'T7', Sunday: 'CN'
 };
 
+const getValidDaysOfWeek = (validFrom?: string, validTo?: string) => {
+  if (!validFrom || !validTo) return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  
+  const parseDate = (dStr: string) => {
+    const parts = dStr.split('-');
+    if (parts.length === 3) {
+      return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 0, 0, 0);
+    }
+    return new Date(dStr);
+  };
+
+  const start = parseDate(validFrom);
+  const end = parseDate(validTo);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return [];
+
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays >= 6) {
+    return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  }
+
+  const validDays = [];
+  const current = new Date(start.getTime());
+  const daysMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  for (let i = 0; i <= diffDays; i++) {
+    validDays.push(daysMap[current.getDay()]);
+    current.setDate(current.getDate() + 1);
+  }
+  return [...new Set(validDays)];
+};
+
 const getSafeDateOnly = (dateString: any) => {
   try {
     if (!dateString) return new Date().toISOString().slice(0, 10);
@@ -264,7 +297,15 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   };
 
   const updateSlotField = (slotIndex: number, field: string, value: string) => {
-    setAvailabilities(prev => prev.map((slot, i) => i === slotIndex ? { ...slot, [field]: value } : slot));
+    setAvailabilities(prev => prev.map((slot, i) => {
+      if (i !== slotIndex) return slot;
+      const newSlot = { ...slot, [field]: value };
+      if (field === 'validFrom' || field === 'validTo') {
+        const validDays = getValidDaysOfWeek(newSlot.validFrom, newSlot.validTo);
+        newSlot.daysOfWeek = newSlot.daysOfWeek.filter((d: string) => validDays.includes(d));
+      }
+      return newSlot;
+    }));
   };
 
   const addSlot = () => {
@@ -315,13 +356,9 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       }
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); 
     const startDate = new Date(allowedStartTime);
-    if (!initialData && startDate < today) {
-      setError('Thời gian bắt đầu không thể nằm trong quá khứ!');
-      return;
-    }
+    
+    // Bỏ validation ngày quá khứ theo yêu cầu mới
 
     if (new Date(allowedEndTime) <= new Date(allowedStartTime)) {
       setError('Thời gian kết thúc phải sau thời gian bắt đầu!');
@@ -786,19 +823,24 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
               <h3 className="form-section-title">
                 <Clock size={14} /> Khung giờ chia sẻ
               </h3>
-              {availabilities.map((slot, idx) => (
+              {availabilities.map((slot, idx) => {
+                const validDays = getValidDaysOfWeek(slot.validFrom, slot.validTo);
+                return (
                 <div key={idx} style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '14px', marginBottom: '10px' }}>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                    {DAYS_OF_WEEK.map(day => (
+                    {DAYS_OF_WEEK.map(day => {
+                      const isDayValid = validDays.includes(day);
+                      return (
                       <button
                         type="button" key={day}
                         className={`filter-tab ${slot.daysOfWeek.includes(day) ? 'filter-tab--active' : ''}`}
                         onClick={() => toggleDayInSlot(idx, day)}
-                        disabled={isLoading}
+                        disabled={isLoading || !isDayValid}
+                        style={{ opacity: isDayValid ? 1 : 0.5 }}
                       >
                         {DAYS_LABEL_VI[day]}
                       </button>
-                    ))}
+                    )})}
                   </div>
                   <div className="form-group" style={{ marginBottom: '10px' }}>
                     <label className="form-label">Ngày cụ thể (tùy chọn)</label>
@@ -849,7 +891,8 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                     </button>
                   )}
                 </div>
-              ))}
+                );
+              })}
               <button type="button" className="btn-ghost" onClick={addSlot} disabled={isLoading}>
                 <Plus size={14} /> Thêm khung giờ khác
               </button>
