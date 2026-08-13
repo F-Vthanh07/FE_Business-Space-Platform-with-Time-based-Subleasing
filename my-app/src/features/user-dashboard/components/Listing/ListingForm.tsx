@@ -406,7 +406,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         shareSpaceDetailShareSpaceAmenities: [],
         shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => ({
           ...slot,
-          specificdate: (slot.specificdate && !String(slot.specificdate).startsWith('0001')) ? slot.specificdate : null
+          specificdate: (slot.specificdate && !String(slot.specificdate).startsWith('0001')) ? slot.specificdate : undefined
         })),
         shareSpaceDetailShareSpaceCategories: []
       };
