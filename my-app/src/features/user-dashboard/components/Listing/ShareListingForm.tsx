@@ -144,9 +144,6 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
   const [maxSubRenter, setMaxSubRenter] = useState<number>(initialData?.shareSpaceDetailMaxSubRenter || 1);
   const [isLegalCommitted, setIsLegalCommitted] = useState<boolean>(initialData?.shareSpaceDetailIsLegalCommitted ?? false);
 
-  // Ngày hôm nay (dùng làm mốc so sánh + làm min cho input date)
-  const todayStr = getSafeDateString(null);
-
   const [allowedStartTime, setAllowedStartTime] = useState(() => getSafeDateString(initialData?.allowedStartTime));
   const [allowedEndTime, setAllowedEndTime] = useState(() => {
     if (initialData?.allowedEndTime) return getSafeDateString(initialData.allowedEndTime);
@@ -154,11 +151,6 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     return getSafeDateString(nextMonth);
   });
-
-  // Giá trị gốc của allowedStartTime khi mở form (dùng để biết user có thay đổi ngày bắt đầu hay không khi edit)
-  const originalStartTime = initialData?.allowedStartTime
-    ? getSafeDateString(initialData.allowedStartTime)
-    : null;
 
   const [selectedAmenities, setSelectedAmenities] = useState<Record<number, { included: boolean; price: number }>>(
     () => {
@@ -271,9 +263,6 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       setError('Đơn giá phải lớn hơn 0!');
       return;
     }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);    const startDate = new Date(allowedStartTime);
 
     // Bỏ validation ngày quá khứ theo yêu cầu mới
 
