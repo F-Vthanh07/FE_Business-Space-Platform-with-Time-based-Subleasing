@@ -239,23 +239,29 @@ export const UploadedContractsPage: React.FC = () => {
                 <h4 style={{ fontSize: '16px', fontWeight: '600', color: '#0F172A', margin: '0 0 16px 0' }}>Ảnh hợp đồng đính kèm</h4>
                 
                 {/* Giả định field ảnh là contractPictures, pictures, hoặc imageUrls. BE chưa rõ, hiển thị mockup nếu trống */}
-                {viewingContract.pictures?.length > 0 || viewingContract.contractPictures?.length > 0 || viewingContract.externalContractPictures?.length > 0 ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                    {(viewingContract.pictures || viewingContract.contractPictures || viewingContract.externalContractPictures || []).map((pic: any, idx: number) => {
-                      const url = typeof pic === 'string' ? pic : (pic.url || pic.imageUrl);
-                      return (
-                        <div key={idx} style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E8F0', height: '240px' }}>
-                          <img src={url} alt={`Trang ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#F1F5F9' }} />
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
+                {(() => {
+                  const pics = viewingContract.pictureURLs || viewingContract.pictures || viewingContract.contractPictures || viewingContract.externalContractPictures || [];
+                  if (pics.length > 0) {
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                        {pics.map((pic: any, idx: number) => {
+                          const url = typeof pic === 'string' ? pic : (pic.imageUrl || pic.url || pic.Url);
+                          return (
+                            <div key={idx} style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E8F0', height: '240px' }}>
+                              <img src={url} alt={`Trang ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#F1F5F9' }} />
+                            </div>
+                          )
+                        })}
+                      </div>
+                    );
+                  }
+                  return (
                   <div style={{ padding: '32px', textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px dashed #CBD5E1' }}>
                     <FileImage size={40} color="#94A3B8" style={{ margin: '0 auto 12px auto', display: 'block' }} />
                     <p style={{ color: '#64748B', margin: 0, fontSize: '14px' }}>Hợp đồng này chưa tải ảnh lên hoặc API không trả về mảng ảnh.</p>
                   </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
 

@@ -23,6 +23,48 @@ const statusConfig: Record<string, { className: string; icon: React.ReactNode; l
 // Chỉ có đúng 2 listingType thật từ BE: EntireSpace / SharedSpace
 const isShareListing = (l: any) => l?.listingType === 'SharedSpace';
 
+const ExpandableDescription: React.FC<{ text: string }> = ({ text }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  if (!text) return <p style={{ margin: 0, lineHeight: '1.6', color: 'var(--color-text-secondary)' }}>Chưa có mô tả</p>;
+  
+  const maxLength = 250;
+  const isLong = text.length > maxLength;
+  const displayText = isExpanded ? text : (isLong ? `${text.slice(0, maxLength)}...` : text);
+
+  return (
+    <div style={{ margin: 0, lineHeight: '1.6', whiteSpace: 'pre-wrap', color: 'var(--color-text-secondary)', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+      {displayText}
+      {isLong && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            setIsExpanded(!isExpanded);
+          }}
+          style={{
+            background: 'none', border: 'none', color: '#3b82f6',
+            padding: 0, marginLeft: '6px', fontSize: '13px',
+            fontWeight: 500, cursor: 'pointer'
+          }}
+        >
+          {isExpanded ? 'Thu gọn' : 'Xem thêm'}
+        </button>
+      )}
+    </div>
+  );
+};
+
+const formatToAmPm = (timeStr?: string) => {
+  if (!timeStr) return '';
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return timeStr;
+  const hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${minutes} ${ampm}`;
+};
+
 export const OwnerListings: React.FC = () => {
   const [listings, setListings] = useState<any[]>([]); // Data lấy từ API
   const [search, setSearch] = useState('');
@@ -462,7 +504,7 @@ export const OwnerListings: React.FC = () => {
 
                 <div className="glass-card--inset" style={{ padding: '16px', borderRadius: 'var(--radius-lg)' }}>
                   <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', color: 'var(--color-text-primary)' }}>Mô tả chi tiết</h4>
-                  <p style={{ margin: 0, lineHeight: '1.6', whiteSpace: 'pre-wrap', color: 'var(--color-text-secondary)' }}>{viewingListing.description || 'Chưa có mô tả'}</p>
+                  <ExpandableDescription text={viewingListing.description} />
                 </div>
 
                 <div className="glass-card--inset" style={{ padding: '16px', borderRadius: 'var(--radius-lg)' }}>
@@ -503,7 +545,7 @@ export const OwnerListings: React.FC = () => {
                               {slot.daysOfWeek?.length > 0 ? slot.daysOfWeek.join(', ') : (slot.specificdate ? formatDate(slot.specificdate) : 'Không rõ')}
                             </span>
                             <span style={{ color: 'var(--color-text-secondary)' }}>
-                              {slot.startTime?.slice(0, 5)} - {slot.endTime?.slice(0, 5)}
+                              {formatToAmPm(slot.startTime)} - {formatToAmPm(slot.endTime)}
                             </span>
                             <span style={{ color: 'var(--color-text-secondary)' }}>
                               {formatDate(slot.validFrom)} → {formatDate(slot.validTo)}
