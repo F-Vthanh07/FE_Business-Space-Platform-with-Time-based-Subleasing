@@ -404,6 +404,67 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
 
         <form onSubmit={handleSubmit} className="modal-body">
 
+          {/* AI Image Editor Promo Banner */}
+          <div style={{
+            background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: 'radial-gradient(circle, rgba(168,85,247,0.15) 0%, rgba(255,255,255,0) 70%)', borderRadius: '50%' }}></div>
+            
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', zIndex: 1 }}>
+              <div style={{
+                width: '48px', height: '48px', borderRadius: '12px',
+                background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+                boxShadow: '0 4px 10px rgba(168,85,247,0.3)'
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 'bold', color: '#1e293b' }}>
+                  Làm đẹp ảnh mặt bằng bằng AI <span style={{ backgroundColor: '#fef08a', color: '#854d0e', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', verticalAlign: 'middle', marginLeft: '4px' }}>MỚI</span>
+                </h4>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                  Xóa rác, làm sáng, thêm đồ nội thất ảo... Giúp mặt bằng nổi bật và cho thuê nhanh hơn!
+                </p>
+              </div>
+            </div>
+            
+            <a 
+              href="http://localhost:5173/ai-image-editor" 
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                zIndex: 1,
+                padding: '8px 16px',
+                background: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                color: '#ec4899',
+                fontSize: '13px',
+                fontWeight: '600',
+                textDecoration: 'none',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.02)',
+                transition: 'all 0.2s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.borderColor = '#ec4899'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.15)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.02)'; }}
+            >
+              Trải nghiệm ngay <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
+          </div>
           <div className="form-section">
             <h3 className="form-section-title">Thông tin cơ bản</h3>
 
