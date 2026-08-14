@@ -39,8 +39,13 @@ const parseErrorResponse = async (res: Response, fallback: string): Promise<stri
   }
 };
 
-export const createShareListing = async (payload: ShareListingPayload, amount: number) => {
-  const res = await fetch(`${BASE_URL}/Listing/CreateShareListing?amount=${amount}`, {
+export const createShareListing = async (payload: ShareListingPayload, amount: number, durationInDays: number) => {
+  const params = new URLSearchParams({
+    amount: String(amount),
+    durationInDays: String(durationInDays)
+  });
+
+  const res = await fetch(`${BASE_URL}/Listing/CreateShareListing?${params.toString()}`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload)

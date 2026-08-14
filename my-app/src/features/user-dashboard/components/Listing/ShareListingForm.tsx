@@ -349,7 +349,9 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       return;
     }
 
-    const chosenPackagePrice = priorityLevels.find(p => p.id === priorityLevelId)?.price ?? 0;
+    const selectedPriorityLevel = priorityLevels.find(p => p.id === priorityLevelId);
+    const chosenPackagePrice = selectedPriorityLevel?.price ?? 0;
+    const durationInDays = selectedPriorityLevel?.durationInDays ?? 0;
     if (!isEditingListing && walletBalance !== null && walletBalance < chosenPackagePrice) {
       setError(`Số dư ví không đủ để đăng tin! Cần ${chosenPackagePrice.toLocaleString('vi-VN')} VNĐ, ví hiện có ${walletBalance.toLocaleString('vi-VN')} VNĐ.`);
       return;
@@ -383,7 +385,7 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       if (initialData) {
         await updateShareListing(initialData.id || initialData.Id, payload);
       } else {
-        await createShareListing(payload, chosenPackagePrice);
+        await createShareListing(payload, chosenPackagePrice, durationInDays);
       }
       onSuccess();
     } catch (err: any) {

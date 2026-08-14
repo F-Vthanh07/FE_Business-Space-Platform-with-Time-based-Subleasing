@@ -427,6 +427,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
     const selectedPriorityLevel = priorityLevels.find(p => p.id === priorityLevelId);
     const amount = selectedPriorityLevel?.price ?? 0;
+    const durationInDays = selectedPriorityLevel?.durationInDays ?? 0;
 
     // ===== NHÁNH 1: CHIA SẺ MẶT BẰNG =====
     if (mode === 'share') {
@@ -456,7 +457,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         if (initialData) {
           await updateShareListing(initialData.id || initialData.Id, sharePayload);
         } else {
-          const created = await createShareListing(sharePayload, amount);
+          const created = await createShareListing(sharePayload, amount, durationInDays);
           createdShareListingId = created?.id ?? created?.Id ?? created;
         }
 
@@ -509,7 +510,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       const targetId = initialData?.id || initialData?.Id;
       const url = isEditing
         ? `https://flexi-space-capstone-project.onrender.com/api/Listing/Update/${targetId}`
-        : `https://flexi-space-capstone-project.onrender.com/api/Listing/Create?amount=${amount}`;
+        : `https://flexi-space-capstone-project.onrender.com/api/Listing/Create?amount=${amount}&durationInDays=${durationInDays}`;
 
       const listingPayload = {
         spaceId: Number(spaceId),
