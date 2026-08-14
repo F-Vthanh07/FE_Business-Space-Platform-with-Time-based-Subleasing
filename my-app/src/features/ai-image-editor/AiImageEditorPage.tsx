@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useForm } from 'react-hook-form';
 import { Joyride, STATUS, type EventData, type Step } from 'react-joyride';
@@ -1075,7 +1075,7 @@ export const AiImageEditorPage: React.FC = () => {
             data-tour="object-image"
           >
             <ImageUp size={17} />
-            {objectImage ? 'Đã chọn ảnh object' : 'Nhập ảnh object'}
+            {objectImage ? 'Đã chọn ảnh vật thể' : 'Thêm ảnh vật thể'}
           </button>
 
           <label className="ai-editor-control" data-tour="brush-size">
@@ -1137,7 +1137,7 @@ export const AiImageEditorPage: React.FC = () => {
             <header>
               <div>
                 <p className="label-caps">OBJECT IMAGE</p>
-                <h2 id="ai-object-modal-title">Ảnh object muốn thêm</h2>
+                <h2 id="ai-object-modal-title">Ảnh vật thể muốn thêm</h2>
               </div>
               <button type="button" aria-label="Đóng" onClick={() => setIsObjectUploaderOpen(false)}>
                 <X size={18} />
@@ -1148,8 +1148,8 @@ export const AiImageEditorPage: React.FC = () => {
               <div className="ai-editor-object-preview ai-editor-object-preview--modal">
                 <img src={objectImageUrl} alt="Object preview" />
                 <div>
-                  <span>Ảnh object hiện tại</span>
-                  <p>AI sẽ lấy object từ ảnh này và đưa vào vùng bạn đã tô xanh lá neon trên ảnh gốc.</p>
+                  <span>Ảnh vật thể hiện tại</span>
+                  <p>AI sẽ lấy vật thể từ ảnh này và đưa vào vùng bạn đã tô xanh lá neon trên ảnh gốc.</p>
                   <div className="ai-editor-object-modal-actions">
                     <button
                       type="button"
@@ -1160,7 +1160,7 @@ export const AiImageEditorPage: React.FC = () => {
                       }}
                     >
                       <Trash2 size={15} />
-                      Xóa object
+                      Xóa vật thể
                     </button>
                     <button type="button" onClick={() => setIsObjectUploaderOpen(false)}>
                       Xong
@@ -1172,8 +1172,8 @@ export const AiImageEditorPage: React.FC = () => {
               <div {...getObjectRootProps()} className={`ai-editor-object-dropzone ai-editor-object-dropzone--modal ${isObjectDragActive ? 'is-active' : ''}`}>
                 <input {...getObjectInputProps()} />
                 <ImageUp size={32} />
-                <strong>Kéo-thả hoặc chọn ảnh object</strong>
-                <span>Nếu không upload ảnh object, AI sẽ tự tạo nội dung mới dựa theo prompt.</span>
+                <strong>Thêm ảnh vật thể (VD: cái bàn, chậu cây...)</strong>
+                <span>Tải lên ảnh của vật thể bạn muốn thêm vào vùng đã tô. Nếu để trống, AI sẽ tự tạo nội dung dựa theo prompt.</span>
               </div>
             )}
           </section>

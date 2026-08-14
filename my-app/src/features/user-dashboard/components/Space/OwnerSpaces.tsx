@@ -430,6 +430,30 @@ export const OwnerSpaces: React.FC = () => {
               </div>
 
               <div className="form-section">
+                <div className="form-section-title">{language === 'en' ? 'Operating hours' : 'Giờ hoạt động'}</div>
+                <div className="meta-badges" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {(() => {
+                    const hours = viewingSpace.operatingHours || [];
+                    if (hours.length === 0) return <span className="text-muted text-xs">{language === 'en' ? 'Not configured' : 'Chưa thiết lập'}</span>;
+                    
+                    const isFullWeek = hours.length === 7 && hours.every((h: any, i: number, arr: any[]) => h.openTime === arr[0].openTime && h.closeTime === arr[0].closeTime);
+                    
+                    if (isFullWeek) {
+                      return <div className="space-detail-row"><span className="space-detail-label"><Clock size={12}/> {language === 'en' ? 'Full week' : 'Cả tuần'}</span><span className="space-detail-value">{hours[0].openTime?.substring(0, 5)} - {hours[0].closeTime?.substring(0, 5)}</span></div>;
+                    }
+                    
+                    const daysMap: Record<number, string> = { 0: 'Chủ Nhật', 1: 'Thứ Hai', 2: 'Thứ Ba', 3: 'Thứ Tư', 4: 'Thứ Năm', 5: 'Thứ Sáu', 6: 'Thứ Bảy' };
+                    return hours.map((h: any, idx: number) => (
+                      <div key={idx} className="space-detail-row">
+                        <span className="space-detail-label" style={{ minWidth: '100px' }}><Clock size={12}/> {daysMap[h.dayOfWeek] || h.dayOfWeek}</span>
+                        <span className="space-detail-value">{h.openTime?.substring(0, 5)} - {h.closeTime?.substring(0, 5)}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              <div className="form-section">
                 <div className="form-section-title">{t('spaces.amenities') || 'Tiện ích'}</div>
                 <div className="meta-badges">
                   {(viewingSpace.amenities || []).length > 0 ? (

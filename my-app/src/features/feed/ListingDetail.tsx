@@ -12,6 +12,36 @@ import { formatDate } from '../../utils/dateUtils';
 import { getListingPictureUrl, getListingPictureUrls } from '../shared/listingPictures';
 
 // --- COMPONENT NÚT CHIA SẺ DÙNG LẠI (SHARE BUTTON) ---
+const ExpandableDescription: React.FC<{ text: string }> = ({ text }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  if (!text) return <div style={{ lineHeight: '1.7', color: '#444', marginBottom: '40px', fontSize: '15px' }}>Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này. Vui lòng liên hệ trực tiếp để biết thêm thông tin về hợp đồng và cọc.</div>;
+  
+  const maxLength = 250;
+  const isLong = text.length > maxLength;
+  const displayText = isExpanded ? text : (isLong ? `${text.slice(0, maxLength)}...` : text);
+
+  return (
+    <div style={{ lineHeight: '1.7', color: '#444', whiteSpace: 'pre-wrap', marginBottom: '40px', fontSize: '15px', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+      {displayText}
+      {isLong && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            setIsExpanded(!isExpanded);
+          }}
+          style={{
+            background: 'none', border: 'none', color: '#3b82f6',
+            padding: 0, marginLeft: '6px', fontSize: '14px',
+            fontWeight: 500, cursor: 'pointer', textDecoration: 'underline'
+          }}
+        >
+          {isExpanded ? 'Thu gọn' : 'Xem chi tiết'}
+        </button>
+      )}
+    </div>
+  );
+};
 interface ShareButtonProps {
   icon: React.ReactNode;
   label: string;
@@ -552,9 +582,7 @@ export const ListingDetail: React.FC = () => {
             </div>
 
             <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Thông tin mô tả</h3>
-            <div style={{ lineHeight: '1.7', color: '#444', whiteSpace: 'pre-wrap', marginBottom: '40px', fontSize: '15px' }}>
-              {listing.description || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này. Vui lòng liên hệ trực tiếp để biết thêm thông tin về hợp đồng và cọc.'}
-            </div>
+            <ExpandableDescription text={listing.description} />
 
             {/* TIỆN ÍCH */}
             {activeAmenities.length > 0 && (

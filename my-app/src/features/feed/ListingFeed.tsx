@@ -10,6 +10,38 @@ import { useNavigate } from 'react-router-dom';
 import { HomeSearchBar } from '../homepage/components/HomeSearchBar';
 import { getListingPictureUrl, getListingPictureUrls } from '../shared/listingPictures';
 import '../homepage/Homepage.css';
+import '../homepage/Homepage.css';
+
+const ExpandableDescription: React.FC<{ text: string }> = ({ text }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  if (!text) return <div>Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này.</div>;
+  
+  const maxLength = 250;
+  const isLong = text.length > maxLength;
+  const displayText = isExpanded ? text : (isLong ? `${text.slice(0, maxLength)}...` : text);
+
+  return (
+    <div style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-wrap' }}>
+      {displayText}
+      {isLong && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            setIsExpanded(!isExpanded);
+          }}
+          style={{
+            background: 'none', border: 'none', color: '#3b82f6',
+            padding: 0, marginLeft: '6px', fontSize: '13px',
+            fontWeight: 500, cursor: 'pointer', textDecoration: 'underline'
+          }}
+        >
+          {isExpanded ? 'Thu gọn' : 'Xem chi tiết'}
+        </button>
+      )}
+    </div>
+  );
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyItem = any;
@@ -411,7 +443,7 @@ export const ListingFeed: React.FC = () => {
                     <div style={{ fontWeight: 'bold', color: 'var(--color-positive, #2E7D32)', fontSize: '16px', marginBottom: '6px' }}>
                       💰 {item.price ? `${item.price.toLocaleString('vi-VN')} ₫/giờ` : 'Thỏa thuận'} • {item.area ? `${item.area}m²` : 'N/A'}
                     </div>
-                    {item.description || 'Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này.'}
+                    <ExpandableDescription text={item.description} />
                   </div>
 
                   {/* KHU VỰC ẢNH */}
