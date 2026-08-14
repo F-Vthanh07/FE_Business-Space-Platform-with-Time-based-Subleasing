@@ -23,14 +23,17 @@ const getPicUrl = (pic: any): string => {
 // Hiển thị thời gian tương đối dựa trên createdAt trả về từ BE
 const formatTimeAgo = (dateStr?: string) => {
   if (!dateStr) return 'Vừa cập nhật';
-  const diffMin = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'Vừa cập nhật';
+  d.setHours(d.getHours() + 7);
+  const diffMin = Math.floor((Date.now() - d.getTime()) / 60000);
   if (diffMin < 1) return 'Vừa xong';
   if (diffMin < 60) return `${diffMin} phút trước`;
   const diffHour = Math.floor(diffMin / 60);
   if (diffHour < 24) return `${diffHour} giờ trước`;
   const diffDay = Math.floor(diffHour / 24);
   if (diffDay < 30) return `${diffDay} ngày trước`;
-  return new Date(dateStr).toLocaleDateString('vi-VN');
+  return d.toLocaleDateString('vi-VN');
 };
 
 type RentalCategory = 'longterm' | 'hourly';

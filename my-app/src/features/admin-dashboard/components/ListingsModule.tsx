@@ -5,6 +5,7 @@ import { ListingDetailModal } from './ListingDetailModal';
 import { getPictureUrl } from '../utils/listingPicture';
 import { fetchListingReportDetail } from '../api/admin.api';
 import { RefreshButton } from './RefreshButton';
+import { formatDate as formatDateUtil } from '../../../utils/dateUtils';
 
 export const REPORT_REASON_LABELS: Record<string, { en: string; vi: string }> = {
   ScamOrFraud: { en: 'Scam / Fraud', vi: 'Lừa đảo / Gian lận' },
@@ -159,9 +160,7 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
   };
 
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return language === 'en' ? 'Unknown' : 'Không rõ';
-    return d.toLocaleDateString(language === 'en' ? 'en-US' : 'vi-VN');
+    return formatDateUtil(dateStr, language === 'en' ? 'en-US' : 'vi-VN', language === 'en' ? 'Unknown' : 'Không rõ');
   };
 
   return (

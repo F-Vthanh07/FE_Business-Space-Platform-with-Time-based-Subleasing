@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Printer, FileText, Wallet, CalendarDays, Building2, Briefcase, CheckCircle, Edit3, Trash2 } from 'lucide-react';
 import { splitContractHeaderBody, formatSchedule, type ContractSchedule } from '../contractTemplates';
 import { createPortal } from 'react-dom';
+import { formatDate, formatDateTime } from '../../utils/dateUtils';
 
 interface ContractViewModalProps {
   contract: any;
@@ -26,8 +27,7 @@ interface UserProfile {
 const formatCurrency = (value?: number) =>
   value || value === 0 ? `${value.toLocaleString('vi-VN')} VNĐ` : '...';
 
-const formatDate = (value?: string) =>
-  value ? new Date(value).toLocaleDateString('vi-VN') : '...';
+
 
 // Đơn vị thời hạn của hợp đồng "sống" (từ form tạo/sửa) là chuỗi enum của BE:
 // 'Days' | 'Weeks' | 'Months' | 'Years'. Phải khớp đủ 4 giá trị với
@@ -789,7 +789,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
                   </span>
                   {verification?.LessorSignedAt && (
                     <div style={{ fontSize: '10.5px', color: '#94A3B8', marginTop: '2px' }}>
-                      {new Date(verification.LessorSignedAt).toLocaleString('vi-VN')}
+                      {formatDateTime(verification.LessorSignedAt)}
                     </div>
                   )}
                 </>
@@ -806,7 +806,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
                   </span>
                   {verification?.LesseeSignedAt && (
                     <div style={{ fontSize: '10.5px', color: '#94A3B8', marginTop: '2px' }}>
-                      {new Date(verification.LesseeSignedAt).toLocaleString('vi-VN')}
+                      {formatDateTime(verification.LesseeSignedAt)}
                     </div>
                   )}
                 </>

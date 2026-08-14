@@ -15,6 +15,7 @@ import {
   Star
 } from 'lucide-react';
 import '../../../shared/ModalShell.css';
+import { formatDate } from '../../../../utils/dateUtils';
 
 interface BookingRequestEditData {
   listingId: number;
@@ -273,7 +274,7 @@ export const RenterBookingRequests: React.FC = () => {
                       <td style={{ padding: '16px 12px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', marginBottom: '4px' }}>
                           <Calendar size={14} style={{ opacity: 0.7 }} />
-                          {req.expectedStartDate ? new Date(req.expectedStartDate).toLocaleDateString('vi-VN') : 'N/A'}
+                          {formatDate(req.expectedStartDate, 'vi-VN', 'N/A')}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', opacity: 0.7 }}>
                           <Clock size={12} /> {req.duration} {req.durationUnit || 'kỳ'}

@@ -13,6 +13,7 @@ import { createUserBanner, uploadUserBannerPictures } from './banner.api';
 import { fetchBannerPriorityLevels, fetchPriorityLevels, type PriorityLevel } from './priorityLevel.api';
 import { fetchWalletAccount } from '../../../wallet/api/wallet.api';
 import type { ShareListingPayload } from '../../types';
+import { formatDateISOOnly } from '../../../../utils/dateUtils';
 
 interface ListingFormProps {
   onClose: () => void;
@@ -61,16 +62,7 @@ const getValidDaysOfWeek = (validFrom?: string, validTo?: string) => {
   return [...new Set(validDays)];
 };
 
-const getSafeDateOnly = (dateString: any) => {
-  try {
-    if (!dateString) return new Date().toISOString().slice(0, 10);
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
-    return date.toISOString().slice(0, 10);
-  } catch {
-    return new Date().toISOString().slice(0, 10);
-  }
-};
+const getSafeDateOnly = formatDateISOOnly;
 
 export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, initialData }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -620,7 +612,16 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         let parsedMsg = errText;
         try {
            const errObj = JSON.parse(errText);
-           parsedMsg = errObj.message || errObj.title || errObj.detail || errText;
+           if (errObj.errors && typeof errObj.errors === 'object') {
+             const fieldMessages = Object.values(errObj.errors).flat().filter(Boolean) as string[];
+             if (fieldMessages.length > 0) {
+               parsedMsg = fieldMessages.join('\n');
+             } else {
+               parsedMsg = errObj.message || errObj.title || errObj.detail || errText;
+             }
+           } else {
+             parsedMsg = errObj.message || errObj.title || errObj.detail || errText;
+           }
         } catch(e) { /* empty */ }
         setError(parsedMsg || 'Lỗi xử lý hệ thống');
         setIsLoading(false);
