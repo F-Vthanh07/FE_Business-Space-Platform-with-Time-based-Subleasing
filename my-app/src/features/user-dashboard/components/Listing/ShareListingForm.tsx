@@ -8,6 +8,7 @@ import { createShareListing, updateShareListing } from './shareListing.api';
 import { fetchPriorityLevels, type PriorityLevel } from './priorityLevel.api';
 import { fetchWalletAccount } from '../../../wallet/api/wallet.api';
 import type { ShareListingPayload } from '../../types';
+import { formatDateISOOnly } from '../../../../utils/dateUtils';
 
 interface SpaceOption {
   id: number;
@@ -62,16 +63,7 @@ const getValidDaysOfWeek = (validFrom?: string, validTo?: string) => {
   return [...new Set(validDays)];
 };
 
-const getSafeDateString = (dateString: any) => {
-  try {
-    if (!dateString) return new Date().toISOString().slice(0, 10);
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
-    return date.toISOString().slice(0, 10);
-  } catch {
-    return new Date().toISOString().slice(0, 10);
-  }
-};
+const getSafeDateString = formatDateISOOnly;
 
 export const ShareListingForm: React.FC<ShareListingFormProps> = ({
   onClose, onSuccess, initialData, spaceOptions, apiCategories, apiAmenities
