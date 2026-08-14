@@ -45,6 +45,18 @@ export const FloatingChat: React.FC = () => {
   const [showContractTypeMenu, setShowContractTypeMenu] = useState(false);
   const [isExternalContractModalOpen, setIsExternalContractModalOpen] = useState(false);
 
+  // Thêm state lưu thông tin yêu cầu thuê liên quan
+  const [relatedRequests, setRelatedRequests] = useState<any[]>([]);
+  const [showRequestPopup, setShowRequestPopup] = useState(false);
+
+  // Lấy ID người đang chat cùng mình (dùng cho link tới Profile)
+  const getOtherPersonId = (room: any) => {
+    if (!room) return '';
+    const rLessorId = room.lessorId || room.LessorId;
+    const rLesseeId = room.lesseeId || room.LesseeId;
+    return String(rLessorId) === String(currentUserId) ? rLesseeId : rLessorId;
+  };
+
   // Tên hiển thị của "người kia" trong khung chat (dùng cho tiêu đề chat, avatar...).
   // Field thật từ BE là lessorUserName/lesseeUserName (xem GET /api/Conversation/User/{id}),
   // vẫn giữ thêm vài field dự phòng (lessorName/LessorName...) phòng khi BE đổi tên field.
@@ -223,6 +235,30 @@ export const FloatingChat: React.FC = () => {
     return () => window.removeEventListener('open-ether-chat', handleOpenChatEvent);
   }, [connection]);
 
+  // FETCH THÔNG TIN YÊU CẦU THUÊ LIÊN QUAN KHI MỞ CHAT
+  useEffect(() => {
+    if (activeChat && view === 'CHAT') {
+      const fetchReqs = async () => {
+        try {
+          const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
+            const otherId = getOtherPersonId(activeChat);
+            const reqs = safeData.filter((r: any) => 
+              (String(r.lessorId) === String(currentUserId) && String(r.lesseeId) === String(otherId)) ||
+              (String(r.lessorId) === String(otherId) && String(r.lesseeId) === String(currentUserId))
+            );
+            setRelatedRequests(reqs);
+          }
+        } catch(e) {}
+      };
+      fetchReqs();
+    }
+  }, [activeChat, view, currentUserId, token]);
+
   const openChatRoom = async (roomData: any) => {
     setActiveChat(roomData);
     setView('CHAT');
@@ -393,7 +429,7 @@ export const FloatingChat: React.FC = () => {
                     const displayName = getOtherPersonName(room);
                     return (
                       <div key={idx} onClick={() => openChatRoom(room)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #F0F0F0', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#E4E6EB', color: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{displayName.substring(0, 2).toUpperCase()}</div>
+                        <div onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:5173/profile/${getOtherPersonId(room)}`, '_blank'); }} style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#E4E6EB', color: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{displayName.substring(0, 2).toUpperCase()}</div>
                         <div style={{ flex: 1, overflow: 'hidden' }}>
                           <div style={{ fontWeight: '600', fontSize: '14px', color: (room.unreadCount || room.UnreadCount) > 0 ? '#1E293B' : '#2C2C2C', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {displayName}
@@ -416,7 +452,7 @@ export const FloatingChat: React.FC = () => {
               <div style={{ backgroundColor: '#1E293B', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button onClick={() => setView('LIST')} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}><ArrowLeft size={20} /></button>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#fff', color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>
+                  <div onClick={() => window.open(`http://localhost:5173/profile/${getOtherPersonId(activeChat)}`, '_blank')} style={{ cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#fff', color: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>
                     {getOtherPersonName(activeChat).substring(0, 2).toUpperCase()}
                   </div>
                   <div>
@@ -428,6 +464,9 @@ export const FloatingChat: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button onClick={() => setShowRequestPopup(!showRequestPopup)} title="Thông tin yêu cầu thuê" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
+                    <FileText size={16} />
+                  </button>
                   {isLessor && (
                     <div style={{ position: 'relative' }}>
                       <button 
@@ -463,10 +502,47 @@ export const FloatingChat: React.FC = () => {
                 </div>
               </div>
 
+              {/* POPUP THÔNG TIN YÊU CẦU THUÊ */}
+              {showRequestPopup && (
+                <div style={{ padding: '10px 14px', backgroundColor: '#F0F9FF', borderBottom: '1px solid #E0F2FE', fontSize: '12px', color: '#0369A1' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Thông tin Yêu cầu thuê:</div>
+                  {relatedRequests.length === 0 ? (
+                    <div>Không tìm thấy yêu cầu thuê liên quan.</div>
+                  ) : (
+                    <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                      {relatedRequests.map(req => (
+                        <li key={req.id || req.Id} style={{ marginBottom: '4px' }}>
+                          Mã Yêu Cầu: <strong>#{req.id || req.Id}</strong> - Thuê từ: {req.rentalStartDate ? new Date(req.rentalStartDate).toLocaleDateString('vi-VN') : '?'} đến {req.rentalEndDate ? new Date(req.rentalEndDate).toLocaleDateString('vi-VN') : '?'}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
               <div className="custom-scrollbar" style={{ flex: 1, padding: '14px', overflowY: 'auto', backgroundColor: '#F8F9FA', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {chatHistory.map((msg) => {
                   const isMe = String(msg.senderId) === String(currentUserId);
                   const senderName = isMe ? 'Bạn' : getOtherPersonName(activeChat);
+
+                  const isSystemMsg = msg.text && (
+                    msg.text.includes('Chủ mặt bằng đã xác nhận hợp đồng') ||
+                    msg.text.includes('Khách thuê đã ký') ||
+                    msg.text.includes('thu hồi Hợp đồng') ||
+                    msg.text.includes('vừa tạo và gửi một Hợp đồng') ||
+                    msg.text.includes('vừa cập nhật Hợp đồng')
+                  );
+
+                  if (isSystemMsg) {
+                    return (
+                      <div key={msg.id} style={{ display: 'flex', justifyContent: 'center', margin: '12px 0', width: '100%' }}>
+                        <div style={{ backgroundColor: '#F1F5F9', padding: '8px 16px', borderRadius: '16px', fontSize: '11.5px', color: '#475569', textAlign: 'center', maxWidth: '85%', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                          {renderMessageContent(msg.text)}
+                          <div style={{ fontSize: '10px', marginTop: '4px', opacity: 0.7 }}>{msg.time}</div>
+                        </div>
+                      </div>
+                    );
+                  }
 
                   return (
                     <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
@@ -485,7 +561,6 @@ export const FloatingChat: React.FC = () => {
               </div>
 
               <form onSubmit={(e) => handleSendMessage(e)} style={{ padding: '10px 12px', borderTop: '1px solid #E0E0E0', display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#fff' }}>
-                <button type="button" style={{ background: 'none', border: 'none', color: '#A0AEC0', cursor: 'pointer', padding: '4px' }}><ImageIcon size={18} /></button>
                 <input type="text" placeholder="Nhập tin nhắn..." value={message} onChange={(e) => setMessage(e.target.value)} disabled={!connection} style={{ flex: 1, padding: '8px 14px', borderRadius: '20px', border: 'none', backgroundColor: '#EDF2F7', outline: 'none', fontSize: '13.5px', color: '#2D3748' }} />
                 <button type="submit" disabled={!connection} style={{ background: 'none', border: 'none', color: message.trim() ? '#1E293B' : '#A0AEC0', cursor: 'pointer', padding: '4px' }}><Send size={18} /></button>
               </form>
