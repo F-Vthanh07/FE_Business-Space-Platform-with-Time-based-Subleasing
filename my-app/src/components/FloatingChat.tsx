@@ -240,20 +240,28 @@ export const FloatingChat: React.FC = () => {
     if (activeChat && view === 'CHAT') {
       const fetchReqs = async () => {
         try {
-          const [reqRes, spaceRes, listingRes] = await Promise.all([
-            fetch(`https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll`, {
+          const [reqRes1, reqRes2, spaceRes, listingRes] = await Promise.all([
+            fetch(`https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll?status=1`, {
+              headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+            }),
+            fetch(`https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll?status=2`, {
               headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
             }),
             fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetAll`, { headers: { 'accept': '*/*' } }),
             fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll`, { headers: { 'accept': '*/*' } })
           ]);
 
-          if (reqRes.ok) {
-            const data = await reqRes.json();
+          if (reqRes1.ok || reqRes2.ok) {
+            const data1 = reqRes1.ok ? await reqRes1.json() : [];
+            const data2 = reqRes2.ok ? await reqRes2.json() : [];
+            
+            const safeData1 = Array.isArray(data1) ? data1 : (data1?.data || data1?.items || []);
+            const safeData2 = Array.isArray(data2) ? data2 : (data2?.data || data2?.items || []);
+            const safeData = [...safeData1, ...safeData2];
+
             const spaceData = spaceRes.ok ? await spaceRes.json() : [];
             const listingData = listingRes.ok ? await listingRes.json() : [];
 
-            const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
             const spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
             const listings = Array.isArray(listingData) ? listingData : (listingData?.data || listingData?.items || []);
 
