@@ -30,8 +30,6 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
-  // Số đơn "Yêu cầu chờ duyệt" chưa xem.
-  const [pendingBookingCount, setPendingBookingCount] = useState(0);
 
   // State cho toast thông báo nổi.
   const [toastNotif, setToastNotif] = useState<{ show: boolean, title: string, message: string } | null>(null);
@@ -121,57 +119,13 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     return () => window.removeEventListener('new-notification', handleNewNotif);
   }, [showNotif]);
 
-  // Lấy set các ID đơn đã xem từ localStorage.
-  const getSeenBookingIds = (): Set<string | number> => {
-    try {
-      const raw = localStorage.getItem('seen_booking_request_ids');
-      return new Set(raw ? JSON.parse(raw) : []);
-    } catch {
-      return new Set();
-    }
-  };
-
-  // Kiểm tra số đơn chờ duyệt chưa xem để hiện badge đỏ.
-  const checkPendingBookingRequests = async () => {
-    if (role !== 'user' || !token || !currentUserId) return;
-    try {
-      const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll?status=Pending', {
-        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-      const myRequests = safeData.filter((req: any) => req.lessorId === currentUserId);
-
-      const seenIds = getSeenBookingIds();
-      const unseen = myRequests.filter((r: any) => !seenIds.has(r.id ?? r.Id));
-      setPendingBookingCount(unseen.length);
-    } catch (err) {
-      console.error('Lỗi kiểm tra booking request:', err);
-    }
-  };
 
   useEffect(() => {
     if (!isLoggedIn) return;
 
     fetchUnreadCount();
-    const intervalNotif = setInterval(fetchUnreadCount, 15000);
 
-    if (role === 'user') {
-      checkPendingBookingRequests();
-      const intervalBooking = setInterval(checkPendingBookingRequests, 15000);
 
-      const handleSeen = () => checkPendingBookingRequests();
-      window.addEventListener('booking-request-seen', handleSeen);
-
-      return () => {
-        clearInterval(intervalNotif);
-        clearInterval(intervalBooking);
-        window.removeEventListener('booking-request-seen', handleSeen);
-      };
-    }
-
-    return () => clearInterval(intervalNotif);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, role]);
 
@@ -343,38 +297,6 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                 )}
               </div>
               
-              {/* Booking requests: chỉ hiện cho role user, có badge số đơn chưa xem */}
-              {role === 'user' && (
-                <button
-                  className="header-icon-btn"
-                  title="Yêu cầu chờ duyệt"
-                  onClick={() => navigate('/user/booking-requests')}
-                  style={{ position: 'relative' }}
-                >
-                  <FileText size={15} />
-                  {pendingBookingCount > 0 && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: '2px',
-                        right: '2px',
-                        backgroundColor: '#ef4444',
-                        color: '#fff',
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        borderRadius: '999px',
-                        padding: '0 4px',
-                        minWidth: '15px',
-                        textAlign: 'center',
-                        lineHeight: '15px',
-                        border: '1px solid #0D1117',
-                      }}
-                    >
-                      {pendingBookingCount}
-                    </span>
-                  )}
-                </button>
-              )}
 
               {/* Avatar: bấm để đi thẳng đến trang Profile */}
               <div
