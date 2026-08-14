@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, FileText, LogOut, User, CheckCircle2 } from 'lucide-react';
+import { Bell, LogOut, User, CheckCircle2 } from 'lucide-react';
 import { useIdentityVerification } from '../features/identity-verification';
 import { clearLocalStorageForLogout } from '../utils/preserveLocalStorage';
 import './Header.css';
@@ -36,8 +36,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
 
   const token = localStorage.getItem('portal_token');
   const role = localStorage.getItem('portal_role');
-  const currentUserId = localStorage.getItem('current_user_id');
-  
+
   // Lấy tên từ localStorage để hiển thị.
   const storedName = localStorage.getItem('current_user_name') || userName || 'Khách';
   const displayInitials = userInitials || storedName.substring(0, 2).toUpperCase();
