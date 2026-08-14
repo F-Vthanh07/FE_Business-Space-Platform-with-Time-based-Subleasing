@@ -11,6 +11,7 @@ import "../../../shared/ModalShell.css";
 import { createPortal } from 'react-dom';
 import { useThemeLanguage } from "../../../../context/ThemeLanguageContext";
 import { ListingForm } from './ListingForm';
+import { getListingPictureUrl, getListingPictureUrls } from '../../../shared/listingPictures';
 
 // Chỉ có đúng 2 status thật từ BE: Accepted / Ban
 const statusConfig: Record<string, { className: string; icon: React.ReactNode; label: string }> = {
@@ -303,11 +304,9 @@ export const OwnerListings: React.FC = () => {
               </div>
 
               <div className="listing-visual" style={{ overflow: 'hidden' }}>
-                {listing.listingPictures && listing.listingPictures.length > 0 ? (
+                {getListingPictureUrl(listing.listingPictures?.[0]) ? (
                   <img
-                    src={typeof listing.listingPictures[0] === 'string'
-                      ? listing.listingPictures[0]
-                      : (listing.listingPictures[0].imageUrl || listing.listingPictures[0].url)}
+                    src={getListingPictureUrl(listing.listingPictures?.[0]) || ''}
                     alt="cover"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={(e) => {
@@ -406,32 +405,30 @@ export const OwnerListings: React.FC = () => {
             </div>
 
             <div style={{ maxHeight: '80vh', overflowY: 'auto' }}>
-              {viewingListing.listingPictures && viewingListing.listingPictures.length > 0 ? (
+              {getListingPictureUrls(viewingListing.listingPictures).length > 0 ? (
                 <div style={{ position: 'relative', width: '100%', height: '400px', backgroundColor: '#111' }}>
                   <img
-                    src={typeof viewingListing.listingPictures[currentImageIndex] === 'string'
-                      ? viewingListing.listingPictures[currentImageIndex]
-                      : (viewingListing.listingPictures[currentImageIndex].imageUrl || viewingListing.listingPictures[currentImageIndex].url)}
+                    src={getListingPictureUrls(viewingListing.listingPictures)[currentImageIndex]}
                     alt="gallery"
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
 
-                  {viewingListing.listingPictures.length > 1 && (
+                  {getListingPictureUrls(viewingListing.listingPictures).length > 1 && (
                     <>
                       <button
-                        onClick={() => setCurrentImageIndex(prev => prev > 0 ? prev - 1 : viewingListing.listingPictures.length - 1)}
+                        onClick={() => setCurrentImageIndex(prev => prev > 0 ? prev - 1 : getListingPictureUrls(viewingListing.listingPictures).length - 1)}
                         style={{ position: 'absolute', top: '50%', left: '10px', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
                       >
                         <ChevronLeft size={20} color="#000" />
                       </button>
                       <button
-                        onClick={() => setCurrentImageIndex(prev => prev < viewingListing.listingPictures.length - 1 ? prev + 1 : 0)}
+                        onClick={() => setCurrentImageIndex(prev => prev < getListingPictureUrls(viewingListing.listingPictures).length - 1 ? prev + 1 : 0)}
                         style={{ position: 'absolute', top: '50%', right: '10px', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }}
                       >
                         <ChevronRight size={20} color="#000" />
                       </button>
                       <div style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 10px', borderRadius: '12px', fontSize: '12px' }}>
-                        {currentImageIndex + 1} / {viewingListing.listingPictures.length}
+                        {currentImageIndex + 1} / {getListingPictureUrls(viewingListing.listingPictures).length}
                       </div>
                     </>
                   )}

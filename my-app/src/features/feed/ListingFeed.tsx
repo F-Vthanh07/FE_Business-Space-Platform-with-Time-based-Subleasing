@@ -8,6 +8,7 @@ import {
 import { Header } from '../../components/Header'; // Chỉnh lại đường dẫn cho đúng nha
 import { useNavigate } from 'react-router-dom';
 import { HomeSearchBar } from '../homepage/components/HomeSearchBar';
+import { getListingPictureUrl, getListingPictureUrls } from '../shared/listingPictures';
 import '../homepage/Homepage.css';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -185,7 +186,7 @@ export const ListingFeed: React.FC = () => {
     }
   };
 
-  const getUrl = (img: AnyItem) => (typeof img === 'string' ? img : (img.imageUrl || img.url));
+  const getUrl = (img: AnyItem) => getListingPictureUrl(img) || '';
 
   const handleImageClick = (images: AnyItem[], index: number) => {
     setViewingImages(images);
@@ -208,8 +209,9 @@ export const ListingFeed: React.FC = () => {
     });
   }, [listings, categoryFilter, onlyMine, myListingKeys, showFavoritesOnly, favoriteIds]);
 
-  const renderImages = (images: AnyItem[]) => {
-    if (!images || images.length === 0) {
+  const renderImages = (rawImages: AnyItem[]) => {
+    const images = getListingPictureUrls(rawImages);
+    if (images.length === 0) {
       return (
         <div style={{ width: '100%', height: '300px', backgroundColor: '#EFF1F4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9AA1AC', gap: '8px', fontSize: '14px' }}>
           <Camera size={18} /> Chưa có hình ảnh

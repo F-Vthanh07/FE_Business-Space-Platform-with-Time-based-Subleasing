@@ -18,6 +18,152 @@ html, body, #root {
   overflow: visible !important;
 }
 
+.home-banner-carousel {
+  position: relative;
+  width: 100%;
+  height: clamp(260px, 34vw, 430px);
+  overflow: hidden;
+  background: #111827;
+}
+
+.home-banner-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.home-banner-slide {
+  position: relative;
+  min-width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.home-banner-slide img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  filter: contrast(1.05) saturate(1.06);
+}
+
+.home-banner-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.32) 44%, rgba(0, 0, 0, 0.06) 100%);
+}
+
+.home-banner-content {
+  position: absolute;
+  left: clamp(24px, 7vw, 108px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(620px, 58%);
+  color: #ffffff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+}
+
+.home-banner-content h1 {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 56px);
+  line-height: 1.08;
+  font-weight: 850;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.home-banner-content p {
+  margin: 14px 0 0;
+  font-size: clamp(15px, 1.35vw, 19px);
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.9);
+  overflow-wrap: anywhere;
+}
+
+.home-banner-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  background: rgba(15, 17, 21, 0.52);
+  color: #ffffff;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.home-banner-nav:hover {
+  background: rgba(15, 17, 21, 0.76);
+  border-color: rgba(255, 255, 255, 0.72);
+}
+
+.home-banner-nav--prev {
+  left: 18px;
+}
+
+.home-banner-nav--next {
+  right: 18px;
+}
+
+.home-banner-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  transform: translateX(-50%);
+}
+
+.home-banner-dots button {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.48);
+  cursor: pointer;
+  transition: width 0.2s ease, border-radius 0.2s ease, background 0.2s ease;
+}
+
+.home-banner-dots button.active {
+  width: 26px;
+  border-radius: 999px;
+  background: #00D4A0;
+}
+
+@media (max-width: 768px) {
+  .home-banner-carousel {
+    height: 280px;
+  }
+
+  .home-banner-content {
+    left: 22px;
+    width: calc(100% - 72px);
+  }
+
+  .home-banner-nav {
+    width: 36px;
+    height: 36px;
+  }
+
+  .home-banner-nav--prev {
+    left: 10px;
+  }
+
+  .home-banner-nav--next {
+    right: 10px;
+  }
+}
+
 .listings-layout {
   display: grid;
   grid-template-columns: 1fr;

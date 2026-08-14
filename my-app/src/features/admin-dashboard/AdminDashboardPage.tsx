@@ -26,6 +26,8 @@ import {
   createPriorityLevel,
   updatePriorityLevel,
   deletePriorityLevel,
+  createAdminBanner,
+  uploadBannerPictures,
   fetchAllSpaces,
   fetchListingReports,
   softDeleteListing,
@@ -34,7 +36,7 @@ import {
   fetchAllContracts,
   fetchDashboardStats
 } from './api/admin.api';
-import type { PriorityLevelPayload } from './api/admin.api';
+import type { CreateAdminBannerPayload, PriorityLevelPayload } from './api/admin.api';
 
 // Components imports
 import { OverviewModule } from './components/OverviewModule';
@@ -395,6 +397,46 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     }
   };
 
+  const extractCreatedId = (value: unknown): number | null => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    if (value && typeof value === 'object') {
+      const record = value as Record<string, any>;
+      const candidate = record.id ?? record.bannerId ?? record.data?.id ?? record.data?.bannerId;
+      const parsed = Number(candidate);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  };
+
+  const handleCreateAdminBanner = async (
+    payload: CreateAdminBannerPayload,
+    durationInDays: number,
+    files: File[]
+  ) => {
+    setIsLoading(true);
+    try {
+      const created = await createAdminBanner(payload, durationInDays, token || '');
+      const bannerId = extractCreatedId(created);
+      if (!bannerId) {
+        throw new Error('Cannot read created banner id');
+      }
+      if (files.length > 0) {
+        await uploadBannerPictures(bannerId, files, token || '');
+      }
+      showNotification(language === 'en' ? "Platform banner created successfully!" : "Đã tạo banner quảng cáo nền tảng thành công!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      showNotification(language === 'en' ? "Failed to create platform banner. Please try again." : "Tạo banner quảng cáo thất bại. Vui lòng thử lại.", 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="admin-dashboard-container">
       {/* Sidebar */}
@@ -484,6 +526,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
             handleCreatePriorityLevel={handleCreatePriorityLevel}
             handleUpdatePriorityLevel={handleUpdatePriorityLevel}
             handleDeletePriorityLevel={handleDeletePriorityLevel}
+            handleCreateAdminBanner={handleCreateAdminBanner}
             isLoading={isLoading}
             language={language}
             onRefresh={handleManualRefresh}

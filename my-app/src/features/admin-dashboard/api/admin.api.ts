@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem, ListingReportDetail, AdminContractItem, AdminDashboardStats, AdminUserProfile } from '../types';
+import { API_BASE_URL } from '../../../config/api';
 
 export type PriorityLevelType = 'Listing' | 'Banner';
 
@@ -11,6 +12,12 @@ export interface PriorityLevelPayload {
   durationForBanner: number;
   type: PriorityLevelType;
   isActive: boolean;
+}
+
+export interface CreateAdminBannerPayload {
+  title: string;
+  description: string;
+  listingId: number | null;
 }
 
 const normalizePriorityLevelType = (type?: string | null): PriorityLevelType => {
@@ -228,6 +235,50 @@ export const createPriorityLevel = async (payload: PriorityLevelPayload, token: 
   });
   if (!response.ok) {
     throw new Error('Failed to create priority level');
+  }
+};
+
+export const createAdminBanner = async (
+  payload: CreateAdminBannerPayload,
+  durationInDays: number,
+  token: string
+): Promise<unknown> => {
+  const response = await fetch(`${API_BASE_URL}/api/Banner/CreateForAdmin?durationInDays=${durationInDays}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'accept': '*/*'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create admin banner');
+  }
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+};
+
+export const uploadBannerPictures = async (bannerId: number, files: File[], token: string): Promise<void> => {
+  const formData = new FormData();
+  files.forEach(file => formData.append('file', file));
+  formData.append('bannerId', String(bannerId));
+
+  const response = await fetch(`${API_BASE_URL}/api/Picture`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    },
+    body: formData
+  });
+  if (!response.ok) {
+    throw new Error('Failed to upload banner pictures');
   }
 };
 

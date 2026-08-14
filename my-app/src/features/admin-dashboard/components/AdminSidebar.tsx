@@ -56,7 +56,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, onNaviga
       case 'wallets':
         return { title: isEn ? 'Wallets' : 'Ví', sub: isEn ? 'User balances' : 'Số dư người dùng' };
       case 'priorityLevels':
-        return { title: isEn ? 'Priority Packages' : 'Gói giá đăng bài', sub: isEn ? 'Listing boosts' : 'Ưu tiên hiển thị' };
+        return { title: isEn ? 'Paid Services' : 'Quản lý Dịch vụ Trả phí', sub: isEn ? 'Packages and ads' : 'Gói và banner quảng cáo' };
       case 'categories':
         return { title: isEn ? 'Categories' : 'Ngành nghề', sub: isEn ? 'Business niches' : 'Ngành hàng kinh doanh' };
       default:

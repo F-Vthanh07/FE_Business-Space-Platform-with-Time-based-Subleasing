@@ -4,15 +4,18 @@
 // src/features/homepage/Homepage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
+import { API_BASE_URL } from '../../config/api';
 import { MapComponent } from './components/MapComponent';
 
 // Components dùng chung
 import { Header } from '../../components/Header';
 import { Footer } from '../../components/Footer';
-import { SidebarNav } from '../../components/SidebarNav';
 
 import { HomeListings } from './components/HomeListings';
+import heroImage from '../../assets/hero.png';
 
 import './Homepage.css';
 
@@ -20,9 +23,65 @@ interface HomepageProps {
   onLaunch: () => void;
 }
 
+interface HomepageBanner {
+  id: number | string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  listingId?: number | null;
+}
+
+const unwrapApiList = (value: any): any[] => {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.data)) return value.data;
+  if (Array.isArray(value?.items)) return value.items;
+  if (Array.isArray(value?.result)) return value.result;
+  if (Array.isArray(value?.value)) return value.value;
+  if (Array.isArray(value?.Value)) return value.Value;
+  return [];
+};
+
+const getPictureUrl = (value: any): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return (
+    value.url ||
+    value.pictureUrl ||
+    value.imageUrl ||
+    value.fileUrl ||
+    value.path ||
+    value.secureUrl ||
+    ''
+  );
+};
+
+const getBannerImageUrl = (banner: any): string => {
+  const directUrl = getPictureUrl(banner);
+  if (directUrl) return directUrl;
+  const collections = [
+    banner.bannerPictures,
+    banner.pictures,
+    banner.images,
+    banner.bannerPicture,
+    banner.picture,
+  ];
+  for (const collection of collections) {
+    if (Array.isArray(collection) && collection.length > 0) {
+      const url = getPictureUrl(collection[0]);
+      if (url) return url;
+    }
+    const url = getPictureUrl(collection);
+    if (url) return url;
+  }
+  return '';
+};
+
 export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
   const { t } = useThemeLanguage();
+  const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const [banners, setBanners] = useState<HomepageBanner[]>([]);
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
 
   // State bật/tắt Map
   const [isMapMode, setIsMapMode] = useState(false);
@@ -32,6 +91,49 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
 
   // State cho phần How it works
   const [activeRoleTab, setActiveRoleTab] = useState<'owner' | 'renter'>('owner');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchBanners = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/Banner/GetAll`, {
+          headers: { accept: '*/*' },
+        });
+        if (!res.ok) throw new Error('Failed to fetch banners');
+        const data = await res.json();
+        const mapped = unwrapApiList(data)
+          .map((item: any, index: number) => ({
+            id: item.id ?? item.bannerId ?? index,
+            title: item.title ?? item.name ?? '',
+            description: item.description ?? '',
+            imageUrl: getBannerImageUrl(item) || heroImage,
+            listingId: item.listingId ?? item.ListingId ?? item.listing?.id ?? null,
+          }))
+          .filter((item: HomepageBanner) => item.title || item.description || item.imageUrl);
+
+        if (isMounted) {
+          setBanners(mapped);
+          setActiveBannerIndex(0);
+        }
+      } catch (err) {
+        console.warn('Cannot load homepage banners.', err);
+      }
+    };
+
+    fetchBanners();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const goToBanner = (direction: -1 | 1) => {
+    setActiveBannerIndex((current) => {
+      if (banners.length === 0) return 0;
+      return (current + direction + banners.length) % banners.length;
+    });
+  };
 
   // GSAP Animations — chạy lần đầu load trang
   useEffect(() => {
@@ -104,8 +206,66 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
 
   return (
     <div className="homepage-wrapper" ref={containerRef}>
-      <SidebarNav />
       <Header />
+
+      {banners.length > 0 && (
+        <section className="home-banner-carousel" aria-label="Featured banners">
+          <div
+            className="home-banner-track"
+            style={{ transform: `translateX(-${activeBannerIndex * 100}%)` }}
+          >
+            {banners.map((banner) => (
+              <article
+                className="home-banner-slide"
+                key={banner.id}
+                onClick={() => {
+                  if (banner.listingId) navigate(`/listing/${banner.listingId}`);
+                }}
+                style={{ cursor: banner.listingId ? 'pointer' : 'default' }}
+              >
+                <img src={banner.imageUrl} alt="" />
+                <div className="home-banner-shade" />
+                <div className="home-banner-content">
+                  <h1>{banner.title}</h1>
+                  {banner.description && <p>{banner.description}</p>}
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {banners.length > 1 && (
+            <>
+              <button
+                type="button"
+                className="home-banner-nav home-banner-nav--prev"
+                onClick={() => goToBanner(-1)}
+                aria-label="Previous banner"
+              >
+                <ChevronLeft size={22} />
+              </button>
+              <button
+                type="button"
+                className="home-banner-nav home-banner-nav--next"
+                onClick={() => goToBanner(1)}
+                aria-label="Next banner"
+              >
+                <ChevronRight size={22} />
+              </button>
+              <div className="home-banner-dots">
+                {banners.map((banner, index) => (
+                  <button
+                    key={banner.id}
+                    type="button"
+                    className={index === activeBannerIndex ? 'active' : ''}
+                    onClick={() => setActiveBannerIndex(index)}
+                    aria-label={`Go to banner ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+      )}
 
       {/* =========================================
           KHU VỰC TÌM KIẾM & DANH SÁCH

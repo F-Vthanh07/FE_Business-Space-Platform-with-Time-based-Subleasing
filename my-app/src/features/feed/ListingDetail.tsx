@@ -7,6 +7,7 @@ import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
 import { SiZalo } from "react-icons/si";
+import { getListingPictureUrl, getListingPictureUrls } from '../shared/listingPictures';
 
 // --- COMPONENT NÚT CHIA SẺ DÙNG LẠI (SHARE BUTTON) ---
 interface ShareButtonProps {
@@ -418,9 +419,9 @@ export const ListingDetail: React.FC = () => {
   if (isLoading) return <div style={{ paddingTop: '100px', textAlign: 'center' }}>Đang tải thông tin...</div>;
   if (!listing) return <div style={{ paddingTop: '100px', textAlign: 'center' }}>Không tìm thấy bài đăng!</div>;
 
-  const realImages = listing.listingPictures || [];
-  const getUrl = (img: any) => typeof img === 'string' ? img : (img.imageUrl || img.url);
-  const mainImage = realImages.length > 0 ? getUrl(realImages[currentImageIndex]) : "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=800";
+  const realImages = getListingPictureUrls(listing.listingPictures);
+  const getUrl = (img: any) => getListingPictureUrl(img) || '';
+  const mainImage = realImages.length > 0 ? realImages[currentImageIndex] : "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=800";
 
   const isOwner = currentUserId && (currentUserId === listing.creatorId);
   const ownerName = listing.lessorName || 'Ẩn danh';

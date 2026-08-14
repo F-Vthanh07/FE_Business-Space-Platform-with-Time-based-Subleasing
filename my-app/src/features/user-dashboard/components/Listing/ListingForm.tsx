@@ -2,14 +2,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, DollarSign, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, Users, ShieldCheck, Clock } from 'lucide-react';
+import { X, DollarSign, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, Users, ShieldCheck, Clock, Megaphone } from 'lucide-react';
 import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
 import { Select } from '../../../../components/Select';
 import { DatePicker } from '../../../../components/DatePicker';
 import "../../../shared/ModalShell.css";
 import './ListingForm.css';
 import { createShareListing, updateShareListing } from './shareListing.api';
-import { fetchPriorityLevels, type PriorityLevel } from './priorityLevel.api';
+import { createUserBanner, uploadUserBannerPictures } from './banner.api';
+import { fetchBannerPriorityLevels, fetchPriorityLevels, type PriorityLevel } from './priorityLevel.api';
 import { fetchWalletAccount } from '../../../wallet/api/wallet.api';
 import type { ShareListingPayload } from '../../types';
 
@@ -79,8 +80,15 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
   const isEditingListing = !!initialData;
   const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
+  const [bannerPriorityLevels, setBannerPriorityLevels] = useState<PriorityLevel[]>([]);
   const [priorityLevelId, setPriorityLevelId] = useState<number | ''>('');
+  const [bannerPriorityLevelId, setBannerPriorityLevelId] = useState<number | ''>('');
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [createBannerWithListing, setCreateBannerWithListing] = useState(false);
+  const [bannerTitle, setBannerTitle] = useState(initialData?.name || '');
+  const [bannerDescription, setBannerDescription] = useState(initialData?.description || '');
+  const [bannerFiles, setBannerFiles] = useState<File[]>([]);
+  const [bannerPreviewUrls, setBannerPreviewUrls] = useState<string[]>([]);
 
   // Đã sửa: Dựa vào listingType thật từ API để quyết định form
   const initialMode: ListingMode = initialData?.listingType === 'SharedSpace' ? 'share' : 'longterm';
@@ -115,6 +123,12 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   );
   
   const [timePolicy, setTimePolicy] = useState<any>(null);
+
+  const selectedListingPackage = priorityLevels.find(p => p.id === priorityLevelId);
+  const selectedBannerPackage = bannerPriorityLevels.find(p => p.id === bannerPriorityLevelId);
+  const listingPackagePrice = selectedListingPackage?.price ?? 0;
+  const bannerPackagePrice = createBannerWithListing ? (selectedBannerPackage?.price ?? 0) : 0;
+  const totalPublishPrice = listingPackagePrice + bannerPackagePrice;
 
   useEffect(() => {
     if (!spaceId) {
@@ -214,8 +228,11 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     if (isEditingListing) return;
     const loadPriorityLevels = async () => {
       const levels = await fetchPriorityLevels();
+      const bannerLevels = await fetchBannerPriorityLevels();
       setPriorityLevels(levels);
+      setBannerPriorityLevels(bannerLevels);
       if (levels.length > 0) setPriorityLevelId(levels[0].id);
+      if (bannerLevels.length > 0) setBannerPriorityLevelId(bannerLevels[0].id);
     };
     loadPriorityLevels();
 
@@ -252,6 +269,26 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       URL.revokeObjectURL(newUrls[indexToRemove]);
       newUrls.splice(indexToRemove, 1);
       return newUrls;
+    });
+  };
+
+  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setBannerFiles(files);
+    setBannerPreviewUrls(prev => {
+      prev.forEach(url => URL.revokeObjectURL(url));
+      return files.map(file => URL.createObjectURL(file));
+    });
+    e.target.value = '';
+  };
+
+  const handleRemoveBannerFile = (indexToRemove: number) => {
+    setBannerFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+    setBannerPreviewUrls(prev => {
+      const next = [...prev];
+      URL.revokeObjectURL(next[indexToRemove]);
+      next.splice(indexToRemove, 1);
+      return next;
     });
   };
 
@@ -319,6 +356,37 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     setAvailabilities(prev => prev.filter((_, i) => i !== slotIndex));
   };
 
+  const maybeCreateBannerForListing = async (listingId: any) => {
+    if (isEditingListing || !createBannerWithListing) return;
+
+    const numericListingId = Number(listingId);
+    if (!numericListingId) {
+      throw new Error('Khong doc duoc id bai dang de gan vao banner');
+    }
+
+    const createdBanner = await createUserBanner(
+      {
+        title: bannerTitle.trim(),
+        description: bannerDescription.trim(),
+        listingId: numericListingId
+      },
+      selectedBannerPackage?.durationInDays ?? 0,
+      selectedBannerPackage?.price ?? 0
+    );
+
+    const bannerId = Number(
+      createdBanner?.id ??
+      createdBanner?.bannerId ??
+      createdBanner?.data?.id ??
+      createdBanner?.data?.bannerId ??
+      createdBanner
+    );
+
+    if (bannerFiles.length > 0 && bannerId) {
+      await uploadUserBannerPictures(bannerId, bannerFiles);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -348,9 +416,24 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       return;
     }
 
+    if (!isEditingListing && createBannerWithListing && bannerPriorityLevelId === '') {
+      setError('Vui long chon goi banner!');
+      return;
+    }
+
+    if (!isEditingListing && createBannerWithListing && !bannerTitle.trim()) {
+      setError('Vui long nhap tieu de banner!');
+      return;
+    }
+
+    if (!isEditingListing && createBannerWithListing && !bannerDescription.trim()) {
+      setError('Vui long nhap mo ta banner!');
+      return;
+    }
+
     if (!isEditingListing) {
-      const chosenPackagePrice = priorityLevels.find(p => p.id === priorityLevelId)?.price ?? 0;
-      if (walletBalance !== null && walletBalance < chosenPackagePrice) {
+      const chosenPackagePrice = totalPublishPrice;
+      if (walletBalance !== null && walletBalance < totalPublishPrice) {
         setError(`Số dư ví không đủ để đăng tin! Cần ${chosenPackagePrice.toLocaleString('vi-VN')} VNĐ, ví hiện có ${walletBalance.toLocaleString('vi-VN')} VNĐ.`);
         return;
       }
@@ -478,6 +561,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
           }
         }
 
+        await maybeCreateBannerForListing(createdShareListingId);
         onSuccess();
       } catch (err: any) {
         // Bắt text lỗi chuẩn xác
@@ -577,6 +661,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         }
       }
 
+      await maybeCreateBannerForListing(createdListingId);
       onSuccess();
     } catch (err) {
       console.error(err);
@@ -698,6 +783,108 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                     {walletBalance === null ? 'Đang tải...' : `${walletBalance.toLocaleString('vi-VN')} VNĐ`}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {!isEditingListing && (
+              <div style={{ marginTop: 14, border: '1px solid var(--color-border)', borderRadius: 8, padding: 14, background: 'rgba(0,0,0,0.02)' }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={createBannerWithListing}
+                    onChange={(e) => setCreateBannerWithListing(e.target.checked)}
+                    disabled={isLoading || bannerPriorityLevels.length === 0}
+                  />
+                  <Megaphone size={14} />
+                  <span>Đăng kèm banner quảng cáo cho tin này</span>
+                </label>
+
+                {createBannerWithListing && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div className="form-group">
+                      <label className="form-label">Gói banner</label>
+                      <div className="wallet-balance-display">
+                        {selectedBannerPackage
+                          ? `${selectedBannerPackage.name} - ${selectedBannerPackage.price.toLocaleString('vi-VN')} VNĐ${selectedBannerPackage.durationInDays ? ` / ${selectedBannerPackage.durationInDays} ngày` : ''}`
+                          : 'Chưa có gói banner khả dụng'}
+                      </div>
+                    </div>
+
+                    <div className="form-grid-2" style={{ alignItems: 'stretch' }}>
+                      <div className="form-group" style={{ minWidth: 0 }}>
+                        <label className="form-label">Tiêu đề banner <span className="required-mark">*</span></label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={bannerTitle}
+                          onChange={(e) => setBannerTitle(e.target.value)}
+                          disabled={isLoading}
+                          placeholder={name || 'Tiêu đề nổi bật cho banner'}
+                        />
+                        <div style={{ marginTop: 10 }}>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            id="banner-file-upload"
+                            style={{ display: 'none' }}
+                            onChange={handleBannerFileChange}
+                            disabled={isLoading}
+                          />
+                          <label
+                            htmlFor="banner-file-upload"
+                            className="btn-ghost"
+                            style={{ height: 36, padding: '0 14px', display: 'inline-flex', gap: 6, alignItems: 'center', cursor: isLoading ? 'not-allowed' : 'pointer' }}
+                          >
+                            <Camera size={14} /> Chọn ảnh banner
+                          </label>
+                          {bannerPreviewUrls.length > 0 && (
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                              {bannerPreviewUrls.map((url, index) => (
+                                <div key={`banner-${index}`} className="listing-image-preview">
+                                  <img src={url} alt={`banner-${index}`} />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveBannerFile(index)}
+                                    className="listing-image-remove-btn"
+                                    disabled={isLoading}
+                                  >
+                                    <Trash2 size={10} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="form-group" style={{ minWidth: 0 }}>
+                        <label className="form-label">Mô tả banner <span className="required-mark">*</span></label>
+                        <textarea
+                          className="form-textarea form-textarea--flat"
+                          value={bannerDescription}
+                          onChange={(e) => setBannerDescription(e.target.value)}
+                          disabled={isLoading}
+                          placeholder={description || 'Mô tả ngắn gọn cho banner'}
+                          style={{ minHeight: 90 }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="form-label"><Megaphone size={14} /> Xem trước banner</label>
+                      <div style={{ position: 'relative', overflow: 'hidden', minHeight: 220, borderRadius: 8, background: 'linear-gradient(135deg, #111827 0%, #0f766e 55%, #d9a05b 100%)', color: '#fff' }}>
+                        {bannerPreviewUrls[0] && (
+                          <img src={bannerPreviewUrls[0]} alt="banner preview" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.48 }} />
+                        )}
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,.62), rgba(0,0,0,.18))' }} />
+                        <div style={{ position: 'relative', padding: 22, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', minHeight: 220 }}>
+                          <strong style={{ fontSize: 28, lineHeight: 1.15 }}>{bannerTitle || name || 'Banner của bạn'}</strong>
+                          <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.45, maxWidth: 620 }}>{bannerDescription || description || 'Nội dung banner sẽ hiển thị tại đây trước khi tạo.'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
 
@@ -935,6 +1122,11 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
           )}
 
           <div className="modal-actions-footer">
+            {!isEditingListing && (
+              <div style={{ width: '100%', textAlign: 'right', marginBottom: 10, fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                Tổng phí tạm tính: <strong style={{ color: 'var(--color-text-primary)' }}>{totalPublishPrice.toLocaleString('vi-VN')} VNĐ</strong>
+              </div>
+            )}
             <button type="button" className="btn-ghost cancel-btn" onClick={onClose} disabled={isLoading}>
               Hủy
             </button>

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Plus, Check, X, Zap, Edit3, Trash2, Eye } from 'lucide-react';
+﻿import React, { useEffect, useState } from 'react';
+import { Plus, Check, X, Zap, Edit3, Trash2, Eye, Image, Upload } from 'lucide-react';
 import type { PriorityLevel } from '../types';
-import type { PriorityLevelPayload, PriorityLevelType } from '../api/admin.api';
+import type { CreateAdminBannerPayload, PriorityLevelPayload, PriorityLevelType } from '../api/admin.api';
 import { RefreshButton } from './RefreshButton';
 
 interface PriorityLevelsModuleProps {
@@ -10,6 +10,7 @@ interface PriorityLevelsModuleProps {
   handleCreatePriorityLevel: (payload: PriorityLevelPayload) => Promise<void>;
   handleUpdatePriorityLevel: (id: number, payload: PriorityLevelPayload) => Promise<void>;
   handleDeletePriorityLevel: (id: number) => Promise<void>;
+  handleCreateAdminBanner: (payload: CreateAdminBannerPayload, durationInDays: number, files: File[]) => Promise<void>;
   isLoading: boolean;
   language: 'en' | 'vi';
   onRefresh: () => void;
@@ -22,6 +23,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   handleCreatePriorityLevel,
   handleUpdatePriorityLevel,
   handleDeletePriorityLevel,
+  handleCreateAdminBanner,
   isLoading,
   language,
   onRefresh,
@@ -41,6 +43,21 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   const [durationForBanner, setDurationForBanner] = useState('');
   const [type, setType] = useState<PriorityLevelType>('Listing');
   const [isActive, setIsActive] = useState(true);
+  const [bannerTitle, setBannerTitle] = useState('');
+  const [bannerDescription, setBannerDescription] = useState('');
+  const [bannerDurationInDays, setBannerDurationInDays] = useState('');
+  const [bannerFiles, setBannerFiles] = useState<File[]>([]);
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState('');
+
+  useEffect(() => {
+    if (bannerFiles.length === 0) {
+      setBannerPreviewUrl('');
+      return;
+    }
+    const objectUrl = URL.createObjectURL(bannerFiles[0]);
+    setBannerPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [bannerFiles]);
 
   const getPriorityType = (level: PriorityLevel): PriorityLevelType => {
     return String(level.type || '').toLowerCase() === 'banner' ? 'Banner' : 'Listing';
@@ -173,6 +190,37 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
     setIsEditModalOpen(false);
   };
 
+  const resetAdminBannerForm = () => {
+    setBannerTitle('');
+    setBannerDescription('');
+    setBannerDurationInDays('');
+    setBannerFiles([]);
+  };
+
+  const onAdminBannerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bannerTitle.trim()) {
+      alert(language === 'en' ? 'Please enter a banner title' : 'Vui long nhap tieu de banner');
+      return;
+    }
+    const durationValue = validateNonNegativeInteger(
+      bannerDurationInDays,
+      language === 'en' ? 'duration in days' : 'thoi gian banner'
+    );
+    if (durationValue === null) return;
+
+    await handleCreateAdminBanner(
+      {
+        title: bannerTitle.trim(),
+        description: bannerDescription.trim(),
+        listingId: null,
+      },
+      durationValue,
+      bannerFiles
+    );
+    resetAdminBannerForm();
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr || dateStr === '0001-01-01T00:00:00' || dateStr.startsWith('0001-01-01')) {
       return language === 'en' ? 'N/A' : 'Chua cap nhat';
@@ -183,6 +231,70 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   };
 
   const visiblePriorityLevels = priorityLevels.filter(p => getPriorityType(p) === activeTypeTab);
+
+  const renderAdminBannerForm = () => (
+    <form onSubmit={onAdminBannerSubmit} className="glass-card" style={{ padding: '20px', display: 'grid', gap: '16px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="stat-icon-wrapper orange"><Image size={18} /></div>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>{language === 'en' ? 'Create Platform Ad Banner' : 'Tạo banner quảng cáo nền tảng'}</h2>
+          <p style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)' }}>
+            {language === 'en' ? 'Create a banner and attach images by banner ID' : 'Tạo banner bằng API admin và gắn ảnh theo bannerId'}
+          </p>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 600 }}>{language === 'en' ? 'Title' : 'Tiêu đề'} <span style={{ color: 'red' }}>*</span></label>
+          <input className="slot-input-text" style={{ height: '40px', padding: '0 12px' }} value={bannerTitle} onChange={e => setBannerTitle(e.target.value)} required />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 600 }}>{language === 'en' ? 'Duration In Days' : 'Thời hạn hiển thị (ngày)'} <span style={{ color: 'red' }}>*</span></label>
+          <input type="number" min={0} step={1} className="slot-input-text" style={{ height: '40px', padding: '0 12px' }} value={bannerDurationInDays} onChange={e => setBannerDurationInDays(e.target.value)} required />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 600 }}>{language === 'en' ? 'Banner Images' : 'Ảnh banner'}</label>
+          <label className="btn-ghost" style={{ height: '40px', justifyContent: 'center', cursor: 'pointer' }}>
+            <Upload size={16} />
+            {bannerFiles.length > 0 ? `${bannerFiles.length} file` : (language === 'en' ? 'Choose images' : 'Chọn ảnh')}
+            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setBannerFiles(Array.from(e.target.files || []))} />
+          </label>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <label style={{ fontSize: '13px', fontWeight: 600 }}>{language === 'en' ? 'Description' : 'Mô tả'}</label>
+        <textarea className="slot-input-text" style={{ minHeight: '90px', padding: '10px 12px', resize: 'vertical' }} value={bannerDescription} onChange={e => setBannerDescription(e.target.value)} />
+      </div>
+
+      <div className="admin-banner-preview">
+        {bannerPreviewUrl ? (
+          <img src={bannerPreviewUrl} alt="" />
+        ) : (
+          <div className="admin-banner-preview-empty">
+            <Image size={24} />
+            <span>{language === 'en' ? 'Horizontal image preview' : 'Xem trước ảnh ngang'}</span>
+          </div>
+        )}
+        <div className="admin-banner-preview-shade" />
+        <div className="admin-banner-preview-content">
+          <strong>{bannerTitle || (language === 'en' ? 'Banner title' : 'Tiêu đề banner')}</strong>
+          <p>{bannerDescription || (language === 'en' ? 'Banner description will appear over the image.' : 'Mô tả banner sẽ hiển thị trực tiếp trên ảnh.')}</p>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button type="submit" className="btn-primary" disabled={isLoading}>
+          <Plus size={16} />
+          {language === 'en' ? 'Create Banner' : 'Tạo banner'}
+        </button>
+      </div>
+    </form>
+  );
 
   const renderForm = (mode: 'add' | 'edit') => (
     <form onSubmit={mode === 'add' ? onAddSubmit : onEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
@@ -313,8 +425,8 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
     <div className="admin-module animate-fade-in">
       <header className="module-header">
         <div>
-          <h1>{language === 'en' ? 'Priority Packages' : 'Goi uu tien'}</h1>
-          <p>{language === 'en' ? 'Configure listing and banner priority packages' : 'Quan ly goi uu tien cho listing va banner'}</p>
+          <h1>{language === 'en' ? 'Paid Service Management' : 'Quản lý Dịch vụ Trả phí'}</h1>
+          <p>{language === 'en' ? 'Manage listing packages, banner packages, and platform ad banners' : 'Quản lý gói listing, gói banner và banner quảng cáo nền tảng'}</p>
         </div>
         <RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} language={language} />
       </header>
@@ -352,7 +464,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
           onClick={() => setActiveTypeTab('Listing')}
           disabled={isLoading}
         >
-          Listing
+          {language === 'en' ? 'Listing Packages' : 'Gói Listing'}
         </button>
         <button
           type="button"
@@ -360,7 +472,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
           onClick={() => setActiveTypeTab('Banner')}
           disabled={isLoading}
         >
-          Banner
+          {language === 'en' ? 'Banner Packages' : 'Gói Banner'}
         </button>
       </div>
 
@@ -458,6 +570,12 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
             : (language === 'en' ? 'Add Listing Package' : 'Them goi listing')}
         </button>
       </div>
+
+      {activeTypeTab === 'Banner' && (
+        <div style={{ marginTop: '24px' }}>
+          {renderAdminBannerForm()}
+        </div>
+      )}
 
       {isAddModalOpen && (
         <div className="listing-detail-backdrop">
