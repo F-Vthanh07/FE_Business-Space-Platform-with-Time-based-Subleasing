@@ -176,24 +176,4 @@ export interface AdminDashboardStats {
   totalAiImageCount: number;
 }
 
-export interface AdminContractItem {
-  id: number;
-  spaceId: number;
-  primaryBookingRequestId: number;
-  lessorId?: string;
-  lesseeId?: string;
-  lessorNumberCard: string | null;
-  lesseeNumberCard: string | null;
-  description: string | null;
-  acreage: number;
-  duration: number;
-  startDate: string;
-  endDate: string;
-  depositAmount: number;
-  price: number;
-  status: string; // ContractStatusEnum: "Pending" | "Active" | "Expired" | "Cancelled"
-  createdAt?: string;
-  updatedAt?: string;
-}
-
 export type { AdminPage };

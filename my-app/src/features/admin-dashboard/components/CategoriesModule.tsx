@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Edit3, Check, X, Tag } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Plus, Trash2, Edit3, Check, X, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { BusinessCategory } from '../types';
 import { RefreshButton } from './RefreshButton';
+
+const ITEMS_PER_PAGE = 10;
 
 interface CategoriesModuleProps {
   categories: BusinessCategory[];
@@ -27,10 +29,22 @@ export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<BusinessCategory | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Form states
   const [name, setName] = useState('');
   const [isActive, setIsActive] = useState(true);
+
+  const totalPages = Math.max(1, Math.ceil(categories.length / ITEMS_PER_PAGE));
+  const pagedCategories = categories.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [categories.length]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.min(Math.max(page, 1), totalPages));
+  };
 
   const handleOpenAdd = () => {
     setName('');
@@ -123,6 +137,14 @@ export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
         </div>
       </div>
 
+      {/* Create button — top-left, above the table */}
+      <div style={{ marginBottom: '16px' }}>
+        <button className="btn-ghost" disabled={isLoading} onClick={handleOpenAdd}>
+          <Plus size={16} />
+          {language === 'en' ? 'Add Category' : 'Thêm Ngành nghề'}
+        </button>
+      </div>
+
       {/* Grid Table */}
       <div className="admin-table-container glass-card">
         <table className="admin-table">
@@ -143,7 +165,7 @@ export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
                 </td>
               </tr>
             ) : (
-              categories.map(cat => (
+              pagedCategories.map(cat => (
                 <tr key={cat.id} className={!cat.isActive ? 'blocked-row' : ''}>
                   <td className="font-mono">{cat.id}</td>
                   <td>
@@ -199,13 +221,41 @@ export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
         </table>
       </div>
 
-      {/* Add button — đặt dưới bảng, dạng nút phụ nhỏ gọn */}
-      <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-        <button className="btn-ghost" disabled={isLoading} onClick={handleOpenAdd}>
-          <Plus size={16} />
-          {language === 'en' ? 'Add Category' : 'Thêm Ngành nghề'}
-        </button>
-      </div>
+      {/* Pagination */}
+      {categories.length > 0 && totalPages > 1 && (
+        <div className="admin-pagination">
+          <button
+            type="button"
+            className="btn-icon"
+            disabled={currentPage === 1}
+            onClick={() => goToPage(currentPage - 1)}
+            title={language === 'en' ? 'Previous' : 'Trang trước'}
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button
+              type="button"
+              key={page}
+              className={`admin-pagination-page ${page === currentPage ? 'admin-pagination-page--active' : ''}`}
+              onClick={() => goToPage(page)}
+            >
+              {page}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            className="btn-icon"
+            disabled={currentPage === totalPages}
+            onClick={() => goToPage(currentPage + 1)}
+            title={language === 'en' ? 'Next' : 'Trang sau'}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Add Category Modal */}
       {isAddModalOpen && (

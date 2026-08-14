@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { Search, ArrowUpDown, Wallet, Edit3, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Search, ArrowUpDown, Wallet, Edit3, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { AdminWalletAccount } from '../types';
 import { RefreshButton } from './RefreshButton';
+
+const ITEMS_PER_PAGE = 10;
 
 interface WalletsModuleProps {
   wallets: AdminWalletAccount[];
@@ -20,6 +22,7 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language,
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<AdminWalletAccount | null>(null);
   const [amount, setAmount] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const formatMoney = (n: number) => `${n.toLocaleString('vi-VN')}₫`;
 
@@ -46,6 +49,17 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language,
       sortOrder === 'desc' ? b.balance - a.balance : a.balance - b.balance
     );
   }, [wallets, search, sortOrder]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredWallets.length / ITEMS_PER_PAGE));
+  const pagedWallets = filteredWallets.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, sortOrder, wallets.length]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.min(Math.max(page, 1), totalPages));
+  };
 
   const handleOpenEdit = (wallet: AdminWalletAccount) => {
     setSelectedWallet(wallet);
@@ -143,7 +157,7 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language,
                 </td>
               </tr>
             ) : (
-              filteredWallets.map(w => {
+              pagedWallets.map(w => {
                 const displayName = w.user?.profileFullName || w.user?.userName || w.user?.email || (language === 'en' ? 'Unknown user' : 'Chưa rõ');
                 return (
                   <tr key={w.id}>
@@ -188,6 +202,42 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language,
         </table>
       </div>
 
+      {/* Pagination */}
+      {filteredWallets.length > 0 && totalPages > 1 && (
+        <div className="admin-pagination">
+          <button
+            type="button"
+            className="btn-icon"
+            disabled={currentPage === 1}
+            onClick={() => goToPage(currentPage - 1)}
+            title={language === 'en' ? 'Previous' : 'Trang trước'}
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button
+              type="button"
+              key={page}
+              className={`admin-pagination-page ${page === currentPage ? 'admin-pagination-page--active' : ''}`}
+              onClick={() => goToPage(page)}
+            >
+              {page}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            className="btn-icon"
+            disabled={currentPage === totalPages}
+            onClick={() => goToPage(currentPage + 1)}
+            title={language === 'en' ? 'Next' : 'Trang sau'}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Top-up Balance Modal */}
       {isEditModalOpen && selectedWallet && (
         <div className="listing-detail-backdrop">
@@ -215,8 +265,6 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language,
                 </label>
                 <input
                   type="number"
-                  min={1}
-                  step={1000}
                   className="slot-input-text"
                   style={{ height: '40px', width: '100%', boxSizing: 'border-box', padding: '0 12px' }}
                   value={amount}

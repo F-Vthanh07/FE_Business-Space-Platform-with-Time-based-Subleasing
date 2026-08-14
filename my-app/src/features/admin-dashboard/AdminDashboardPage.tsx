@@ -8,7 +8,7 @@ import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import './AdminDashboardPage.css';
 
 // Types & API imports
-import type { AdminPage, UserAccount, AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem, AdminContractItem, AdminDashboardStats } from './types';
+import type { AdminPage, UserAccount, AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem, AdminDashboardStats } from './types';
 import {
   fetchListings,
   approveListing,
@@ -33,7 +33,6 @@ import {
   softDeleteListing,
   fetchSoftDeletedListings,
   restoreListing,
-  fetchAllContracts,
   fetchDashboardStats
 } from './api/admin.api';
 import type { CreateAdminBannerPayload, PriorityLevelPayload } from './api/admin.api';
@@ -46,9 +45,8 @@ import { CategoriesModule } from './components/CategoriesModule';
 import { WalletsModule } from './components/WalletsModule';
 import { PriorityLevelsModule } from './components/PriorityLevelsModule';
 import { SpacesModule } from './components/SpacesModule';
-import { ContractsModule } from './components/ContractsModule';
 
-const VALID_ADMIN_PAGES: AdminPage[] = ['overview', 'users', 'listings', 'contracts', 'wallets', 'priorityLevels', 'categories', 'spaces'];
+const VALID_ADMIN_PAGES: AdminPage[] = ['overview', 'users', 'listings', 'wallets', 'priorityLevels', 'categories', 'spaces'];
 
 export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { language } = useThemeLanguage();
@@ -69,7 +67,6 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   const [wallets, setWallets] = useState<AdminWalletAccount[]>([]);
   const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
   const [spaces, setSpaces] = useState<AdminSpaceItem[]>([]);
-  const [contracts, setContracts] = useState<AdminContractItem[]>([]);
   const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats | null>(null);
   const [listingReports, setListingReports] = useState<ListingReportItem[]>([]);
   const [deletedListings, setDeletedListings] = useState<AdminListingItem[]>([]);
@@ -160,13 +157,6 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       setListingReports(reportsData);
     } catch (e) {
       console.warn("Không kết nối được API thật cho Listing Reports.", e);
-    }
-
-    try {
-      const contractsData = await fetchAllContracts(token);
-      setContracts(contractsData);
-    } catch (e) {
-      console.warn("Không kết nối được API thật cho Contracts.", e);
     }
 
     try {
@@ -467,10 +457,15 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
             priorityLevels={priorityLevels}
             categories={categories}
             reports={listingReports}
-            contracts={contracts}
             stats={dashboardStats}
             language={language}
             onNavigateToListingReports={() => navigate('/admin/listings?tab=reports')}
+            onNavigateToUsers={() => goToTab('users')}
+            onNavigateToSpaces={() => goToTab('spaces')}
+            onNavigateToListings={() => goToTab('listings')}
+            onNavigateToWallets={() => goToTab('wallets')}
+            onNavigateToPriorityLevels={() => goToTab('priorityLevels')}
+            onNavigateToCategories={() => goToTab('categories')}
             onRefresh={handleManualRefresh}
             isRefreshing={isRefreshing}
           />
@@ -506,11 +501,6 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
         {/* --- MODULE 7: SPACES --- */}
         {activeTab === 'spaces' && (
           <SpacesModule spaces={spaces} users={users} listings={listings} language={language} onRefresh={handleManualRefresh} isRefreshing={isRefreshing} />
-        )}
-
-        {/* --- MODULE 8: CONTRACTS --- */}
-        {activeTab === 'contracts' && (
-          <ContractsModule contracts={contracts} spaces={spaces} users={users} language={language} onRefresh={handleManualRefresh} isRefreshing={isRefreshing} />
         )}
 
         {/* --- MODULE 4: WALLETS --- */}

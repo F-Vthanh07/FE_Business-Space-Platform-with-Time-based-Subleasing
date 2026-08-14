@@ -102,6 +102,8 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [reportsPage, setReportsPage] = useState(1);
+  const [deletedPage, setDeletedPage] = useState(1);
   const [deletingReportId, setDeletingReportId] = useState<number | null>(null);
   const [deletingListingId, setDeletingListingId] = useState<number | null>(null);
   const [reportDetails, setReportDetails] = useState<Record<number, ListingReportDetail>>({});
@@ -157,6 +159,28 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
 
   const goToPage = (page: number) => {
     setCurrentPage(Math.min(Math.max(page, 1), totalPages));
+  };
+
+  const reportsTotalPages = Math.max(1, Math.ceil(reports.length / ITEMS_PER_PAGE));
+  const pagedReports = reports.slice((reportsPage - 1) * ITEMS_PER_PAGE, reportsPage * ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    setReportsPage(1);
+  }, [reports.length]);
+
+  const goToReportsPage = (page: number) => {
+    setReportsPage(Math.min(Math.max(page, 1), reportsTotalPages));
+  };
+
+  const deletedTotalPages = Math.max(1, Math.ceil(deletedListings.length / ITEMS_PER_PAGE));
+  const pagedDeletedListings = deletedListings.slice((deletedPage - 1) * ITEMS_PER_PAGE, deletedPage * ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    setDeletedPage(1);
+  }, [deletedListings.length, deletedListingType]);
+
+  const goToDeletedPage = (page: number) => {
+    setDeletedPage(Math.min(Math.max(page, 1), deletedTotalPages));
   };
 
   const formatDate = (dateStr: string) => {
@@ -219,7 +243,7 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
                   </td>
                 </tr>
               ) : (
-                reports.map(r => {
+                pagedReports.map(r => {
                   const cleanStatus = (r.listingStatus || 'Pending').toLowerCase();
                   const status = statusConfig[cleanStatus] || statusConfig.pending;
                   const isExpanded = expandedReportId === r.listingId;
@@ -305,6 +329,42 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
         </div>
       )}
 
+      {/* Reports Pagination */}
+      {activeListingsTab === 'reports' && reports.length > 0 && reportsTotalPages > 1 && (
+        <div className="admin-pagination">
+          <button
+            type="button"
+            className="btn-icon"
+            disabled={reportsPage === 1}
+            onClick={() => goToReportsPage(reportsPage - 1)}
+            title={language === 'en' ? 'Previous' : 'Trang trước'}
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          {Array.from({ length: reportsTotalPages }, (_, i) => i + 1).map(page => (
+            <button
+              type="button"
+              key={page}
+              className={`admin-pagination-page ${page === reportsPage ? 'admin-pagination-page--active' : ''}`}
+              onClick={() => goToReportsPage(page)}
+            >
+              {page}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            className="btn-icon"
+            disabled={reportsPage === reportsTotalPages}
+            onClick={() => goToReportsPage(reportsPage + 1)}
+            title={language === 'en' ? 'Next' : 'Trang sau'}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+
       {activeListingsTab === 'deleted' && (
         <>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
@@ -349,7 +409,7 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
                     </td>
                   </tr>
                 ) : (
-                  deletedListings.map(lt => {
+                  pagedDeletedListings.map(lt => {
                     const cleanStatus = (lt.status || 'Pending').toLowerCase();
                     const status = statusConfig[cleanStatus] || statusConfig.pending;
                     return (
@@ -394,6 +454,42 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
               </tbody>
             </table>
           </div>
+
+          {/* Deleted Listings Pagination */}
+          {!isLoadingDeleted && deletedListings.length > 0 && deletedTotalPages > 1 && (
+            <div className="admin-pagination">
+              <button
+                type="button"
+                className="btn-icon"
+                disabled={deletedPage === 1}
+                onClick={() => goToDeletedPage(deletedPage - 1)}
+                title={language === 'en' ? 'Previous' : 'Trang trước'}
+              >
+                <ChevronLeft size={16} />
+              </button>
+
+              {Array.from({ length: deletedTotalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  type="button"
+                  key={page}
+                  className={`admin-pagination-page ${page === deletedPage ? 'admin-pagination-page--active' : ''}`}
+                  onClick={() => goToDeletedPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                className="btn-icon"
+                disabled={deletedPage === deletedTotalPages}
+                onClick={() => goToDeletedPage(deletedPage + 1)}
+                title={language === 'en' ? 'Next' : 'Trang sau'}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
         </>
       )}
 

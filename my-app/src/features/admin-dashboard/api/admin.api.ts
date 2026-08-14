@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem, ListingReportDetail, AdminContractItem, AdminDashboardStats, AdminUserProfile } from '../types';
+import type { AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem, ListingReportDetail, AdminDashboardStats, AdminUserProfile } from '../types';
 import { API_BASE_URL } from '../../../config/api';
 
 export type PriorityLevelType = 'Listing' | 'Banner';
@@ -428,19 +428,5 @@ export const fetchDashboardStats = async (token: string): Promise<AdminDashboard
     throw new Error('Failed to fetch dashboard stats');
   }
   return response.json();
-};
-
-export const fetchAllContracts = async (token: string): Promise<AdminContractItem[]> => {
-  const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/Contract/GetAll', {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'accept': '*/*'
-    }
-  });
-  if (!response.ok) {
-    throw new Error('Failed to fetch contracts');
-  }
-  const data = await response.json();
-  return Array.isArray(data) ? data : (data?.data || data?.items || []);
 };
 

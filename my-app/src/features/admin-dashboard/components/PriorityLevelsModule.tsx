@@ -1,8 +1,10 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { Plus, Check, X, Zap, Edit3, Trash2, Eye, Image, Upload } from 'lucide-react';
+import { Plus, Check, X, Zap, Edit3, Trash2, Eye, Image, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PriorityLevel } from '../types';
 import type { CreateAdminBannerPayload, PriorityLevelPayload, PriorityLevelType } from '../api/admin.api';
 import { RefreshButton } from './RefreshButton';
+
+const ITEMS_PER_PAGE = 10;
 
 interface PriorityLevelsModuleProps {
   priorityLevels: PriorityLevel[];
@@ -35,6 +37,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   const [selectedLevel, setSelectedLevel] = useState<PriorityLevel | null>(null);
   const [detailLevel, setDetailLevel] = useState<PriorityLevel | null>(null);
   const [activeTypeTab, setActiveTypeTab] = useState<PriorityLevelType>('Listing');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -231,6 +234,16 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   };
 
   const visiblePriorityLevels = priorityLevels.filter(p => getPriorityType(p) === activeTypeTab);
+  const totalPages = Math.max(1, Math.ceil(visiblePriorityLevels.length / ITEMS_PER_PAGE));
+  const pagedPriorityLevels = visiblePriorityLevels.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTypeTab, priorityLevels.length]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.min(Math.max(page, 1), totalPages));
+  };
 
   const renderAdminBannerForm = () => (
     <form onSubmit={onAdminBannerSubmit} className="glass-card" style={{ padding: '20px', display: 'grid', gap: '16px', marginBottom: '20px' }}>
@@ -457,22 +470,31 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-        <button
-          type="button"
-          className={activeTypeTab === 'Listing' ? 'btn-primary' : 'btn-ghost'}
-          onClick={() => setActiveTypeTab('Listing')}
-          disabled={isLoading}
-        >
-          {language === 'en' ? 'Listing Packages' : 'Gói Listing'}
-        </button>
-        <button
-          type="button"
-          className={activeTypeTab === 'Banner' ? 'btn-primary' : 'btn-ghost'}
-          onClick={() => setActiveTypeTab('Banner')}
-          disabled={isLoading}
-        >
-          {language === 'en' ? 'Banner Packages' : 'Gói Banner'}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            className={activeTypeTab === 'Listing' ? 'btn-primary' : 'btn-ghost'}
+            onClick={() => setActiveTypeTab('Listing')}
+            disabled={isLoading}
+          >
+            {language === 'en' ? 'Listing Packages' : 'Gói Listing'}
+          </button>
+          <button
+            type="button"
+            className={activeTypeTab === 'Banner' ? 'btn-primary' : 'btn-ghost'}
+            onClick={() => setActiveTypeTab('Banner')}
+            disabled={isLoading}
+          >
+            {language === 'en' ? 'Banner Packages' : 'Gói Banner'}
+          </button>
+        </div>
+
+        <button className="btn-ghost" disabled={isLoading} onClick={handleOpenAdd}>
+          <Plus size={16} />
+          {activeTypeTab === 'Banner'
+            ? (language === 'en' ? 'Add Banner Package' : 'Them goi banner')
+            : (language === 'en' ? 'Add Listing Package' : 'Them goi listing')}
         </button>
       </div>
 
@@ -498,7 +520,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
                 </td>
               </tr>
             ) : (
-              visiblePriorityLevels.map(p => (
+              pagedPriorityLevels.map(p => (
                 <tr key={p.id} className={!p.isActive ? 'blocked-row' : ''}>
                   <td className="font-mono">{p.id}</td>
                   <td>
@@ -562,14 +584,41 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
         </table>
       </div>
 
-      <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-        <button className="btn-ghost" disabled={isLoading} onClick={handleOpenAdd}>
-          <Plus size={16} />
-          {activeTypeTab === 'Banner'
-            ? (language === 'en' ? 'Add Banner Package' : 'Them goi banner')
-            : (language === 'en' ? 'Add Listing Package' : 'Them goi listing')}
-        </button>
-      </div>
+      {/* Pagination */}
+      {visiblePriorityLevels.length > 0 && totalPages > 1 && (
+        <div className="admin-pagination">
+          <button
+            type="button"
+            className="btn-icon"
+            disabled={currentPage === 1}
+            onClick={() => goToPage(currentPage - 1)}
+            title={language === 'en' ? 'Previous' : 'Trang trước'}
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+            <button
+              type="button"
+              key={page}
+              className={`admin-pagination-page ${page === currentPage ? 'admin-pagination-page--active' : ''}`}
+              onClick={() => goToPage(page)}
+            >
+              {page}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            className="btn-icon"
+            disabled={currentPage === totalPages}
+            onClick={() => goToPage(currentPage + 1)}
+            title={language === 'en' ? 'Next' : 'Trang sau'}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
 
       {activeTypeTab === 'Banner' && (
         <div style={{ marginTop: '24px' }}>

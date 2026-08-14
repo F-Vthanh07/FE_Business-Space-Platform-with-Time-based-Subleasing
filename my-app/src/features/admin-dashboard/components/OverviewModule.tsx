@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
-import { Users, Building, FileText, Wallet, AlertTriangle, Zap, Tag, ScrollText, CalendarClock, TrendingUp, ChevronRight } from 'lucide-react';
+import { Users, Building, FileText, Wallet, AlertTriangle, Zap, Tag, TrendingUp, ChevronRight, BarChart3 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
-import type { AdminListingItem, UserAccount, AdminSpaceItem, AdminWalletAccount, PriorityLevel, BusinessCategory, ListingReportItem, AdminContractItem, AdminDashboardStats } from '../types';
+import type { AdminListingItem, UserAccount, AdminSpaceItem, AdminWalletAccount, PriorityLevel, BusinessCategory, ListingReportItem, AdminDashboardStats } from '../types';
 import { RefreshButton } from './RefreshButton';
 
 interface OverviewModuleProps {
@@ -15,23 +15,22 @@ interface OverviewModuleProps {
   priorityLevels: PriorityLevel[];
   categories: BusinessCategory[];
   reports: ListingReportItem[];
-  contracts: AdminContractItem[];
   stats: AdminDashboardStats | null;
   language: 'en' | 'vi';
   onNavigateToListingReports: () => void;
+  onNavigateToUsers: () => void;
+  onNavigateToSpaces: () => void;
+  onNavigateToListings: () => void;
+  onNavigateToWallets: () => void;
+  onNavigateToPriorityLevels: () => void;
+  onNavigateToCategories: () => void;
   onRefresh: () => void;
   isRefreshing?: boolean;
 }
 
 const CHART_COLORS = {
-  pending: '#D97706',
-  accepted: '#16A34A',
-  canceled: '#DC2626',
   listing: '#4A72FF',
   aiImage: '#8B5CF6',
-  active: '#2EEA82',
-  expired: '#A0AABC',
-  cancelled: '#FF4D6D',
 };
 
 export const OverviewModule: React.FC<OverviewModuleProps> = ({
@@ -42,10 +41,15 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
   priorityLevels,
   categories,
   reports,
-  contracts,
   stats,
   language,
   onNavigateToListingReports,
+  onNavigateToUsers,
+  onNavigateToSpaces,
+  onNavigateToListings,
+  onNavigateToWallets,
+  onNavigateToPriorityLevels,
+  onNavigateToCategories,
   onRefresh,
   isRefreshing,
 }) => {
@@ -65,21 +69,6 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
   const activePriorityCount = useMemo(() => priorityLevels.filter(p => p.isActive).length, [priorityLevels]);
   const activeCategoryCount = useMemo(() => categories.filter(c => c.isActive).length, [categories]);
 
-  const activeContractsCount = useMemo(
-    () => contracts.filter(c => (c.status || '').toLowerCase() === 'active').length,
-    [contracts]
-  );
-
-  const expiringContractsCount = useMemo(() => {
-    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    return contracts.filter(c => {
-      if ((c.status || '').toLowerCase() !== 'active') return false;
-      const end = new Date(c.endDate).getTime();
-      return !isNaN(end) && end - now <= THIRTY_DAYS && end - now > 0;
-    }).length;
-  }, [contracts]);
-
   const spendingChartData = useMemo(() => {
     if (!stats) return [];
     return [
@@ -88,26 +77,35 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
     ].filter(d => d.value > 0);
   }, [stats, language]);
 
-  const contractStatusChartData = useMemo(() => {
-    const counts = { pending: 0, active: 0, expired: 0, cancelled: 0 };
-    contracts.forEach(c => {
-      const status = (c.status || '').toLowerCase();
-      if (status === 'pending') counts.pending++;
-      else if (status === 'active') counts.active++;
-      else if (status === 'expired') counts.expired++;
-      else if (status === 'cancelled') counts.cancelled++;
+  const monthlyListingsChartData = useMemo(() => {
+    const MONTHS_TO_SHOW = 6;
+    const now = new Date();
+    const buckets: { key: string; name: string; count: number }[] = [];
+    for (let i = MONTHS_TO_SHOW - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const name = language === 'en'
+        ? d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+        : `Th${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
+      buckets.push({ key, name, count: 0 });
+    }
+    const bucketIndex = new Map(buckets.map((b, idx) => [b.key, idx]));
+
+    listings.forEach(l => {
+      if (!l.createdAt) return;
+      const d = new Date(l.createdAt);
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const idx = bucketIndex.get(key);
+      if (idx !== undefined) buckets[idx].count++;
     });
-    return [
-      { key: 'pending', name: language === 'en' ? 'Pending' : 'Chờ hiệu lực', count: counts.pending, color: CHART_COLORS.pending },
-      { key: 'active', name: language === 'en' ? 'Active' : 'Đang hiệu lực', count: counts.active, color: CHART_COLORS.active },
-      { key: 'expired', name: language === 'en' ? 'Expired' : 'Hết hạn', count: counts.expired, color: CHART_COLORS.expired },
-      { key: 'cancelled', name: language === 'en' ? 'Cancelled' : 'Đã hủy', count: counts.cancelled, color: CHART_COLORS.cancelled },
-    ];
-  }, [contracts, language]);
+
+    return buckets;
+  }, [listings, language]);
 
   const formatMoney = (n: number) => `${n.toLocaleString('vi-VN')}đ`;
 
-  const hasAlerts = pendingListingsCount > 0 || unresolvedReportsCount > 0 || expiringContractsCount > 0;
+  const hasAlerts = pendingListingsCount > 0 || unresolvedReportsCount > 0;
 
   return (
     <div className="admin-module animate-fade-in">
@@ -116,42 +114,61 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
           <h1>{language === 'en' ? 'System Overview' : 'Tổng quan Hệ thống'}</h1>
           <p>{language === 'en' ? 'Live analytics and system monitoring' : 'Thông số hoạt động và phân tích trực tiếp'}</p>
         </div>
-        <RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} language={language} />
       </header>
 
       {/* Stats Cards */}
       <div className="admin-stats-grid">
-        <div className="admin-stat-card glass-card">
+        <button
+          type="button"
+          className="admin-stat-card glass-card"
+          onClick={onNavigateToUsers}
+          style={{ cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
+        >
           <div className="stat-icon-wrapper blue"><Users size={20} /></div>
           <div className="stat-data">
             <span className="stat-label">{language === 'en' ? 'TOTAL USERS' : 'TỔNG NGƯỜI DÙNG'}</span>
             <h2 className="stat-value">{users.length}</h2>
           </div>
-        </div>
+        </button>
 
-        <div className="admin-stat-card glass-card">
+        <button
+          type="button"
+          className="admin-stat-card glass-card"
+          onClick={onNavigateToSpaces}
+          style={{ cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
+        >
           <div className="stat-icon-wrapper green"><Building size={20} /></div>
           <div className="stat-data">
             <span className="stat-label">{language === 'en' ? 'REGISTERED SPACES' : 'MẶT BẰNG ĐÃ ĐĂNG KÝ'}</span>
             <h2 className="stat-value">{spaces.length}</h2>
           </div>
-        </div>
+        </button>
 
-        <div className="admin-stat-card glass-card">
+        <button
+          type="button"
+          className="admin-stat-card glass-card"
+          onClick={onNavigateToListings}
+          style={{ cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
+        >
           <div className="stat-icon-wrapper orange"><FileText size={20} /></div>
           <div className="stat-data">
             <span className="stat-label">{language === 'en' ? 'TOTAL LISTINGS' : 'TỔNG TIN ĐĂNG'}</span>
             <h2 className="stat-value">{listings.length}</h2>
           </div>
-        </div>
+        </button>
 
-        <div className="admin-stat-card glass-card">
+        <button
+          type="button"
+          className="admin-stat-card glass-card"
+          onClick={onNavigateToWallets}
+          style={{ cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
+        >
           <div className="stat-icon-wrapper purple"><Wallet size={20} /></div>
           <div className="stat-data">
             <span className="stat-label">{language === 'en' ? 'TOTAL WALLET BALANCE' : 'TỔNG SỐ DƯ VÍ HỆ THỐNG'}</span>
             <h2 className="stat-value">{formatMoney(totalWalletBalance)}</h2>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Alerts requiring action */}
@@ -163,13 +180,19 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
           </div>
           <div className="admin-stats-grid" style={{ marginTop: '12px', marginBottom: 0 }}>
             {pendingListingsCount > 0 && (
-              <div className="admin-stat-card glass-card--inset">
+              <button
+                type="button"
+                className="admin-stat-card glass-card--inset"
+                onClick={onNavigateToListings}
+                style={{ cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
+              >
                 <div className="stat-icon-wrapper orange"><FileText size={18} /></div>
-                <div className="stat-data">
+                <div className="stat-data" style={{ flex: 1 }}>
                   <span className="stat-label">{language === 'en' ? 'PENDING LISTINGS' : 'TIN ĐĂNG CHỜ DUYỆT'}</span>
                   <h2 className="stat-value">{pendingListingsCount}</h2>
                 </div>
-              </div>
+                <ChevronRight size={18} className="text-secondary" />
+              </button>
             )}
             {unresolvedReportsCount > 0 && (
               <button
@@ -185,15 +208,6 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
                 </div>
                 <ChevronRight size={18} className="text-secondary" />
               </button>
-            )}
-            {expiringContractsCount > 0 && (
-              <div className="admin-stat-card glass-card--inset">
-                <div className="stat-icon-wrapper orange"><CalendarClock size={18} /></div>
-                <div className="stat-data">
-                  <span className="stat-label">{language === 'en' ? 'CONTRACTS EXPIRING SOON' : 'HỢP ĐỒNG SẮP HẾT HẠN'}</span>
-                  <h2 className="stat-value">{expiringContractsCount}</h2>
-                </div>
-              </div>
             )}
           </div>
         </div>
@@ -243,19 +257,19 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
           )}
         </div>
 
-        {/* Contract status bar chart */}
+        {/* Monthly new listings bar chart */}
         <div className="admin-chart-card glass-card">
           <div className="section-title-row">
-            <ScrollText size={18} className="text-neon-green" />
-            <h3>{language === 'en' ? 'Contracts by Status' : 'Hợp đồng theo trạng thái'}</h3>
+            <BarChart3 size={18} className="text-neon-green" />
+            <h3>{language === 'en' ? 'New Listings by Month' : 'Tổng tin đăng theo tháng'}</h3>
           </div>
-          {contracts.length === 0 ? (
+          {listings.length === 0 ? (
             <p className="text-secondary" style={{ padding: '24px 0', textAlign: 'center' }}>
-              {language === 'en' ? 'No contracts data available yet.' : 'Chưa có dữ liệu hợp đồng.'}
+              {language === 'en' ? 'No listings data available yet.' : 'Chưa có dữ liệu tin đăng.'}
             </p>
           ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={contractStatusChartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={monthlyListingsChartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: 'var(--color-text-secondary)', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis allowDecimals={false} tick={{ fill: 'var(--color-text-secondary)', fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -263,12 +277,9 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
                   cursor={{ fill: 'rgba(255,255,255,0.04)' }}
                   contentStyle={{ background: 'rgba(20,24,32,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
                   labelStyle={{ color: '#fff' }}
+                  formatter={(value) => [value, language === 'en' ? 'Listings' : 'Tin đăng']}
                 />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-                  {contractStatusChartData.map(entry => (
-                    <Cell key={entry.key} fill={entry.color} />
-                  ))}
-                </Bar>
+                <Bar dataKey="count" fill={CHART_COLORS.listing} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -277,29 +288,36 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
 
       {/* Priority packages & categories summary */}
       <div className="admin-stats-grid" style={{ marginTop: '24px', marginBottom: 0 }}>
-        <div className="admin-stat-card glass-card">
-          <div className="stat-icon-wrapper blue"><ScrollText size={20} /></div>
-          <div className="stat-data">
-            <span className="stat-label">{language === 'en' ? 'ACTIVE CONTRACTS' : 'HỢP ĐỒNG ĐANG HIỆU LỰC'}</span>
-            <h2 className="stat-value">{activeContractsCount} / {contracts.length}</h2>
-          </div>
-        </div>
-
-        <div className="admin-stat-card glass-card">
+        <button
+          type="button"
+          className="admin-stat-card glass-card"
+          onClick={onNavigateToPriorityLevels}
+          style={{ cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
+        >
           <div className="stat-icon-wrapper blue"><Zap size={20} /></div>
           <div className="stat-data">
             <span className="stat-label">{language === 'en' ? 'ACTIVE PRIORITY PACKAGES' : 'GÓI ƯU TIÊN ĐANG HOẠT ĐỘNG'}</span>
             <h2 className="stat-value">{activePriorityCount} / {priorityLevels.length}</h2>
           </div>
-        </div>
+        </button>
 
-        <div className="admin-stat-card glass-card">
+        <button
+          type="button"
+          className="admin-stat-card glass-card"
+          onClick={onNavigateToCategories}
+          style={{ cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
+        >
           <div className="stat-icon-wrapper green"><Tag size={20} /></div>
           <div className="stat-data">
             <span className="stat-label">{language === 'en' ? 'ACTIVE CATEGORIES' : 'NGÀNH NGHỀ ĐANG HOẠT ĐỘNG'}</span>
             <h2 className="stat-value">{activeCategoryCount} / {categories.length}</h2>
           </div>
-        </div>
+        </button>
+      </div>
+
+      {/* Refresh action */}
+      <div className="admin-overview-footer-actions" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
+        <RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} language={language} />
       </div>
     </div>
   );
