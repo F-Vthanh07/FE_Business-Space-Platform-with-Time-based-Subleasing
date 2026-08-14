@@ -113,13 +113,12 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     checkPendingBookingRequests();
-    const interval = setInterval(checkPendingBookingRequests, 15000);
+    // Đã xóa setInterval ở đây vì bên Header.tsx đã có chạy polling 15s/lần rồi, tránh gọi API trùng lặp 2 lần.
 
     const handleSeen = () => checkPendingBookingRequests();
     window.addEventListener('booking-request-seen', handleSeen);
 
     return () => {
-      clearInterval(interval);
       window.removeEventListener('booking-request-seen', handleSeen);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

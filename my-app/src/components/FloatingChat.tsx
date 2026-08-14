@@ -208,22 +208,11 @@ export const FloatingChat: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // GIẢI PHÁP TẠM THỜI CHO PHÍA KHÁCH THUÊ (chưa có SignalR push từ Backend):
-  // Tự động fetch lại danh sách phòng chat mỗi vài giây (polling), để khi chủ nhà duyệt
-  // đơn ở 1 tab/trình duyệt KHÁC, khách thuê vẫn tự thấy phòng chat xuất hiện sau vài giây,
-  // không cần F5 lại trang. Khi nào Backend làm xong SignalR event "ReceiveNewConversation"
-  // thật sự (đẩy real-time, không delay) thì có thể bỏ đoạn polling này đi cho nhẹ máy.
-  const POLLING_INTERVAL_MS = 8000;
-  useEffect(() => {
-    if (!currentUserId || !token) return;
-    const intervalId = setInterval(() => {
-      // Chỉ cần polling khi đang KHÔNG mở khung chat (view LIST hoặc đang đóng),
-      // để tránh vừa polling vừa đang gõ tin nhắn gây giật UI không cần thiết.
-      fetchAndSyncConversations();
-    }, POLLING_INTERVAL_MS);
-    return () => clearInterval(intervalId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserId, token]);
+  // Đã gỡ bỏ polling tự động tải lại danh sách chat theo yêu cầu.
+  // Danh sách chat sẽ chỉ được làm mới khi:
+  // 1. Mở trang web (chạy lần đầu).
+  // 2. Nhận được event SignalR "ReceiveNewConversation" từ BE (nếu BE đã làm).
+  // 3. Có sự kiện 'conversation-created' nội bộ ở FE.
 
   useEffect(() => {
     const handleOpenChatEvent = (e: Event) => {
