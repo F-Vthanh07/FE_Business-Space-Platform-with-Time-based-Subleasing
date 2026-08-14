@@ -97,13 +97,17 @@
 }
 
 .onboarding-input {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 12px 16px;
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.onboarding-input::placeholder {
+  color: var(--color-text-muted);
 }
 
 .onboarding-input:focus {

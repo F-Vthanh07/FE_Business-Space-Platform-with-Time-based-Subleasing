@@ -11,7 +11,6 @@ export const OnboardingProfilePage: React.FC = () => {
   const isEn = language === 'en';
   const navigate = useNavigate();
 
-  const [avatarUrl, setAvatarUrl] = useState('');
   const [bio, setBio] = useState('');
   const [socialLink, setSocialLink] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -30,7 +29,6 @@ export const OnboardingProfilePage: React.FC = () => {
       const token = localStorage.getItem('portal_token') || '';
       await updateProfile(
         {
-          avatarUrl: avatarUrl || undefined,
           bio: bio || undefined,
           socialLink: socialLink || undefined,
         },
@@ -65,22 +63,11 @@ export const OnboardingProfilePage: React.FC = () => {
             <h1 className="onboarding-title">{isEn ? 'Complete your profile' : 'Hoàn tất hồ sơ của bạn'}</h1>
             <p className="onboarding-subtitle text-secondary">
               {isEn
-                ? 'Add an avatar and a short bio so others recognize you.'
-                : 'Thêm ảnh đại diện và giới thiệu ngắn để mọi người dễ nhận ra bạn.'}
+                ? 'Add a short bio so others recognize you.'
+                : 'Thêm giới thiệu ngắn để mọi người dễ nhận ra bạn.'}
             </p>
 
             <form className="onboarding-form" onSubmit={handleSaveProfile}>
-              <div className="onboarding-field-group">
-                <label className="onboarding-label">{isEn ? 'Avatar URL' : 'Ảnh đại diện (URL)'}</label>
-                <input
-                  type="text"
-                  className="onboarding-input"
-                  placeholder="https://..."
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                />
-              </div>
-
               <div className="onboarding-field-group">
                 <label className="onboarding-label">{isEn ? 'Bio' : 'Giới thiệu bản thân'}</label>
                 <textarea

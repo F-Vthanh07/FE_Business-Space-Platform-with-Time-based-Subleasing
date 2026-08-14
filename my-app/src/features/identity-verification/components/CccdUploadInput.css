@@ -10,16 +10,16 @@
   justify-content: center;
   min-height: 220px;
   border-radius: 20px;
-  border: 1px dashed rgba(255, 255, 255, 0.16);
-  background: rgba(15, 20, 25, 0.4);
+  border: 1px dashed var(--color-border-hover);
+  background: var(--color-bg-card);
   cursor: pointer;
   overflow: hidden;
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .cccd-upload-dropzone:hover {
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--color-accent);
+  background: var(--color-bg-hover);
 }
 
 .cccd-upload-hidden-input {
@@ -39,6 +39,16 @@
   width: 100%;
   max-height: 320px;
   object-fit: contain;
+}
+
+.cccd-upload-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .cccd-upload-scan-btn {

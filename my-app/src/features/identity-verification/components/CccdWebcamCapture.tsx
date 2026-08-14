@@ -58,6 +58,18 @@ export const CccdWebcamCapture: React.FC<CccdWebcamCaptureProps> = ({ scanState,
           ? 'Align the QR code inside the frame. It will be detected automatically.'
           : 'Đưa mã QR vào giữa khung. Hệ thống sẽ tự động nhận diện.'}
       </p>
+      <ul className="cccd-webcam-tips text-secondary">
+        <li>
+          {isEn
+            ? 'Hold the card straight-on and steady — avoid tilting or blur.'
+            : 'Giữ CCCD thẳng góc và ổn định, tránh bị xéo hoặc rung mờ.'}
+        </li>
+        <li>
+          {isEn
+            ? 'Use good, even lighting with no glare on the card surface.'
+            : 'Chụp ở nơi đủ sáng, tránh ánh sáng chói làm lóa mặt thẻ.'}
+        </li>
+      </ul>
     </div>
   );
 };

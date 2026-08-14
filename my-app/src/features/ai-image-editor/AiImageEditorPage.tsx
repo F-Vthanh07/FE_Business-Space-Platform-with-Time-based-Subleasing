@@ -22,7 +22,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { API_BASE_URL } from '../../config/api';
 import './AiImageEditorPage.css';
 
@@ -924,8 +924,6 @@ export const AiImageEditorPage: React.FC = () => {
           },
         }}
       />
-
-      <Toaster position="top-right" />
 
       <div className="ai-editor-header">
         <div>

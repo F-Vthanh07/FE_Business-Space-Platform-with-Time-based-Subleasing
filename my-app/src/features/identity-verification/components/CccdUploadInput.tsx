@@ -55,6 +55,29 @@ export const CccdUploadInput: React.FC<CccdUploadInputProps> = ({ scanState, onS
         )}
       </label>
 
+      <ul className="cccd-upload-tips text-secondary">
+        <li>
+          {isEn
+            ? 'Make sure the photo is sharp and in focus — avoid blur.'
+            : 'Đảm bảo ảnh chụp rõ nét, không bị mờ.'}
+        </li>
+        <li>
+          {isEn
+            ? 'Hold the card straight-on, not tilted or at an angle.'
+            : 'Chụp thẳng góc, không để CCCD bị xéo hoặc nghiêng.'}
+        </li>
+        <li>
+          {isEn
+            ? 'Ensure even lighting with no glare or shadows covering the QR code.'
+            : 'Chụp nơi đủ sáng, tránh lóa sáng hoặc bóng che lên mã QR.'}
+        </li>
+        <li>
+          {isEn
+            ? 'Frame the whole card in the shot, including all four corners.'
+            : 'Chụp trọn khung CCCD, không bị cắt góc hoặc thiếu cạnh.'}
+        </li>
+      </ul>
+
       <button
         type="button"
         className="btn-primary cccd-upload-scan-btn"

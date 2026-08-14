@@ -201,7 +201,6 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
           <UserSidebar
             activePage={activePage}
             onNavigate={(page) => navigate(`/user/${page}`)}
-            onNewSpaceClick={() => setIsNewSpaceFormOpen(true)}
             onNewSlotClick={() => setIsNewSlotFormOpen(true)}
             onLogout={onLogout}
           />

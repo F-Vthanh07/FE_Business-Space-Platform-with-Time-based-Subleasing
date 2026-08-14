@@ -2,7 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Share2, Heart, ChevronRight, Home, TrendingUp, Calendar, Hash, ShieldCheck, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Clock, Tag, Flag, Star } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Clock, Tag, Flag, Star } from 'lucide-react';
 import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
@@ -148,6 +149,8 @@ export const ListingDetail: React.FC = () => {
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [reviewStarFilter, setReviewStarFilter] = useState<number | 'all'>('all');
 
+  const [businessCategoriesById, setBusinessCategoriesById] = useState<Record<number, string>>({});
+
   const currentUserId = localStorage.getItem('current_user_id');
   const token = localStorage.getItem('portal_token');
 
@@ -163,6 +166,25 @@ export const ListingDetail: React.FC = () => {
         if (spaceResponse.ok) {
           const spaceData = await spaceResponse.json();
           spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+        }
+
+        // LẤY DANH SÁCH NGÀNH NGHỀ ĐỂ ĐỔI bussinessCategoryId -> TÊN NGÀNH NGHỀ
+        try {
+          const categoryResponse = await fetch('https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/GetAll', {
+            headers: { 'accept': '*/*' }
+          });
+          if (categoryResponse.ok) {
+            const categoryData = await categoryResponse.json();
+            const categories = Array.isArray(categoryData) ? categoryData : (categoryData?.data || categoryData?.items || []);
+            const map: Record<number, string> = {};
+            categories.forEach((c: any) => {
+              const catId = c.id ?? c.Id;
+              if (catId != null) map[catId] = c.name;
+            });
+            setBusinessCategoriesById(map);
+          }
+        } catch (catErr) {
+          console.error('Lỗi lấy danh sách ngành nghề:', catErr);
         }
 
         // BƯỚC 2: LẤY DANH SÁCH BÀI ĐĂNG (Thêm header)
@@ -276,7 +298,7 @@ export const ListingDetail: React.FC = () => {
 
   const handleToggleFavorite = async () => {
     if (!token) {
-      alert("Vui lòng đăng nhập để lưu mặt bằng!");
+      toast.error("Vui lòng đăng nhập để lưu mặt bằng!");
       navigate('/login');
       return;
     }
@@ -303,7 +325,7 @@ export const ListingDetail: React.FC = () => {
   const handleSubmitBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUserId || !token) {
-      alert("Vui lòng đăng nhập để gửi yêu cầu thuê!");
+      toast.error("Vui lòng đăng nhập để gửi yêu cầu thuê!");
       navigate('/login');
       return;
     }
@@ -373,7 +395,7 @@ export const ListingDetail: React.FC = () => {
 
   const handleOpenReportModal = () => {
     if (!token) {
-      alert("Vui lòng đăng nhập để báo cáo bài đăng!");
+      toast.error("Vui lòng đăng nhập để báo cáo bài đăng!");
       navigate('/login');
       return;
     }
@@ -495,7 +517,8 @@ export const ListingDetail: React.FC = () => {
             )}
 
             <p style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#505050', margin: '0 0 20px 0' }}>
-              <MapPin size={16} /> {listing.location || listing.address || listing.spaceAddress || 'Đang cập nhật địa chỉ'}
+              <MapPin size={16} />
+              {[listing.location || listing.address || listing.spaceAddress, listing.city].filter(Boolean).join(', ') || 'Đang cập nhật địa chỉ'}
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E0E0E0', borderBottom: '1px solid #E0E0E0', padding: '16px 0', marginBottom: '30px' }}>
@@ -566,7 +589,11 @@ export const ListingDetail: React.FC = () => {
                 <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Mục đích sử dụng phù hợp</h3>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '40px' }}>
                   {allowedCategories.map((cat: any, idx: number) => {
-                    const label = typeof cat === 'string' ? cat : (cat.name || cat.categoryName || cat.title || '');
+                    const categoryId = cat?.bussinessCategoryId ?? cat?.businessCategoryId ?? cat?.categoryId;
+                    const label = typeof cat === 'string'
+                      ? cat
+                      : (cat.name || cat.categoryName || cat.title || businessCategoriesById[categoryId] || '');
+                    if (!label) return null;
                     return (
                       <div
                         key={idx}
@@ -623,12 +650,6 @@ export const ListingDetail: React.FC = () => {
                <div>
                   <div style={{ color: '#777', fontSize: '13px', marginBottom: '8px' }}>Giá hiện tại</div>
                   <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--color-positive)' }}>{listing.price ? `${listing.price.toLocaleString('vi-VN')} ₫` : 'N/A'}</div>
-               </div>
-               <div>
-                  <div style={{ color: '#777', fontSize: '13px', marginBottom: '8px' }}>Biến động trong 1 tháng</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <TrendingUp size={18} color="var(--color-positive)" /> 0% (Giữ giá)
-                  </div>
                </div>
                <div>
                   <div style={{ color: '#777', fontSize: '13px', marginBottom: '8px' }}>Đánh giá thị trường</div>
@@ -747,7 +768,7 @@ export const ListingDetail: React.FC = () => {
                />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', paddingBottom: '30px', borderBottom: '1px solid #E0E0E0', marginBottom: '40px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', paddingBottom: '30px', borderBottom: '1px solid #E0E0E0', marginBottom: '40px' }}>
                <div>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#777', fontSize: '12px', marginBottom: '4px' }}><Calendar size={12}/> Ngày đăng</div>
                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
@@ -759,16 +780,6 @@ export const ListingDetail: React.FC = () => {
                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
                     {listing.allowedEndTime ? new Date(listing.allowedEndTime).toLocaleDateString('vi-VN') : 'Sau 30 ngày'}
                  </div>
-               </div>
-               <div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#777', fontSize: '12px', marginBottom: '4px' }}><ShieldCheck size={12}/> Loại tin</div>
-                 <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
-                    {listing.listingType === 'EntireSpace' ? 'Nguyên căn' : 'Tin thường'}
-                 </div>
-               </div>
-               <div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#777', fontSize: '12px', marginBottom: '4px' }}><Hash size={12}/> Mã tin</div>
-                 <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>#{listing.id || listing.Id || '46032982'}</div>
                </div>
             </div>
 
@@ -851,7 +862,7 @@ export const ListingDetail: React.FC = () => {
 
                   <button 
                     onClick={() => {
-                      if(!currentUserId) { alert("Vui lòng đăng nhập!"); navigate('/login'); return; }
+                      if(!currentUserId) { navigate('/login'); return; }
                       setIsBookingModalOpen(true);
                     }}
                     style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '6px', border: 'none', backgroundColor: '#1E293B', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}

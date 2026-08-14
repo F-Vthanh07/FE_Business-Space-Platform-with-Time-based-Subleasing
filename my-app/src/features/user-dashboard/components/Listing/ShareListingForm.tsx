@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, DollarSign, Users, ShieldCheck, ShieldAlert, Plus, Trash2, Clock, Type } from 'lucide-react';
+import { X, Users, ShieldCheck, ShieldAlert, Plus, Trash2, Clock, Type } from 'lucide-react';
 import "../../../shared/ModalShell.css";
 import { Select } from '../../../../components/Select';
 import { createShareListing, updateShareListing } from './shareListing.api';
@@ -413,7 +413,7 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
               </label>
               <input
                 type="text"
-                className="form-input"
+                className="form-input form-input--flat"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 disabled={isLoading}
@@ -444,18 +444,15 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                 <label className="form-label">
                   Đơn giá chia sẻ (VNĐ) <span className="required-mark">*</span>
                 </label>
-                <div className="input-with-icon">
-                  <DollarSign size={14} className="input-icon" />
-                  <input
-                    type="number"
-                    min="0"
-                    className="form-input"
-                    value={price}
-                    onChange={e => setPrice(Number(e.target.value))}
-                    disabled={isLoading}
-                    required
-                  />
-                </div>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-input form-input--flat"
+                  value={price === 0 ? '' : price}
+                  onChange={e => setPrice(e.target.value === '' ? 0 : Number(e.target.value))}
+                  disabled={isLoading}
+                  required
+                />
               </div>
             </div>
 

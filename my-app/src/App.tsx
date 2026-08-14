@@ -1,5 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { MeshBackground } from './components/MeshBackground';
 import { Header } from './components/Header';
 import { UserDashboardPage } from './features/user-dashboard/UserDashboardPage';
@@ -44,6 +45,8 @@ const App: React.FC = () => {
 
   return (
     <>
+      <Toaster position="top-right" />
+
       {/* Hiệu ứng click toàn màn hình */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'none' }}>
         <ClickSpark
