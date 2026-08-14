@@ -356,8 +356,6 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       }
     }
 
-    const startDate = new Date(allowedStartTime);
-    
     // Bỏ validation ngày quá khứ theo yêu cầu mới
 
     if (new Date(allowedEndTime) <= new Date(allowedStartTime)) {

@@ -60,7 +60,6 @@ export const OwnerListings: React.FC = () => {
       });
 
       let mySpaces: any[] = [];
-      let mySpaceIds: any[] = [];
       if (spaceRes.ok) {
         const spaceData = await spaceRes.json();
         const spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
@@ -87,8 +86,6 @@ export const OwnerListings: React.FC = () => {
             }
           } catch(err) { console.error("Error fetching space parts", err); }
         }
-        
-        mySpaceIds = mySpaces.map((s: any) => s.id || s.Id);
       }
 
       // BƯỚC 2: Lấy tất cả bài đăng
