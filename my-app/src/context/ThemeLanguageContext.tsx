@@ -259,7 +259,7 @@ const translations: Translations = {
   'overview.spacesUnit': { en: 'spaces', vi: 'mặt bằng' },
   'overview.contractsUnit': { en: 'contracts', vi: 'hợp đồng' },
   'overview.listingsUnit': { en: 'listings', vi: 'tin đăng' },
-  'overview.pendingRequests': { en: 'Pending Booking Requests', vi: 'Yêu cầu đặt chỗ chờ duyệt' },
+  'overview.pendingRequests': { en: 'Pending Booking Requests', vi: 'Yêu cầu thuê chờ duyệt' },
   'overview.noPendingRequests': { en: 'No pending requests', vi: 'Không có yêu cầu nào đang chờ' },
   'overview.noPendingDesc': {
     en: 'All booking requests have been processed. New requests will appear here.',

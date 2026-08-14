@@ -259,9 +259,9 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
       {/* Calendar Panel */}
       <div className="glass-card calendar-panel">
 
-        {/* Bộ chọn Mặt bằng + Nút phóng to lịch */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="space-selector-dropdown" style={{ flex: 1 }} ref={spaceDropdownRef}>
+        {/* Toolbar: chọn Mặt bằng, điều hướng tháng, nút phóng to lịch — 1 hàng duy nhất khi phóng to */}
+        <div className="calendar-toolbar">
+          <div className="space-selector-dropdown calendar-toolbar-space" ref={spaceDropdownRef}>
           <button
             type="button"
             className="space-selector-trigger"
@@ -298,9 +298,72 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
           )}
           </div>
 
+          {/* Month Navigation */}
+          <div className="calendar-header">
+            <button className="btn-icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+              <ChevronLeft size={16} />
+            </button>
+
+            <div className="space-selector-dropdown" ref={monthPickerRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className="calendar-month-title"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                onClick={() => setIsMonthPickerOpen((prev) => !prev)}
+              >
+                {format(currentMonth, 'MMMM yyyy', { locale: dateLocale })}
+                <ChevronDown size={14} className={`space-selector-chevron ${isMonthPickerOpen ? 'space-selector-chevron--open' : ''}`} />
+              </button>
+
+              {isMonthPickerOpen && (
+                <div className="space-selector-menu" style={{ display: 'flex', gap: 8, padding: 10, width: 220 }}>
+                  <select
+                    value={currentMonth.getMonth()}
+                    onChange={(e) => {
+                      const month = Number(e.target.value);
+                      setCurrentMonth((prev) => new Date(prev.getFullYear(), month, 1));
+                    }}
+                    style={{
+                      flex: 1, padding: '6px 8px', borderRadius: 6,
+                      border: '1px solid var(--color-border)', background: 'var(--color-bg-card-deep)',
+                      color: 'var(--color-text-primary)', fontSize: 13,
+                    }}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i} value={i}>
+                        {format(new Date(2000, i, 1), 'MMMM', { locale: dateLocale })}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={currentMonth.getFullYear()}
+                    onChange={(e) => {
+                      const year = Number(e.target.value);
+                      setCurrentMonth((prev) => new Date(year, prev.getMonth(), 1));
+                    }}
+                    style={{
+                      width: 90, padding: '6px 8px', borderRadius: 6,
+                      border: '1px solid var(--color-border)', background: 'var(--color-bg-card-deep)',
+                      color: 'var(--color-text-primary)', fontSize: 13,
+                    }}
+                  >
+                    {Array.from({ length: 21 }, (_, i) => {
+                      const year = new Date().getFullYear() - 10 + i;
+                      return <option key={year} value={year}>{year}</option>;
+                    })}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <button className="btn-icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
           <button
             type="button"
-            className="btn-icon"
+            className="btn-icon calendar-toolbar-expand"
             title={isExpanded
               ? (language === 'en' ? 'Collapse' : 'Thu gọn')
               : (language === 'en' ? 'Expand' : 'Phóng to')}
@@ -310,69 +373,6 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
             }}
           >
             {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
-        </div>
-
-        {/* Month Navigation */}
-        <div className="calendar-header">
-          <button className="btn-icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-            <ChevronLeft size={16} />
-          </button>
-
-          <div className="space-selector-dropdown" ref={monthPickerRef} style={{ position: 'relative' }}>
-            <button
-              type="button"
-              className="calendar-month-title"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-              onClick={() => setIsMonthPickerOpen((prev) => !prev)}
-            >
-              {format(currentMonth, 'MMMM yyyy', { locale: dateLocale })}
-              <ChevronDown size={14} className={`space-selector-chevron ${isMonthPickerOpen ? 'space-selector-chevron--open' : ''}`} />
-            </button>
-
-            {isMonthPickerOpen && (
-              <div className="space-selector-menu" style={{ display: 'flex', gap: 8, padding: 10, width: 220 }}>
-                <select
-                  value={currentMonth.getMonth()}
-                  onChange={(e) => {
-                    const month = Number(e.target.value);
-                    setCurrentMonth((prev) => new Date(prev.getFullYear(), month, 1));
-                  }}
-                  style={{
-                    flex: 1, padding: '6px 8px', borderRadius: 6,
-                    border: '1px solid var(--color-border)', background: 'var(--color-bg-card-deep)',
-                    color: 'var(--color-text-primary)', fontSize: 13,
-                  }}
-                >
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i} value={i}>
-                      {format(new Date(2000, i, 1), 'MMMM', { locale: dateLocale })}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={currentMonth.getFullYear()}
-                  onChange={(e) => {
-                    const year = Number(e.target.value);
-                    setCurrentMonth((prev) => new Date(year, prev.getMonth(), 1));
-                  }}
-                  style={{
-                    width: 90, padding: '6px 8px', borderRadius: 6,
-                    border: '1px solid var(--color-border)', background: 'var(--color-bg-card-deep)',
-                    color: 'var(--color-text-primary)', fontSize: 13,
-                  }}
-                >
-                  {Array.from({ length: 21 }, (_, i) => {
-                    const year = new Date().getFullYear() - 10 + i;
-                    return <option key={year} value={year}>{year}</option>;
-                  })}
-                </select>
-              </div>
-            )}
-          </div>
-
-          <button className="btn-icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-            <ChevronRight size={16} />
           </button>
         </div>
 

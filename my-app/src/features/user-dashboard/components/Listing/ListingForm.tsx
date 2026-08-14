@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, DollarSign, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, Users, ShieldCheck, Clock, Megaphone } from 'lucide-react';
+import { X, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, Users, ShieldCheck, Clock, Megaphone } from 'lucide-react';
 import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
 import { Select } from '../../../../components/Select';
 import { DatePicker } from '../../../../components/DatePicker';
@@ -746,18 +746,15 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 <label className="form-label">
                   Đơn giá {mode === 'share' ? 'chia sẻ' : 'cơ bản'} (VNĐ) <span className="required-mark">*</span>
                 </label>
-                <div className="input-with-icon">
-                  <DollarSign size={14} className="input-icon" />
-                  <input
-                    type="number"
-                    min="0"
-                    className="form-input"
-                    value={price}
-                    onChange={e => setPrice(Number(e.target.value))}
-                    disabled={isLoading}
-                    required
-                  />
-                </div>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-input form-input--flat"
+                  value={price === 0 ? '' : price}
+                  onChange={e => setPrice(e.target.value === '' ? 0 : Number(e.target.value))}
+                  disabled={isLoading}
+                  required
+                />
               </div>
             </div>
 
@@ -1094,7 +1091,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
               </label>
               <input
                 type="text"
-                className="form-input"
+                className="form-input form-input--flat"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 disabled={isLoading}

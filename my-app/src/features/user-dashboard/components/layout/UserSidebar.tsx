@@ -6,7 +6,6 @@ import {
   FileText,
   Users,
   CalendarDays,
-  Plus,
   LogOut,
   Inbox,
   Wallet,
@@ -19,7 +18,6 @@ import type { UserPage } from '../../types';
 interface UserSidebarProps {
   activePage: UserPage | string;
   onNavigate: (page: UserPage | string) => void;
-  onNewSpaceClick?: () => void;
   onNewSlotClick?: () => void;
   onLogout?: () => void;
 }
@@ -42,7 +40,6 @@ const requestNavItems: NavItem[] = [
 const spaceNavItems: NavItem[] = [
   { id: 'spaces', icon: <Building2 size={16} /> },
   { id: 'listings', icon: <FileText size={16} /> },
-  { id: 'contracts', icon: <FileText size={16} /> },
   { id: 'external-contracts', icon: <FileText size={16} /> },
   { id: 'tenants', icon: <Users size={16} /> },
 ];
@@ -74,7 +71,7 @@ const getPageLabels = (id: string, lang: string) => {
   }
 };
 
-export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate, onNewSpaceClick, onLogout }) => {
+export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate, onLogout }) => {
   const { t, language } = useThemeLanguage();
   const [pendingBookingCount, setPendingBookingCount] = useState(0);
 
@@ -170,10 +167,6 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
 
   return (
     <aside className="user-sidebar glass-card">
-      <div className="user-sidebar-header">
-        <p className="user-sidebar-subtitle">System Console</p>
-      </div>
-
       <nav className="user-sidebar-nav">
         {renderNavGroup(dashboardNavItems)}
 
@@ -195,10 +188,6 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
 
       <div className="user-sidebar-footer">
         <div className="user-sidebar-divider" />
-        <button className="btn-primary user-sidebar-cta" onClick={onNewSpaceClick || (() => onNavigate('spaces'))}>
-          <Plus size={16} />
-          {language === 'en' ? 'NEW SPACE' : 'THÊM MẶT BẰNG'}
-        </button>
 
         <div className="user-sidebar-footer-actions">
           <button

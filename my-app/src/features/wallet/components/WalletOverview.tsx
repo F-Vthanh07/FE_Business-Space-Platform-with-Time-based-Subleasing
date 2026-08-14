@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Wallet, Plus, ArrowUpRight, Clock3, TrendingUp, TrendingDown, Inbox } from 'lucide-react';
+import { Wallet, Plus, ArrowUpRight, TrendingUp, TrendingDown, Inbox } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { formatVnd } from '../utils/format';
 import { fetchWalletAccount, fetchTransactionHistory } from '../api/wallet.api';
@@ -78,13 +78,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({ onNavigate }) =>
         </div>
 
         <div className="wallet-stats-row">
-          <div className="glass-card--inset wallet-stat-tile">
-            <span className="label-caps">
-              <Clock3 size={11} style={{ verticalAlign: -1, marginRight: 4 }} />
-              {t('wallet.pendingBalance')}
-            </span>
-            <span className="wallet-stat-value">{formatVnd(0, language)}</span>
-          </div>
           <div className="glass-card--inset wallet-stat-tile">
             <span className="label-caps">
               <TrendingUp size={11} style={{ verticalAlign: -1, marginRight: 4 }} />

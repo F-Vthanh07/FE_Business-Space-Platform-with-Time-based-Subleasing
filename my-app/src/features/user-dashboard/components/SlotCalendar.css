@@ -24,6 +24,46 @@
   align-self: flex-start;
 }
 
+/* ---- Toolbar (chọn mặt bằng + điều hướng tháng + nút phóng to) ----
+   Chế độ thu gọn: xếp dọc 2 hàng vì cột lịch chỉ ~400-680px, không đủ chỗ 1 hàng.
+   Chế độ phóng to: gộp thành 1 hàng ngang, tận dụng chiều rộng còn trống thay vì để trống bên dưới. */
+.calendar-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.calendar-toolbar-space {
+  width: 100%;
+}
+
+.calendar-toolbar-expand {
+  align-self: flex-end;
+}
+
+.slot-calendar-wrapper--expanded .calendar-toolbar {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.slot-calendar-wrapper--expanded .calendar-toolbar-space {
+  width: auto;
+  max-width: 320px;
+  flex-shrink: 0;
+}
+
+.slot-calendar-wrapper--expanded .calendar-header {
+  flex: 1;
+  justify-content: center;
+}
+
+.slot-calendar-wrapper--expanded .calendar-toolbar-expand {
+  align-self: auto;
+  flex-shrink: 0;
+}
+
 .cal-day-contract-chips {
   display: flex;
   flex-direction: column;

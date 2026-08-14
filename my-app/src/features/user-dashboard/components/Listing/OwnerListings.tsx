@@ -469,8 +469,10 @@ export const OwnerListings: React.FC = () => {
                   <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', color: 'var(--color-text-primary)' }}>Thông tin mặt bằng</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
                     <div><strong style={{ color: 'var(--color-text-primary)' }}>Mặt bằng:</strong> {viewingListing.spaceName || 'Chưa cập nhật'}</div>
-                    <div><strong style={{ color: 'var(--color-text-primary)' }}>Thành phố:</strong> {viewingListing.spaceCity || 'Chưa cập nhật'}</div>
-                    <div style={{ gridColumn: '1 / -1' }}><strong style={{ color: 'var(--color-text-primary)' }}>Địa chỉ:</strong> {viewingListing.location || viewingListing.address || 'Chưa cập nhật địa chỉ'}</div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <strong style={{ color: 'var(--color-text-primary)' }}>Địa chỉ:</strong>{' '}
+                      {[viewingListing.location || viewingListing.address, viewingListing.spaceCity].filter(Boolean).join(', ') || 'Chưa cập nhật địa chỉ'}
+                    </div>
                   </div>
                 </div>
 

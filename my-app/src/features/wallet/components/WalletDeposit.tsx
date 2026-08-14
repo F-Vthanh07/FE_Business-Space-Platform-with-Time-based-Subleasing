@@ -39,6 +39,7 @@ export const WalletDeposit: React.FC<WalletDepositProps> = ({ onNavigate }) => {
     try {
       const token = localStorage.getItem('portal_token') || '';
       const checkoutUrl = await createDepositTransaction(total, token);
+      localStorage.setItem('pending_deposit_amount', String(total));
       window.location.href = checkoutUrl;
     } catch (err) {
       setIsSubmitting(false);

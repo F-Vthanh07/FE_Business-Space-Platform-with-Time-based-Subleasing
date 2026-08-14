@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
@@ -11,11 +11,16 @@ export const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
-  const txnId = params.get('txnId') || 'TXN-00000';
-  const amount = Number(params.get('amount') || 0);
+  const txnId = params.get('txnId') || params.get('orderCode') || 'TXN-00000';
+  const storedAmount = localStorage.getItem('pending_deposit_amount');
+  const amount = Number(params.get('amount') || storedAmount || 0);
   const methodId = params.get('method') || 'vnpay';
   const methodName = paymentMethods.find((m) => m.id === methodId)?.name || methodId;
   const now = new Date().toISOString();
+
+  useEffect(() => {
+    localStorage.removeItem('pending_deposit_amount');
+  }, []);
 
   return (
     <div className="payment-result-screen">

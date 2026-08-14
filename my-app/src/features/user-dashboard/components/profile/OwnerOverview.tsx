@@ -39,6 +39,7 @@ interface DashboardSpace {
 
 interface DashboardListing {
   id: number;
+  name?: string;
   title?: string;
   location?: string;
   address?: string;
@@ -55,6 +56,11 @@ interface PendingBooking {
   lesseeEmail?: string;
   spaceName?: string;
   listingTitle?: string;
+  listingId?: number;
+  offeredPrice?: number;
+  duration?: number;
+  durationUnit?: string;
+  purpose?: string;
   createdAt?: string;
   status?: string;
 }
@@ -149,6 +155,11 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
                 lesseeEmail: req.lesseeEmail || req.lessee?.email || '',
                 spaceName: req.spaceName || req.listing?.title || req.space?.name || '',
                 listingTitle: req.listingTitle || '',
+                listingId: req.listingId,
+                offeredPrice: req.offeredPrice,
+                duration: req.duration,
+                durationUnit: req.durationUnit,
+                purpose: req.purpose,
                 createdAt: req.createdAt || req.CreatedAt || '',
                 status: req.status || 'Pending',
               }));
@@ -174,7 +185,7 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-
+  const listingsById = new Map(listingsData.map((l) => [l.id, l]));
 
   const today = new Date();
   const dateStr = today.toLocaleDateString(language === 'en' ? 'en-US' : 'vi-VN', {
@@ -323,32 +334,48 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
               </div>
             ) : (
               <div className="pending-list">
-                {pendingBookings.map((booking) => (
-                  <div
-                    key={booking.id}
-                    className="glass-card--inset pending-item"
-                    onClick={() => navigate('booking-requests')}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className="pending-item-left">
-                      <div className="pending-avatar">
-                        {getInitials(booking.lesseeName || booking.lesseeEmail || '')}
+                {pendingBookings.map((booking) => {
+                  const listing = booking.listingId != null ? listingsById.get(booking.listingId) : undefined;
+                  const listingName = listing?.name || booking.spaceName || booking.listingTitle || '';
+                  return (
+                    <div
+                      key={booking.id}
+                      className="glass-card--inset pending-item"
+                      onClick={() => navigate('booking-requests')}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="pending-item-left">
+                        <div className="pending-avatar">
+                          {getInitials(booking.lesseeName || booking.lesseeEmail || '')}
+                        </div>
+                        <div className="pending-meta">
+                          {(booking.lesseeName || booking.lesseeEmail) && (
+                            <span className="pending-name">
+                              {booking.lesseeName || booking.lesseeEmail}
+                            </span>
+                          )}
+                          {listingName && (
+                            <span className="pending-space">
+                              {t('overview.requestsFor')} {listingName}
+                            </span>
+                          )}
+                          {(booking.offeredPrice || booking.duration) && (
+                            <span className="pending-space text-secondary" style={{ fontSize: 12 }}>
+                              {booking.offeredPrice ? formatVnd(booking.offeredPrice, language) : (language === 'en' ? 'Negotiable' : 'Thỏa thuận')}
+                              {booking.duration ? ` • ${booking.duration} ${booking.durationUnit || ''}` : ''}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="pending-meta">
-                        <span className="pending-name">
-                          {booking.lesseeName || booking.lesseeEmail || 'Unknown'}
-                        </span>
-                        <span className="pending-space">
-                          {t('overview.requestsFor')} {booking.spaceName || booking.listingTitle || '—'}
-                        </span>
+                      <div className="pending-item-right">
+                        {booking.createdAt && (
+                          <span className="pending-date">{formatDate(booking.createdAt)}</span>
+                        )}
+                        <span className="pending-status">PENDING</span>
                       </div>
                     </div>
-                    <div className="pending-item-right">
-                      <span className="pending-date">{formatDate(booking.createdAt || '')}</span>
-                      <span className="pending-status">PENDING</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
