@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/immutability */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Minus, Send, Image as ImageIcon, ArrowLeft, BellRing, FileSignature, FileText } from 'lucide-react';
+import { MessageCircle, X, Minus, Send, ArrowLeft, BellRing, FileSignature, FileText } from 'lucide-react';
 import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr';
 import { ContractViewModal } from './Contract/ContractViewModal';
 import { ContractCreateModal } from './Contract/ContractCreateModal';
