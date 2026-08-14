@@ -25,14 +25,17 @@ const getRentalCategory = (item: AnyItem): 'longterm' | 'hourly' => {
 // Hiển thị thời gian tương đối dựa trên createdAt trả về từ BE
 const formatTimeAgo = (dateStr?: string) => {
   if (!dateStr) return 'Vừa cập nhật';
-  const diffMin = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'Vừa cập nhật';
+  d.setHours(d.getHours() + 7);
+  const diffMin = Math.floor((Date.now() - d.getTime()) / 60000);
   if (diffMin < 1) return 'Vừa xong';
   if (diffMin < 60) return `${diffMin} phút trước`;
   const diffHour = Math.floor(diffMin / 60);
   if (diffHour < 24) return `${diffHour} giờ trước`;
   const diffDay = Math.floor(diffHour / 24);
   if (diffDay < 30) return `${diffDay} ngày trước`;
-  return new Date(dateStr).toLocaleDateString('vi-VN');
+  return d.toLocaleDateString('vi-VN');
 };
 
 export const ListingFeed: React.FC = () => {
@@ -107,7 +110,7 @@ export const ListingFeed: React.FC = () => {
               address: item.spaceAddress || item.location || item.address || parentSpace?.address || parentSpace?.location || ''
             };
           });
-          safeData = safeData.reverse();
+          // safeData = safeData.reverse();
         }
         setListings(safeData);
 
@@ -267,8 +270,8 @@ export const ListingFeed: React.FC = () => {
             <div
               onClick={() => { setOnlyMine(!onlyMine); setShowFavoritesOnly(false); }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '8px 6px', borderRadius: '8px', cursor: 'pointer', color: '#050505', fontWeight: 500, backgroundColor: onlyMine ? '#F0F2F5' : 'transparent' }}
-              onMouseEnter={(e) => { if(!onlyMine) e.currentTarget.style.backgroundColor = '#F0F2F5'; }}
-              onMouseLeave={(e) => { if(!onlyMine) e.currentTarget.style.backgroundColor = 'transparent'; }}
+              onMouseEnter={(e) => { if (!onlyMine) e.currentTarget.style.backgroundColor = '#F0F2F5'; }}
+              onMouseLeave={(e) => { if (!onlyMine) e.currentTarget.style.backgroundColor = 'transparent'; }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={18} color="var(--color-gold, #D9A05B)" /></div>
@@ -287,8 +290,8 @@ export const ListingFeed: React.FC = () => {
             <div
               onClick={() => { setShowFavoritesOnly(!showFavoritesOnly); setOnlyMine(false); }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '8px 6px', borderRadius: '8px', cursor: 'pointer', color: '#050505', fontWeight: 500, backgroundColor: showFavoritesOnly ? '#F0F2F5' : 'transparent', marginTop: '4px' }}
-              onMouseEnter={(e) => { if(!showFavoritesOnly) e.currentTarget.style.backgroundColor = '#F0F2F5'; }}
-              onMouseLeave={(e) => { if(!showFavoritesOnly) e.currentTarget.style.backgroundColor = 'transparent'; }}
+              onMouseEnter={(e) => { if (!showFavoritesOnly) e.currentTarget.style.backgroundColor = '#F0F2F5'; }}
+              onMouseLeave={(e) => { if (!showFavoritesOnly) e.currentTarget.style.backgroundColor = 'transparent'; }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Bookmark size={18} color={showFavoritesOnly ? "#E02424" : "var(--color-gold, #D9A05B)"} /></div>

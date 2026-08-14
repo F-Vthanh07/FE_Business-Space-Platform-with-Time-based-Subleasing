@@ -11,6 +11,7 @@ import "../../../shared/ModalShell.css";
 import { createPortal } from 'react-dom';
 import { useThemeLanguage } from "../../../../context/ThemeLanguageContext";
 import { ListingForm } from './ListingForm';
+import { formatDate } from '../../../../utils/dateUtils';
 
 // Chỉ có đúng 2 status thật từ BE: Accepted / Ban
 const statusConfig: Record<string, { className: string; icon: React.ReactNode; label: string }> = {
@@ -40,12 +41,7 @@ export const OwnerListings: React.FC = () => {
 
   const getStatusLabel = (status: string) => statusConfig[status]?.label || 'Không rõ';
 
-  const formatDate = (dateStr: any) => {
-    if (!dateStr) return 'Không rõ';
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return 'Không rõ';
-    return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
+
 
   // --- API LẤY BÀI ĐĂNG CỦA RIÊNG MÌNH ---
   const fetchListings = async () => {

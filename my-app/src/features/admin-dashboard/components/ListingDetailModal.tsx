@@ -5,6 +5,7 @@ import {
 import type { AdminListingItem, BusinessCategory, ListingReportDetail } from '../types';
 import { getPictureUrl } from '../utils/listingPicture';
 import { getReasonLabel } from './ListingsModule';
+import { formatDate } from '../../../utils/dateUtils';
 
 interface ListingDetailModalProps {
   listing: AdminListingItem;
@@ -181,8 +182,8 @@ export const ListingDetailModal: React.FC<ListingDetailModalProps> = ({ listing,
                 <div className="param-item">
                   <div className="param-label"><Clock size={13} /> {language === 'en' ? 'Validity Period' : 'Thời gian cho thuê'}</div>
                   <div className="param-value">
-                    <div>{language === 'en' ? 'From:' : 'Từ:'} {new Date(listing.allowedStartTime).toLocaleDateString()}</div>
-                    <div>{language === 'en' ? 'To:' : 'Đến:'} {new Date(listing.allowedEndTime).toLocaleDateString()}</div>
+                    <div>{language === 'en' ? 'From:' : 'Từ:'} {formatDate(listing.allowedStartTime, language === 'en' ? 'en-US' : 'vi-VN')}</div>
+                    <div>{language === 'en' ? 'To:' : 'Đến:'} {formatDate(listing.allowedEndTime, language === 'en' ? 'en-US' : 'vi-VN')}</div>
                   </div>
                 </div>
 

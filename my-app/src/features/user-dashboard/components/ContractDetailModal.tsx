@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Phone, Mail, MapPin, Wallet, CalendarDays, User as UserIcon, Briefcase } from 'lucide-react';
 import { API_BASE_URL } from '../../../config/api';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
+import { formatDate } from '../../../utils/dateUtils';
 
 interface ContractDetail {
   id: number;
@@ -52,8 +53,7 @@ interface ContractDetailModalProps {
 const formatCurrency = (value?: number) =>
   value || value === 0 ? `${value.toLocaleString('vi-VN')} VNĐ` : '...';
 
-const formatDate = (value?: string) =>
-  value ? new Date(value).toLocaleDateString('vi-VN') : '...';
+
 
 const formatDurationUnit = (unit?: string, language?: string) => {
   const map: Record<string, [string, string]> = {
