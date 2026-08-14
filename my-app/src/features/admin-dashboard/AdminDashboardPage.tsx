@@ -22,8 +22,10 @@ import {
   fetchAllWallets,
   updateWalletBalance,
   fetchPriorityLevels,
+  fetchPriorityLevelById,
   createPriorityLevel,
   updatePriorityLevel,
+  deletePriorityLevel,
   fetchAllSpaces,
   fetchListingReports,
   softDeleteListing,
@@ -32,6 +34,7 @@ import {
   fetchAllContracts,
   fetchDashboardStats
 } from './api/admin.api';
+import type { PriorityLevelPayload } from './api/admin.api';
 
 // Components imports
 import { OverviewModule } from './components/OverviewModule';
@@ -346,10 +349,10 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   };
 
   // --- ACTIONS QUẢN LÝ GÓI GIÁ ĐĂNG BÀI (PRIORITY LEVELS) ---
-  const handleCreatePriorityLevel = async (name: string, price: number, isActive: boolean) => {
+  const handleCreatePriorityLevel = async (payload: PriorityLevelPayload) => {
     setIsLoading(true);
     try {
-      await createPriorityLevel(name, price, isActive, token || '');
+      await createPriorityLevel(payload, token || '');
       showNotification(language === 'en' ? "Priority package created successfully!" : "Đã tạo gói giá đăng bài thành công!");
       fetchRealAdminData();
     } catch (err) {
@@ -360,15 +363,33 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     }
   };
 
-  const handleUpdatePriorityLevel = async (id: number, name: string, price: number, isActive: boolean) => {
+  const handleUpdatePriorityLevel = async (id: number, payload: PriorityLevelPayload) => {
     setIsLoading(true);
     try {
-      await updatePriorityLevel(id, name, price, isActive, token || '');
+      await updatePriorityLevel(id, payload, token || '');
       showNotification(language === 'en' ? "Priority package updated successfully!" : "Đã cập nhật gói giá đăng bài thành công!");
       fetchRealAdminData();
     } catch (err) {
       console.error(err);
       showNotification(language === 'en' ? "Failed to update priority package. Please try again." : "Cập nhật gói giá đăng bài thất bại. Vui lòng thử lại.", 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGetPriorityLevelById = async (id: number) => {
+    return fetchPriorityLevelById(id, token || '');
+  };
+
+  const handleDeletePriorityLevel = async (id: number) => {
+    setIsLoading(true);
+    try {
+      await deletePriorityLevel(id, token || '');
+      showNotification(language === 'en' ? "Priority package deleted successfully!" : "Da xoa goi uu tien thanh cong!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      showNotification(language === 'en' ? "Failed to delete priority package. Please try again." : "Xoa goi uu tien that bai. Vui long thu lai.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -459,8 +480,10 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
         {activeTab === 'priorityLevels' && (
           <PriorityLevelsModule
             priorityLevels={priorityLevels}
+            handleGetPriorityLevelById={handleGetPriorityLevelById}
             handleCreatePriorityLevel={handleCreatePriorityLevel}
             handleUpdatePriorityLevel={handleUpdatePriorityLevel}
+            handleDeletePriorityLevel={handleDeletePriorityLevel}
             isLoading={isLoading}
             language={language}
             onRefresh={handleManualRefresh}

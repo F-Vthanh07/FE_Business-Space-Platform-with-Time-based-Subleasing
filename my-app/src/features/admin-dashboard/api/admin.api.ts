@@ -1,6 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { AdminListingItem, BusinessCategory, AdminWalletAccount, PriorityLevel, AdminSpaceItem, ListingReportItem, ListingReportDetail, AdminContractItem, AdminDashboardStats, AdminUserProfile } from '../types';
 
+export type PriorityLevelType = 'Listing' | 'Banner';
+
+export interface PriorityLevelPayload {
+  name: string;
+  description: string;
+  price: number;
+  durationInDays: number;
+  durationForBanner: number;
+  type: PriorityLevelType;
+  isActive: boolean;
+}
+
+const normalizePriorityLevelType = (type?: string | null): PriorityLevelType => {
+  return String(type || '').toLowerCase() === 'banner' ? 'Banner' : 'Listing';
+};
+
+const normalizePriorityLevel = (item: PriorityLevel): PriorityLevel => ({
+  ...item,
+  type: normalizePriorityLevelType(item.type),
+});
+
 export const fetchUsers = async (token: string): Promise<any[]> => {
   const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/User', {
     headers: {
@@ -175,10 +196,27 @@ export const fetchPriorityLevels = async (token: string): Promise<PriorityLevel[
     throw new Error('Failed to fetch priority levels');
   }
   const data = await response.json();
-  return Array.isArray(data) ? data : (data?.data || data?.items || []);
+  const safeData: PriorityLevel[] = Array.isArray(data) ? data : (data?.data || data?.items || []);
+  return safeData
+    .map(normalizePriorityLevel)
+    .sort((a, b) => a.id - b.id);
 };
 
-export const createPriorityLevel = async (name: string, price: number, isActive: boolean, token: string): Promise<void> => {
+export const fetchPriorityLevelById = async (id: number, token: string): Promise<PriorityLevel> => {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/PriorityLevel/GetById${id}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch priority level');
+  }
+  const data = await response.json();
+  return normalizePriorityLevel(data);
+};
+
+export const createPriorityLevel = async (payload: PriorityLevelPayload, token: string): Promise<void> => {
   const response = await fetch('https://flexi-space-capstone-project.onrender.com/api/PriorityLevel/Create', {
     method: 'POST',
     headers: {
@@ -186,10 +224,23 @@ export const createPriorityLevel = async (name: string, price: number, isActive:
       'Content-Type': 'application/json',
       'accept': '*/*'
     },
-    body: JSON.stringify({ name, price, isActive })
+    body: JSON.stringify(payload)
   });
   if (!response.ok) {
     throw new Error('Failed to create priority level');
+  }
+};
+
+export const deletePriorityLevel = async (id: number, token: string): Promise<void> => {
+  const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/PriorityLevel/Delete${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete priority level');
   }
 };
 
@@ -206,7 +257,7 @@ export const updateWalletBalance = async (userId: string, amountToAdd: number, t
   }
 };
 
-export const updatePriorityLevel = async (id: number, name: string, price: number, isActive: boolean, token: string): Promise<void> => {
+export const updatePriorityLevel = async (id: number, payload: PriorityLevelPayload, token: string): Promise<void> => {
   const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/PriorityLevel/Update${id}`, {
     method: 'PUT',
     headers: {
@@ -214,7 +265,7 @@ export const updatePriorityLevel = async (id: number, name: string, price: numbe
       'Content-Type': 'application/json',
       'accept': '*/*'
     },
-    body: JSON.stringify({ name, price, isActive })
+    body: JSON.stringify(payload)
   });
   if (!response.ok) {
     throw new Error('Failed to update priority level');

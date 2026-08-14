@@ -8,6 +8,7 @@ import { createShareListing, updateShareListing } from './shareListing.api';
 import { fetchPriorityLevels, type PriorityLevel } from './priorityLevel.api';
 import { fetchWalletAccount } from '../../../wallet/api/wallet.api';
 import type { ShareListingPayload } from '../../types';
+import { formatDateISOOnly } from '../../../../utils/dateUtils';
 
 interface SpaceOption {
   id: number;
@@ -62,16 +63,7 @@ const getValidDaysOfWeek = (validFrom?: string, validTo?: string) => {
   return [...new Set(validDays)];
 };
 
-const getSafeDateString = (dateString: any) => {
-  try {
-    if (!dateString) return new Date().toISOString().slice(0, 10);
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
-    return date.toISOString().slice(0, 10);
-  } catch {
-    return new Date().toISOString().slice(0, 10);
-  }
-};
+const getSafeDateString = formatDateISOOnly;
 
 export const ShareListingForm: React.FC<ShareListingFormProps> = ({
   onClose, onSuccess, initialData, spaceOptions, apiCategories, apiAmenities
@@ -144,9 +136,6 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
   const [maxSubRenter, setMaxSubRenter] = useState<number>(initialData?.shareSpaceDetailMaxSubRenter || 1);
   const [isLegalCommitted, setIsLegalCommitted] = useState<boolean>(initialData?.shareSpaceDetailIsLegalCommitted ?? false);
 
-  // Ngày hôm nay (dùng làm mốc so sánh + làm min cho input date)
-  const todayStr = getSafeDateString(null);
-
   const [allowedStartTime, setAllowedStartTime] = useState(() => getSafeDateString(initialData?.allowedStartTime));
   const [allowedEndTime, setAllowedEndTime] = useState(() => {
     if (initialData?.allowedEndTime) return getSafeDateString(initialData.allowedEndTime);
@@ -154,11 +143,6 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     return getSafeDateString(nextMonth);
   });
-
-  // Giá trị gốc của allowedStartTime khi mở form (dùng để biết user có thay đổi ngày bắt đầu hay không khi edit)
-  const originalStartTime = initialData?.allowedStartTime
-    ? getSafeDateString(initialData.allowedStartTime)
-    : null;
 
   const [selectedAmenities, setSelectedAmenities] = useState<Record<number, { included: boolean; price: number }>>(
     () => {
@@ -272,9 +256,6 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       return;
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);    const startDate = new Date(allowedStartTime);
-
     // Bỏ validation ngày quá khứ theo yêu cầu mới
 
     if (new Date(allowedEndTime) <= new Date(allowedStartTime)) {
@@ -349,7 +330,9 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       return;
     }
 
-    const chosenPackagePrice = priorityLevels.find(p => p.id === priorityLevelId)?.price ?? 0;
+    const selectedPriorityLevel = priorityLevels.find(p => p.id === priorityLevelId);
+    const chosenPackagePrice = selectedPriorityLevel?.price ?? 0;
+    const durationInDays = selectedPriorityLevel?.durationInDays ?? 0;
     if (!isEditingListing && walletBalance !== null && walletBalance < chosenPackagePrice) {
       setError(`Số dư ví không đủ để đăng tin! Cần ${chosenPackagePrice.toLocaleString('vi-VN')} VNĐ, ví hiện có ${walletBalance.toLocaleString('vi-VN')} VNĐ.`);
       return;
@@ -383,7 +366,7 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       if (initialData) {
         await updateShareListing(initialData.id || initialData.Id, payload);
       } else {
-        await createShareListing(payload, chosenPackagePrice);
+        await createShareListing(payload, chosenPackagePrice, durationInDays);
       }
       onSuccess();
     } catch (err: any) {

@@ -3,15 +3,14 @@ import { Pencil } from 'lucide-react';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import { CccdVerificationSection, VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
 import { updateProfile } from '../../../onboarding';
+import { formatDate as formatDateUtil } from '../../../../utils/dateUtils';
 import './ProfileOverviewPage.css';
 
 const EMPTY_DATE = '0001-01-01';
 
 const formatDate = (value: string | null | undefined, locale: string, placeholder: string): string => {
   if (!value || value === EMPTY_DATE) return placeholder;
-  const date = new Date(value);
-  if (isNaN(date.getTime())) return placeholder;
-  return date.toLocaleDateString(locale);
+  return formatDateUtil(value, locale, placeholder);
 };
 
 export const ProfileOverviewPage: React.FC = () => {

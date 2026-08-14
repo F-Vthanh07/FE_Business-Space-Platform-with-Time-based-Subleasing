@@ -106,6 +106,10 @@ export interface PriorityLevel {
   price: number;
   isActive: boolean;
   name: string;
+  description?: string | null;
+  durationInDays?: number | null;
+  durationForBanner?: number | null;
+  type?: 'Listing' | 'Banner' | string | null;
   createdBy: string;
   createdAt: string;
   updatedBy: string | null;

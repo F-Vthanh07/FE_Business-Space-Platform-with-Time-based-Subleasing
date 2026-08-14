@@ -22,6 +22,7 @@ import { useIdentityVerification } from '../../../identity-verification';
 import { fetchWalletAccount } from '../../../wallet/api/wallet.api';
 import { formatVnd } from '../../../wallet/utils/format';
 import { API_BASE_URL } from '../../../../config/api';
+import { formatDate } from '../../../../utils/dateUtils';
 import './OwnerOverview.css';
 
 interface OwnerOverviewProps {
@@ -173,15 +174,7 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const formatDate = (iso: string) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleDateString(language === 'en' ? 'en-US' : 'vi-VN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
+
 
   const today = new Date();
   const dateStr = today.toLocaleDateString(language === 'en' ? 'en-US' : 'vi-VN', {

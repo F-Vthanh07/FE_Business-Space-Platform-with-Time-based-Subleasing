@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, FileText, Calendar, User } from 'lucide-react';
+import { formatDate } from '../../../../utils/dateUtils';
 
 export const OwnerBookingRequests: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
@@ -169,7 +170,7 @@ export const OwnerBookingRequests: React.FC = () => {
                     <td style={{ padding: '16px 12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', marginBottom: '4px' }}>
                         <Calendar size={14} style={{ opacity: 0.7 }}/> 
-                        {req.expectedStartDate ? new Date(req.expectedStartDate).toLocaleDateString('vi-VN') : 'N/A'}
+                        {formatDate(req.expectedStartDate, 'vi-VN', 'N/A')}
                       </div>
                       <div style={{ fontSize: '12px', opacity: 0.7 }}>
                         Thời lượng: {req.duration} {req.durationUnit || 'kỳ'}

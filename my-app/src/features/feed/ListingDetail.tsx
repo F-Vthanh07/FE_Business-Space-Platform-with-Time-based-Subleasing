@@ -7,6 +7,7 @@ import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
 import { SiZalo } from "react-icons/si";
+import { formatDate } from '../../utils/dateUtils';
 
 // --- COMPONENT NÚT CHIA SẺ DÙNG LẠI (SHARE BUTTON) ---
 interface ShareButtonProps {
@@ -717,7 +718,7 @@ export const ListingDetail: React.FC = () => {
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                               <span style={{ fontWeight: 600, fontSize: '14px', color: '#2C2C2C' }}>{review.reviewerName || 'Ẩn danh'}</span>
                               <span style={{ fontSize: '12px', color: '#999' }}>
-                                {review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : ''}
+                                {review.createdAt ? formatDate(review.createdAt) : ''}
                               </span>
                             </div>
                             <div style={{ display: 'flex', gap: '2px', marginBottom: '6px' }}>
@@ -749,7 +750,7 @@ export const ListingDetail: React.FC = () => {
                <div>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#777', fontSize: '12px', marginBottom: '4px' }}><Calendar size={12}/> Ngày đăng</div>
                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
-                    {listing.createdAt ? new Date(listing.createdAt).toLocaleDateString('vi-VN') : 'Hôm nay'}
+                    {listing.createdAt ? formatDate(listing.createdAt) : 'Hôm nay'}
                  </div>
                </div>
                <div>
