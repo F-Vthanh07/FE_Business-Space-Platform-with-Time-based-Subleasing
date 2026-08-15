@@ -14,9 +14,9 @@ import { getListingPictureUrl, getListingPictureUrls } from '../shared/listingPi
 // --- COMPONENT NÚT CHIA SẺ DÙNG LẠI (SHARE BUTTON) ---
 const ExpandableDescription: React.FC<{ text: string }> = ({ text }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   if (!text) return <div style={{ lineHeight: '1.7', color: '#444', marginBottom: '40px', fontSize: '15px' }}>Chủ nhà chưa cung cấp mô tả chi tiết cho mặt bằng này. Vui lòng liên hệ trực tiếp để biết thêm thông tin về hợp đồng và cọc.</div>;
-  
+
   const maxLength = 250;
   const isLong = text.length > maxLength;
   const displayText = isExpanded ? text : (isLong ? `${text.slice(0, maxLength)}...` : text);
@@ -147,7 +147,7 @@ const REPORT_REASONS: { value: string; label: string }[] = [
 export const ListingDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [listing, setListing] = useState<any | null>(null);
   const [similarListings, setSimilarListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -225,7 +225,7 @@ export const ListingDetail: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-          
+
           const found = safeData.find((item: any) => (item.id?.toString() === id || item.Id?.toString() === id));
 
           // BƯỚC 3: GHÉP area/address/amenities/operatingHours/allowedCategories (TỪ SPACE CHA)
@@ -235,8 +235,10 @@ export const ListingDetail: React.FC = () => {
             foundWithSpaceInfo = {
               ...found,
               area: found.area || parentSpace?.area || null,
-              address: found.location || found.address || parentSpace?.address || parentSpace?.location || '',
+              address: found.spaceAddress || found.location || found.address || parentSpace?.address || parentSpace?.location || '',
               city: found.city || parentSpace?.city || '',
+              spaceLatitude: found.spaceLatitude ?? parentSpace?.latitude ?? parentSpace?.Latitude ?? null,
+              spaceLongitude: found.spaceLongitude ?? parentSpace?.longitude ?? parentSpace?.Longitude ?? null,
               amenities: found.amenities || parentSpace?.amenities || [],
               operatingHours: found.operatingHours || parentSpace?.operatingHours || [],
               allowedCategories: found.spaceAllowedCategories || parentSpace?.spaceAllowedCategories || []
@@ -347,8 +349,8 @@ export const ListingDetail: React.FC = () => {
         });
         if (res.ok) setIsFavorite(true);
       }
-    } catch (err) { 
-      console.error(err); 
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -380,7 +382,7 @@ export const ListingDetail: React.FC = () => {
 
       if (response.ok) {
         alert("🎉 Gửi yêu cầu thuê thành công! Vui lòng chờ chủ nhà duyệt trong mục Quản lý.");
-        setIsBookingModalOpen(false); 
+        setIsBookingModalOpen(false);
       } else {
         const err = await response.json().catch(() => ({}));
         alert(err.message || "Có lỗi xảy ra khi gửi yêu cầu.");
@@ -501,7 +503,7 @@ export const ListingDetail: React.FC = () => {
       <div style={{ position: 'sticky', top: 0, zIndex: 99 }}><Header /></div>
 
       <div style={{ maxWidth: '1140px', margin: '0 auto', paddingTop: '20px', paddingBottom: '50px' }}>
-        
+
         {/* BREADCRUMB */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#999', marginBottom: '16px' }}>
           <span style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => navigate('/')}>
@@ -514,7 +516,7 @@ export const ListingDetail: React.FC = () => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(auto, 780px) 320px', gap: '30px' }}>
-          
+
           {/* CỘT TRÁI */}
           <div>
             <div style={{ backgroundColor: '#000', borderRadius: '8px', overflow: 'hidden', marginBottom: '12px', position: 'relative' }}>
@@ -523,17 +525,17 @@ export const ListingDetail: React.FC = () => {
                 {currentImageIndex + 1} / {realImages.length || 1}
               </div>
             </div>
-            
+
             {realImages.length > 1 && (
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '24px' }}>
                 {realImages.map((img: any, idx: number) => (
-                  <img 
+                  <img
                     key={idx} src={getUrl(img)} alt={`thumb-${idx}`} onClick={() => setCurrentImageIndex(idx)}
-                    style={{ 
+                    style={{
                       width: '80px', height: '60px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer',
                       border: currentImageIndex === idx ? '2px solid var(--color-primary)' : '2px solid transparent',
                       opacity: currentImageIndex === idx ? 1 : 0.6
-                    }} 
+                    }}
                   />
                 ))}
               </div>
@@ -566,7 +568,7 @@ export const ListingDetail: React.FC = () => {
               </div>
               <div style={{ display: 'flex', gap: '16px' }}>
                 <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: '#555', fontWeight: 500 }}><Share2 size={18} /> Chia sẻ</button>
-                <button 
+                <button
                   onClick={handleToggleFavorite}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: isFavorite ? '#E02424' : '#555', fontWeight: 500 }}
                 >
@@ -675,19 +677,19 @@ export const ListingDetail: React.FC = () => {
 
             <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Lịch sử giá cho thuê</h3>
             <div style={{ border: '1px solid #E0E0E0', borderRadius: '8px', padding: '20px', marginBottom: '40px', display: 'flex', gap: '40px', backgroundColor: '#fff' }}>
-               <div>
-                  <div style={{ color: '#777', fontSize: '13px', marginBottom: '8px' }}>Giá hiện tại</div>
-                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--color-positive)' }}>{listing.price ? `${listing.price.toLocaleString('vi-VN')} ₫` : 'N/A'}</div>
-               </div>
-               <div>
-                  <div style={{ color: '#777', fontSize: '13px', marginBottom: '8px' }}>Đánh giá thị trường</div>
-                  <div style={{ fontSize: '15px', color: '#333', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Star size={16} color="#F5A623" fill="#F5A623" />
-                    {reviewCount > 0
-                      ? `${averageRating.toFixed(1)}/5 (${reviewCount} đánh giá)`
-                      : 'Chưa có đánh giá'}
-                  </div>
-               </div>
+              <div>
+                <div style={{ color: '#777', fontSize: '13px', marginBottom: '8px' }}>Giá hiện tại</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--color-positive)' }}>{listing.price ? `${listing.price.toLocaleString('vi-VN')} ₫` : 'N/A'}</div>
+              </div>
+              <div>
+                <div style={{ color: '#777', fontSize: '13px', marginBottom: '8px' }}>Đánh giá thị trường</div>
+                <div style={{ fontSize: '15px', color: '#333', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Star size={16} color="#F5A623" fill="#F5A623" />
+                  {reviewCount > 0
+                    ? `${averageRating.toFixed(1)}/5 (${reviewCount} đánh giá)`
+                    : 'Chưa có đánh giá'}
+                </div>
+              </div>
             </div>
 
             {/* ĐÁNH GIÁ & NHẬN XÉT */}
@@ -789,26 +791,43 @@ export const ListingDetail: React.FC = () => {
             </div>
 
             <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Xem trên bản đồ</h3>
-            <div style={{ width: '100%', height: '350px', backgroundColor: '#e5e3df', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px', border: '1px solid #E0E0E0' }}>
-               <iframe 
-                 width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight={0} marginWidth={0} 
-                 src={`https://maps.google.com/maps?q=${encodeURIComponent(listing.location || listing.address || listing.spaceAddress || 'Hồ Chí Minh, Việt Nam')}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-               />
-            </div>
+            {(() => {
+              const lat = listing.spaceLatitude ?? listing.latitude ?? listing.Latitude;
+              const lng = listing.spaceLongitude ?? listing.longitude ?? listing.Longitude;
+              const hasValidCoords = typeof lat === 'number' && typeof lng === 'number' && lat !== 0 && lng !== 0;
+
+              const textAddress = [
+                listing.spaceAddress || listing.address || listing.location,
+                listing.city
+              ].filter(Boolean).join(', ');
+
+              const mapQuery = hasValidCoords
+                ? `${lat},${lng}`
+                : (textAddress || 'Hồ Chí Minh, Việt Nam');
+
+              return (
+                <div style={{ width: '100%', height: '350px', backgroundColor: '#e5e3df', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px', border: '1px solid #E0E0E0' }}>
+                  <iframe
+                    width="100%" height="100%" frameBorder="0" scrolling="no" marginHeight={0} marginWidth={0}
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                  />
+                </div>
+              );
+            })()}
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', paddingBottom: '30px', borderBottom: '1px solid #E0E0E0', marginBottom: '40px' }}>
-               <div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#777', fontSize: '12px', marginBottom: '4px' }}><Calendar size={12}/> Ngày đăng</div>
-                 <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
-                    {listing.createdAt ? formatDate(listing.createdAt) : 'Hôm nay'}
-                 </div>
-               </div>
-               <div>
-                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#777', fontSize: '12px', marginBottom: '4px' }}><Calendar size={12}/> Ngày hết hạn</div>
-                 <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
-                    {listing.allowedEndTime ? new Date(listing.allowedEndTime).toLocaleDateString('vi-VN') : 'Sau 30 ngày'}
-                 </div>
-               </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#777', fontSize: '12px', marginBottom: '4px' }}><Calendar size={12} /> Ngày đăng</div>
+                <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
+                  {listing.createdAt ? formatDate(listing.createdAt) : 'Hôm nay'}
+                </div>
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#777', fontSize: '12px', marginBottom: '4px' }}><Calendar size={12} /> Ngày hết hạn</div>
+                <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
+                  {listing.allowedEndTime ? new Date(listing.allowedEndTime).toLocaleDateString('vi-VN') : 'Sau 30 ngày'}
+                </div>
+              </div>
             </div>
 
             {similarListings.length > 0 && (
@@ -819,8 +838,8 @@ export const ListingDetail: React.FC = () => {
                     const simImgs = simItem.listingPictures || [];
                     const simMainImg = simImgs.length > 0 ? getUrl(simImgs[0]) : "https://images.unsplash.com/photo-1556761175-5973dc0f32d7?auto=format&fit=crop&q=80&w=400";
                     return (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         onClick={() => {
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                           navigate(`/listing/${simItem.id || simItem.Id}`);
@@ -846,7 +865,7 @@ export const ListingDetail: React.FC = () => {
                             {simItem.price ? `${simItem.price.toLocaleString('vi-VN')} ₫/h` : 'Thỏa thuận'}
                           </div>
                           <div style={{ color: '#777', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <MapPin size={10} /> {simItem.location?.substring(0,25) || simItem.address?.substring(0,25) || simItem.spaceAddress?.substring(0,25) || 'TP.HCM'}
+                            <MapPin size={10} /> {simItem.location?.substring(0, 25) || simItem.address?.substring(0, 25) || simItem.spaceAddress?.substring(0, 25) || 'TP.HCM'}
                           </div>
                         </div>
                       </div>
@@ -861,7 +880,7 @@ export const ListingDetail: React.FC = () => {
           {/* CỘT PHẢI: THẺ LIÊN HỆ STICKY */}
           <div style={{ position: 'sticky', top: '90px', height: 'fit-content' }}>
             <div style={{ backgroundColor: '#fff', padding: '24px 20px', borderRadius: '8px', border: '1px solid #E0E0E0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              
+
               <div
                 onClick={() => listing.creatorId && navigate(`/profile/${listing.creatorId}`)}
                 style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: '#E4E6EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold', color: '#333', marginBottom: '12px', border: '2px solid var(--color-primary)', cursor: listing.creatorId ? 'pointer' : 'default' }}
@@ -876,8 +895,8 @@ export const ListingDetail: React.FC = () => {
               </div>
 
               {isOwner ? (
-                <button 
-                  onClick={() => navigate('/user/listings')} 
+                <button
+                  onClick={() => navigate('/user/listings')}
                   style={{ width: '100%', padding: '12px', marginTop: '16px', borderRadius: '6px', border: 'none', backgroundColor: '#333', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
                 >
                   <Edit3 size={18} /> Quản lý bài đăng
@@ -888,9 +907,9 @@ export const ListingDetail: React.FC = () => {
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16A34A', display: 'inline-block' }}></span> Đang hoạt động
                   </div>
 
-                  <button 
+                  <button
                     onClick={() => {
-                      if(!currentUserId) { navigate('/login'); return; }
+                      if (!currentUserId) { navigate('/login'); return; }
                       setIsBookingModalOpen(true);
                     }}
                     style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '6px', border: 'none', backgroundColor: '#1E293B', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
@@ -908,7 +927,7 @@ export const ListingDetail: React.FC = () => {
       {isBookingModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ backgroundColor: '#fff', width: '450px', borderRadius: '12px', padding: '24px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
-            
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E0E0E0', paddingBottom: '16px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', fontSize: '18px', color: '#1E293B' }}>
                 <ClipboardSignature size={20} /> Gửi Yêu Cầu Thuê
@@ -919,20 +938,20 @@ export const ListingDetail: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmitBooking} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              
+
               <div>
                 <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Mức giá đề xuất (VNĐ)</label>
-                <input type="number" required value={bookingData.offeredPrice} onChange={(e) => setBookingData({...bookingData, offeredPrice: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
+                <input type="number" required value={bookingData.offeredPrice} onChange={(e) => setBookingData({ ...bookingData, offeredPrice: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Thời lượng thuê</label>
-                  <input type="number" required min={1} value={bookingData.duration} onChange={(e) => setBookingData({...bookingData, duration: Number(e.target.value)})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
+                  <input type="number" required min={1} value={bookingData.duration} onChange={(e) => setBookingData({ ...bookingData, duration: Number(e.target.value) })} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Đơn vị</label>
-                  <select value={bookingData.durationUnit} onChange={(e) => setBookingData({...bookingData, durationUnit: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}>
+                  <select value={bookingData.durationUnit} onChange={(e) => setBookingData({ ...bookingData, durationUnit: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }}>
                     <option value="Days">Ngày</option>
                     <option value="Months">Tháng</option>
                     <option value="Years">Năm</option>
@@ -942,17 +961,17 @@ export const ListingDetail: React.FC = () => {
 
               <div>
                 <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Ngày bắt đầu dự kiến</label>
-                <input type="date" required value={bookingData.expectedStartDate} onChange={(e) => setBookingData({...bookingData, expectedStartDate: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
+                <input type="date" required value={bookingData.expectedStartDate} onChange={(e) => setBookingData({ ...bookingData, expectedStartDate: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
               </div>
 
               <div>
                 <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Mục đích sử dụng</label>
-                <input type="text" required placeholder="VD: Mở quán cafe, làm kho..." value={bookingData.purpose} onChange={(e) => setBookingData({...bookingData, purpose: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
+                <input type="text" required placeholder="VD: Mở quán cafe, làm kho..." value={bookingData.purpose} onChange={(e) => setBookingData({ ...bookingData, purpose: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd' }} />
               </div>
 
               <div>
                 <label style={{ fontSize: '13px', color: '#555', fontWeight: 500, marginBottom: '6px', display: 'block' }}>Ghi chú cho chủ nhà (Tùy chọn)</label>
-                <textarea rows={3} placeholder="Bạn có yêu cầu gì thêm không?" value={bookingData.note} onChange={(e) => setBookingData({...bookingData, note: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', resize: 'none' }} />
+                <textarea rows={3} placeholder="Bạn có yêu cầu gì thêm không?" value={bookingData.note} onChange={(e) => setBookingData({ ...bookingData, note: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ddd', resize: 'none' }} />
               </div>
 
               <button type="submit" disabled={isSubmitting} style={{ marginTop: '8px', width: '100%', padding: '12px', borderRadius: '6px', border: 'none', backgroundColor: '#1E293B', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>
