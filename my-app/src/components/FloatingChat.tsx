@@ -197,7 +197,8 @@ export const FloatingChat: React.FC = () => {
             const updated = [...prev];
             const idx = updated.findIndex((r) => String(r.id) === String(incomingRoomId) || String(r.Id) === String(incomingRoomId));
             if (idx > -1) {
-              const [room] = updated.splice(idx, 1);
+              const room = { ...updated[idx] };
+              updated.splice(idx, 1);
               room.lastMessageAt = savedMessage.createdAt || new Date();
               room.lastMessageContent = savedMessage.content || savedMessage.message; // Cập nhật preview tin nhắn
               if (!isMyOwnMessage && activeChatIdRef.current !== String(incomingRoomId)) {
@@ -401,7 +402,8 @@ export const FloatingChat: React.FC = () => {
         const updated = [...prev];
         const idx = updated.findIndex((r) => String(r.id) === String(roomId) || String(r.Id) === String(roomId));
         if (idx > -1) {
-          const [room] = updated.splice(idx, 1);
+          const room = { ...updated[idx] };
+          updated.splice(idx, 1);
           room.lastMessageAt = new Date();
           room.lastMessageContent = `Bạn: ${textToSend}`;
           updated.unshift(room);
