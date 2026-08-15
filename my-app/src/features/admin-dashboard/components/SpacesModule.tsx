@@ -36,15 +36,7 @@ const SpaceCoverImage: React.FC<{ src: string }> = ({ src }) => {
   );
 };
 
-const dayLabels: Record<number, { en: string; vi: string }> = {
-  0: { en: 'Sun', vi: 'CN' },
-  1: { en: 'Mon', vi: 'T2' },
-  2: { en: 'Tue', vi: 'T3' },
-  3: { en: 'Wed', vi: 'T4' },
-  4: { en: 'Thu', vi: 'T5' },
-  5: { en: 'Fri', vi: 'T6' },
-  6: { en: 'Sat', vi: 'T7' },
-};
+
 
 export const SpacesModule: React.FC<SpacesModuleProps> = ({ spaces, users, listings, language, onRefresh, isRefreshing }) => {
   const [search, setSearch] = useState('');
@@ -281,22 +273,6 @@ export const SpacesModule: React.FC<SpacesModuleProps> = ({ spaces, users, listi
                             <div className="amenity-name-part">
                               <span className="check-dot">✓</span>
                               <span>{a.name}{a.quantity ? ` (x${a.quantity})` : ''}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedSpace.operatingHours && selectedSpace.operatingHours.length > 0 && (
-                    <div className="detail-section">
-                      <h3 className="section-title">{language === 'en' ? 'Operating Hours' : 'Giờ hoạt động'}</h3>
-                      <div className="availability-slot-list">
-                        {selectedSpace.operatingHours.map((h, idx) => (
-                          <div key={idx} className="avail-slot-card">
-                            <div className="slot-days">{dayLabels[h.dayOfWeek]?.[language] || h.dayOfWeek}</div>
-                            <div className="slot-hours">
-                              {h.openTime?.substring(0, 5)} - {h.closeTime?.substring(0, 5)}
                             </div>
                           </div>
                         ))}

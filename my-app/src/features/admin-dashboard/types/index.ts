@@ -125,7 +125,7 @@ export interface AdminSpaceItem {
   area: number;
   isActive: boolean;
   amenities?: Array<{ name: string; quantity: number | null; isActive: boolean | null }>;
-  operatingHours?: Array<{ dayOfWeek: number; openTime: string; closeTime: string }>;
+
   spaceAllowedCategories?: Array<{ bussinessCategoryId: number }>;
   createdBy?: string;
   createdAt?: string;

@@ -220,9 +220,9 @@ export const OwnerListings: React.FC = () => {
           alert('Lỗi FE: Không tìm thấy ID của bài đăng này!');
           return;
         }
-
+        
         const token = localStorage.getItem('portal_token');
-        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/Delete/${targetId}`, {
+        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/SoftDelete/${targetId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
         });

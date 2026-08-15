@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import { X, Building2, MapPin, Clock, Check, ShieldAlert, Briefcase, Camera, Plus, Trash2 } from 'lucide-react';
+import { X, Building2, MapPin, Check, ShieldAlert, Briefcase, Camera, Plus, Trash2 } from 'lucide-react';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
 import '../../../shared/ModalShell.css';
@@ -14,29 +14,14 @@ interface SpaceFormProps {
 
 const AMENITIES_IDS = ['wifi', 'ac', 'parking', 'wc', 'projector', 'sound'];
 
-const DAYS_OF_WEEK_CONFIG = [
-  { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 0 },
-];
 
-const getDayLabel = (id: number, lang: 'en' | 'vi') => {
-  const days: Record<number, { en: string; vi: string }> = {
-    2: { en: 'Monday', vi: 'Thứ Hai' },
-    3: { en: 'Tuesday', vi: 'Thứ Ba' },
-    4: { en: 'Wednesday', vi: 'Thứ Tư' },
-    5: { en: 'Thursday', vi: 'Thứ Năm' },
-    6: { en: 'Friday', vi: 'Thứ Sáu' },
-    7: { en: 'Saturday', vi: 'Thứ Bảy' },
-    0: { en: 'Sunday', vi: 'Chủ Nhật' },
-  };
-  return days[id]?.[lang] || '';
-};
 
 // ĐỔI SANG EMAIL LIÊN HỆ THẬT CỦA BẠN — Nominatim dùng cái này để định danh app,
 // không dùng được header User-Agent tự set (trình duyệt chặn header đó).
 const NOMINATIM_CONTACT_EMAIL = 'contact@yourdomain.com';
 
 export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initialData }) => {
-  const { t, language } = useThemeLanguage();
+  const { t } = useThemeLanguage();
   const { isVerified } = useIdentityVerification();
 
   const [name, setName] = useState(initialData?.name || '');
@@ -67,10 +52,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
   const [customAmenityChecked, setCustomAmenityChecked] = useState(initialCustomAmenities.length > 0);
   const [customAmenityText, setCustomAmenityText] = useState(initialCustomAmenities.join(', '));
 
-  const [operatingHours, setOperatingHours] = useState<any[]>([]);
-  const [operatingMode, setOperatingMode] = useState<'full' | 'specific'>(initialData ? 'specific' : 'full');
-  const [fullWeekOpen, setFullWeekOpen] = useState('08:00');
-  const [fullWeekClose, setFullWeekClose] = useState('22:00');
 
   const [apiCategories, setApiCategories] = useState<any[]>([]);
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(false);
@@ -119,43 +100,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     fetchCategories();
   }, []);
 
-  useEffect(() => {
-    if (initialData?.operatingHours && initialData.operatingHours.length > 0) {
-      const isFullWeek = initialData.operatingHours.length === 7 && initialData.operatingHours.every((h: any, _i: number, arr: any[]) => h.openTime === arr[0].openTime && h.closeTime === arr[0].closeTime);
-      if (isFullWeek) {
-        setOperatingMode('full');
-        setFullWeekOpen(initialData.operatingHours[0].openTime ? initialData.operatingHours[0].openTime.substring(0, 5) : '08:00');
-        setFullWeekClose(initialData.operatingHours[0].closeTime ? initialData.operatingHours[0].closeTime.substring(0, 5) : '22:00');
-      } else {
-        setOperatingMode('specific');
-      }
-
-      const mappedHours = DAYS_OF_WEEK_CONFIG.map(day => {
-        const backendDayId = day.id === 0 ? 0 : day.id - 1;
-        const found = initialData.operatingHours.find((h: any) => h.dayOfWeek === backendDayId);
-        if (found) {
-          return {
-            dayOfWeek: day.id,
-            enabled: true,
-            openTime: found.openTime ? found.openTime.substring(0, 5) : '08:00',
-            closeTime: found.closeTime ? found.closeTime.substring(0, 5) : '22:00'
-          };
-        }
-        return { dayOfWeek: day.id, enabled: false, openTime: '08:00', closeTime: '22:00' };
-      });
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setOperatingHours(mappedHours);
-    } else {
-      setOperatingHours(
-        DAYS_OF_WEEK_CONFIG.map(day => ({
-          dayOfWeek: day.id,
-          enabled: day.id !== 0,
-          openTime: '08:00',
-          closeTime: '22:00',
-        }))
-      );
-    }
-  }, [initialData]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -230,13 +174,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
     setSelectedAmenities(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
 
-  const handleDayToggle = (dayOfWeek: number) => {
-    setOperatingHours(prev => prev.map(item => item.dayOfWeek === dayOfWeek ? { ...item, enabled: !item.enabled } : item));
-  };
-
-  const handleTimeChange = (dayOfWeek: number, type: 'openTime' | 'closeTime', value: string) => {
-    setOperatingHours(prev => prev.map(item => item.dayOfWeek === dayOfWeek ? { ...item, [type]: value } : item));
-  };
 
   const cleanAddress = (text: string) => {
     if (!text) return '';
@@ -332,21 +269,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
       : [];
     const allAmenities = [...selectedAmenities, ...customAmenities];
 
-    let finalOperatingHours: any[] = [];
-    if (operatingMode === 'full') {
-      finalOperatingHours = DAYS_OF_WEEK_CONFIG.map(h => ({
-        dayOfWeek: h.id === 0 ? 0 : h.id - 1,
-        openTime: fullWeekOpen.length === 5 ? `${fullWeekOpen}:00` : fullWeekOpen,
-        closeTime: fullWeekClose.length === 5 ? `${fullWeekClose}:00` : fullWeekClose
-      }));
-    } else {
-      finalOperatingHours = operatingHours.filter(h => h.enabled).map(h => ({
-        dayOfWeek: h.dayOfWeek === 0 ? 0 : h.dayOfWeek - 1,
-        openTime: h.openTime.length === 5 ? `${h.openTime}:00` : h.openTime,
-        closeTime: h.closeTime.length === 5 ? `${h.closeTime}:00` : h.closeTime
-      }));
-    }
-
     const payload = {
       name: name,
       address: address,
@@ -360,7 +282,6 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
         quantity: 1,
         isActive: true
       })),
-      operatingHours: finalOperatingHours,
       spaceAllowedCategories: selectedCategoryId !== ''
         ? [{ bussinessCategoryId: selectedCategoryId }]
         : []
@@ -615,76 +536,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
             </div>
           </div>
 
-          <div className="form-section">
-            <h3 className="form-section-title">{t('spaceForm.formSectionOperating')} (Tùy chọn)</h3>
-            
-            <div className="operating-mode-toggle" style={{ display: 'flex', gap: '20px', marginBottom: '16px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                <input 
-                  type="radio" 
-                  name="operatingMode" 
-                  checked={operatingMode === 'full'} 
-                  onChange={() => setOperatingMode('full')}
-                  style={{ accentColor: '#3b82f6' }}
-                />
-                <span>Cả tuần (Tất cả các ngày)</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                <input 
-                  type="radio" 
-                  name="operatingMode" 
-                  checked={operatingMode === 'specific'} 
-                  onChange={() => setOperatingMode('specific')}
-                  style={{ accentColor: '#3b82f6' }}
-                />
-                <span>Tùy chỉnh theo thứ</span>
-              </label>
-            </div>
 
-            {operatingMode === 'full' ? (
-              <div className="operating-day-row">
-                <span className="day-name" style={{ minWidth: '120px', fontWeight: 500 }}>Tất cả các ngày</span>
-                <div className="day-time-pickers">
-                  <div className="time-picker-group">
-                    <Clock size={12} className="time-icon" />
-                    <input type="time" value={fullWeekOpen} onChange={(e) => setFullWeekOpen(e.target.value)} disabled={isLoading} className="time-input" />
-                  </div>
-                  <span className="time-separator">{t('spaceForm.formTimeSeparator') || '-'}</span>
-                  <div className="time-picker-group">
-                    <Clock size={12} className="time-icon" />
-                    <input type="time" value={fullWeekClose} onChange={(e) => setFullWeekClose(e.target.value)} disabled={isLoading} className="time-input" />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className="section-desc text-secondary">Tắt tất cả các ngày nếu bạn chưa muốn thiết lập giờ cố định</p>
-                <div className="operating-hours-list">
-                  {operatingHours.map(item => (
-                    <div key={item.dayOfWeek} className={`operating-day-row ${item.enabled ? '' : 'day-disabled'}`}>
-                      <label className={`day-toggle-label ${item.enabled ? 'checkbox-item--checked' : ''}`}>
-                        <input type="checkbox" checked={item.enabled} onChange={() => handleDayToggle(item.dayOfWeek)} className="hidden-checkbox" disabled={isLoading} />
-                        <span className="checkbox-indicator">{item.enabled && <Check size={10} />}</span>
-                        <span className="day-name">{getDayLabel(item.dayOfWeek, language)}</span>
-                      </label>
-
-                      <div className="day-time-pickers">
-                        <div className="time-picker-group">
-                          <Clock size={12} className="time-icon" />
-                          <input type="time" value={item.openTime} onChange={(e) => handleTimeChange(item.dayOfWeek, 'openTime', e.target.value)} disabled={!item.enabled || isLoading} className="time-input" />
-                        </div>
-                        <span className="time-separator">{t('spaceForm.formTimeSeparator') || '-'}</span>
-                        <div className="time-picker-group">
-                          <Clock size={12} className="time-icon" />
-                          <input type="time" value={item.closeTime} onChange={(e) => handleTimeChange(item.dayOfWeek, 'closeTime', e.target.value)} disabled={!item.enabled || isLoading} className="time-input" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
 
           <div className="form-section">
               <h3 className="form-section-title">Hình ảnh mặt bằng (Tùy chọn)</h3>

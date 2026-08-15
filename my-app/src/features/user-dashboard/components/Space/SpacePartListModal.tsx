@@ -178,25 +178,7 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
                     ) : partDetails ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <div><strong>Trạng thái:</strong> {partDetails.isActive ?? partDetails.IsActive ? 'Đang hoạt động' : 'Đang tạm dừng'}</div>
-                        {(partDetails.operatingHours || partDetails.OperatingHours) && (partDetails.operatingHours || partDetails.OperatingHours).length > 0 ? (
-                          <div>
-                            <strong>Giờ hoạt động:</strong>
-                            <ul style={{ paddingLeft: '20px', margin: '4px 0' }}>
-                              {(partDetails.operatingHours || partDetails.OperatingHours).map((h: any, i: number) => {
-                                const dayOfWeek = h.dayOfWeek !== undefined ? h.dayOfWeek : h.DayOfWeek;
-                                const openTime = h.openTime || h.OpenTime;
-                                const closeTime = h.closeTime || h.CloseTime;
-                                return (
-                                  <li key={i}>
-                                    Thứ {dayOfWeek === 0 ? 'CN' : dayOfWeek + 1}: {openTime?.substring(0,5)} - {closeTime?.substring(0,5)}
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </div>
-                        ) : (
-                          <div><strong>Giờ hoạt động:</strong> Chưa thiết lập</div>
-                        )}
+
                         {(partDetails.amenities || partDetails.Amenities) && (partDetails.amenities || partDetails.Amenities).length > 0 && (
                           <div>
                             <strong>Tiện ích:</strong> {(partDetails.amenities || partDetails.Amenities).map((a: any) => a.name || a.Name).join(', ')}
