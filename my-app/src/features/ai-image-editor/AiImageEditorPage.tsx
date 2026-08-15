@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { useForm } from 'react-hook-form';
 import { Joyride, STATUS, type EventData, type Step } from 'react-joyride';
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { API_BASE_URL } from '../../config/api';
+import { clearLocalStorageForLogout } from '../../utils/preserveLocalStorage';
 import './AiImageEditorPage.css';
 
 type Tool = 'brush' | 'eraser' | 'pan';
@@ -91,6 +93,8 @@ interface UserAiImageHistoryApiItem {
 
 const MAX_IMAGE_SIZE = 4096;
 const EDITOR_PADDING = 28;
+// TODO: giá tạm thời — thay bằng giá trị thật từ backend khi có endpoint/field cấu hình giá AI image edit.
+const AI_EDIT_PRICE = 2000;
 const TOUR_STORAGE_KEY_PREFIX = 'ai-image-editor-tour-seen';
 const LEGACY_TOUR_STORAGE_KEY = 'ai-image-editor-tour-seen';
 const HISTORY_STORAGE_KEY = 'ai-image-editor-history';
@@ -228,6 +232,8 @@ const normalizeUserAiImageHistory = (items: UserAiImageHistoryApiItem[]): EditHi
   items.map((item, index) => normalizeUserAiImageHistoryItem(item, index));
 
 export const AiImageEditorPage: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const stageRef = useRef<Konva.Stage>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const isDrawing = useRef(false);
@@ -246,6 +252,7 @@ export const AiImageEditorPage: React.FC = () => {
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [isWalletLoading, setIsWalletLoading] = useState(() => Boolean(localStorage.getItem('portal_token')));
   const [walletError, setWalletError] = useState(() => (localStorage.getItem('portal_token') ? '' : 'Chưa đăng nhập'));
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [resultUrl, setResultUrl] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
@@ -298,10 +305,7 @@ export const AiImageEditorPage: React.FC = () => {
   const toDisplayPoints = (points: number[]) =>
     points.map((point, index) => point * scaleToImage + (index % 2 === 0 ? imageFrame.x : imageFrame.y));
 
-  const onDrop = async (files: File[]) => {
-    const file = files[0];
-    if (!file) return;
-
+  const loadFileIntoWorkspace = async (file: File, successMessage = 'Đã tải ảnh lên.') => {
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       toast.error('Chỉ hỗ trợ JPG, PNG hoặc WebP.');
       return;
@@ -324,11 +328,17 @@ export const AiImageEditorPage: React.FC = () => {
       setResultUrl('');
       setZoom(1);
       reset();
-      toast.success('Đã tải ảnh lên.');
+      toast.success(successMessage);
     } catch {
       URL.revokeObjectURL(url);
       toast.error('Không thể đọc ảnh này.');
     }
+  };
+
+  const onDrop = async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    await loadFileIntoWorkspace(file);
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -383,6 +393,31 @@ export const AiImageEditorPage: React.FC = () => {
     },
   });
 
+  useEffect(() => {
+    const sourceImageUrl = (location.state as { sourceImageUrl?: string } | null)?.sourceImageUrl;
+    if (!sourceImageUrl) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(sourceImageUrl);
+        if (!response.ok) throw new Error('fetch failed');
+        const blob = await response.blob();
+        if (cancelled) return;
+        const fileName = sourceImageUrl.split('/').pop()?.split('?')[0] || 'listing-photo.jpg';
+        const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+        await loadFileIntoWorkspace(file, 'Đã tải ảnh mặt bằng vào trình chỉnh sửa.');
+      } catch {
+        if (!cancelled) toast.error('Không thể tải ảnh từ tin đăng. Vui lòng tải ảnh thủ công.');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
+
   useEffect(() => () => {
     if (imageUrl) URL.revokeObjectURL(imageUrl);
   }, [imageUrl]);
@@ -414,12 +449,14 @@ export const AiImageEditorPage: React.FC = () => {
     if (!token) {
       setIsWalletLoading(false);
       setWalletError('Chưa đăng nhập');
+      setIsSessionExpired(true);
       return undefined;
     }
 
     let isMounted = true;
     setIsWalletLoading(true);
     setWalletError('');
+    setIsSessionExpired(false);
 
     fetch(`${API_BASE_URL}/api/Wallet/own`, {
       headers: {
@@ -429,11 +466,17 @@ export const AiImageEditorPage: React.FC = () => {
     })
       .then(async (response) => {
         if (!response.ok) {
-          if (response.status === 401 || response.status === 403) {
-            throw new Error('Phiên đăng nhập hết hạn');
+          const message = await response.text().catch(() => '');
+          const isAuthError = response.status === 401
+            || response.status === 403
+            || /not authenticated|unauthorized/i.test(message);
+
+          if (isAuthError) {
+            const authError = new Error('Phiên đăng nhập hết hạn');
+            authError.name = 'SessionExpiredError';
+            throw authError;
           }
 
-          const message = await response.text().catch(() => '');
           throw new Error(message || `Không thể tải số dư (${response.status})`);
         }
 
@@ -445,6 +488,8 @@ export const AiImageEditorPage: React.FC = () => {
       })
       .catch((error) => {
         if (!isMounted) return;
+        const isSessionError = error instanceof Error && error.name === 'SessionExpiredError';
+        setIsSessionExpired(isSessionError);
         setWalletError(error instanceof Error ? error.message : 'Không thể tải số dư');
       })
       .finally(() => {
@@ -940,8 +985,18 @@ export const AiImageEditorPage: React.FC = () => {
                 : walletError || `${(walletBalance ?? 0).toLocaleString('vi-VN')} VND`}
             </strong>
             {walletError && (
-              <button type="button" onClick={loadWalletBalance}>
-                Thử lại
+              <button
+                type="button"
+                onClick={() => {
+                  if (isSessionExpired) {
+                    clearLocalStorageForLogout();
+                    navigate('/login');
+                    return;
+                  }
+                  loadWalletBalance();
+                }}
+              >
+                {isSessionExpired ? 'Đăng nhập lại' : 'Thử lại'}
               </button>
             )}
           </div>
@@ -1109,7 +1164,7 @@ export const AiImageEditorPage: React.FC = () => {
             {errors.prompt && <p className="ai-editor-error">{errors.prompt.message}</p>}
             <button className="ai-editor-primary-btn" type="submit" disabled={isProcessing || !image || Boolean(resultUrl)} data-tour="generate">
               {isProcessing ? <Loader2 className="ai-editor-spin" size={18} /> : <Sparkles size={18} />}
-              Tạo ảnh
+              Tạo ảnh · {AI_EDIT_PRICE.toLocaleString('vi-VN')} VND
             </button>
           </form>
 

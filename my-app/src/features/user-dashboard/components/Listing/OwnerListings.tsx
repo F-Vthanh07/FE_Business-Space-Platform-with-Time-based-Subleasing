@@ -435,7 +435,7 @@ export const OwnerListings: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: '700px', width: '95%', padding: 0, overflow: 'hidden' }}
           >
-            <div className="modal-header" style={{ padding: '16px 20px' }}>
+            <div className="modal-header" style={{ padding: '16px 20px', margin: 0, top: 0 }}>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>Chi tiết bài đăng</h2>
               <button type="button" className="btn-icon" onClick={() => setViewingListing(null)}>
                 <X size={20} />
