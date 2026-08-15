@@ -13,6 +13,7 @@ import { useThemeLanguage } from "../../../../context/ThemeLanguageContext";
 import { ListingForm } from './ListingForm';
 import { formatDate } from '../../../../utils/dateUtils';
 import { getListingPictureUrl, getListingPictureUrls } from '../../../shared/listingPictures';
+import { getPriceUnitText } from '../../../../utils/formatPriceUnit';
 
 // Chỉ có đúng 2 status thật từ BE: Accepted / Ban
 const statusConfig: Record<string, { className: string; icon: React.ReactNode; label: string }> = {
@@ -377,7 +378,7 @@ export const OwnerListings: React.FC = () => {
 
                 <div className="listing-price-row">
                   <span className="listing-price">{listing.price ? `${listing.price.toLocaleString('vi-VN')}₫` : 'Thỏa thuận'}</span>
-                  <span className="text-secondary" style={{ fontSize: 12 }}>/giờ</span>
+                  <span className="text-secondary" style={{ fontSize: 12 }}>/{getPriceUnitText(listing.priceUnit)}</span>
                 </div>
 
                 {listing.rating > 0 && (

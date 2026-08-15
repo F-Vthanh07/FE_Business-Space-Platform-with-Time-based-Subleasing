@@ -177,27 +177,32 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
                       <div className="text-secondary" style={{ textAlign: 'center' }}><Clock size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }}/> Đang tải chi tiết...</div>
                     ) : partDetails ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div><strong>Trạng thái:</strong> {partDetails.isActive ? 'Đang hoạt động' : 'Đang tạm dừng'}</div>
-                        {partDetails.operatingHours && partDetails.operatingHours.length > 0 ? (
+                        <div><strong>Trạng thái:</strong> {partDetails.isActive ?? partDetails.IsActive ? 'Đang hoạt động' : 'Đang tạm dừng'}</div>
+                        {(partDetails.operatingHours || partDetails.OperatingHours) && (partDetails.operatingHours || partDetails.OperatingHours).length > 0 ? (
                           <div>
                             <strong>Giờ hoạt động:</strong>
                             <ul style={{ paddingLeft: '20px', margin: '4px 0' }}>
-                              {partDetails.operatingHours.map((h: any, i: number) => (
-                                <li key={i}>
-                                  Thứ {h.dayOfWeek === 0 ? 'CN' : h.dayOfWeek + 1}: {h.openTime?.substring(0,5)} - {h.closeTime?.substring(0,5)}
-                                </li>
-                              ))}
+                              {(partDetails.operatingHours || partDetails.OperatingHours).map((h: any, i: number) => {
+                                const dayOfWeek = h.dayOfWeek !== undefined ? h.dayOfWeek : h.DayOfWeek;
+                                const openTime = h.openTime || h.OpenTime;
+                                const closeTime = h.closeTime || h.CloseTime;
+                                return (
+                                  <li key={i}>
+                                    Thứ {dayOfWeek === 0 ? 'CN' : dayOfWeek + 1}: {openTime?.substring(0,5)} - {closeTime?.substring(0,5)}
+                                  </li>
+                                );
+                              })}
                             </ul>
                           </div>
                         ) : (
                           <div><strong>Giờ hoạt động:</strong> Chưa thiết lập</div>
                         )}
-                        {partDetails.amenities && partDetails.amenities.length > 0 && (
+                        {(partDetails.amenities || partDetails.Amenities) && (partDetails.amenities || partDetails.Amenities).length > 0 && (
                           <div>
-                            <strong>Tiện ích:</strong> {partDetails.amenities.map((a: any) => a.name).join(', ')}
+                            <strong>Tiện ích:</strong> {(partDetails.amenities || partDetails.Amenities).map((a: any) => a.name || a.Name).join(', ')}
                           </div>
                         )}
-                        {partDetails.spaceAllowedCategories && partDetails.spaceAllowedCategories.length > 0 && (
+                        {(partDetails.spaceAllowedCategories || partDetails.SpaceAllowedCategories) && (partDetails.spaceAllowedCategories || partDetails.SpaceAllowedCategories).length > 0 && (
                           <div>
                             <strong>Ngành nghề cho phép:</strong> Có giới hạn
                           </div>

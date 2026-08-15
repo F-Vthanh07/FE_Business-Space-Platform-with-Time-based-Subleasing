@@ -80,18 +80,24 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
           
           // Fetch chi tiết từng space part để lấy operatingHours
           const detailPromises = parts
-            .filter((p: any) => p.isActive && (!initialData || p.id !== initialData.id))
-            .map((p: any) => 
-              fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetById/${p.id}`, {
+            .filter((p: any) => p.isActive && (!initialData || (p.id || p.Id) !== (initialData.id || initialData.Id)))
+            .map((p: any) => {
+              const partId = p.id || p.Id;
+              if (!partId) return Promise.resolve(null);
+              return fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetById/${partId}`, {
                 headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-              }).then(r => r.ok ? r.json() : null)
-            );
+              }).then(r => r.ok ? r.json() : null);
+            });
             
           const detailedParts = await Promise.all(detailPromises);
           
           detailedParts.forEach((dp: any) => {
-            if (dp && Array.isArray(dp.operatingHours)) {
-              dp.operatingHours.forEach((h: any) => usedBackendDays.add(h.dayOfWeek));
+            const opHours = dp?.operatingHours || dp?.OperatingHours;
+            if (opHours && Array.isArray(opHours)) {
+              opHours.forEach((h: any) => {
+                const day = h.dayOfWeek !== undefined ? h.dayOfWeek : h.DayOfWeek;
+                usedBackendDays.add(day);
+              });
             }
           });
 

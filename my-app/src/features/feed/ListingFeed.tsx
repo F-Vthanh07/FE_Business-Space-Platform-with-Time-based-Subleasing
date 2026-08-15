@@ -9,6 +9,7 @@ import { Header } from '../../components/Header'; // Chỉnh lại đường d�
 import { useNavigate } from 'react-router-dom';
 import { HomeSearchBar } from '../homepage/components/HomeSearchBar';
 import { getListingPictureUrl, getListingPictureUrls } from '../shared/listingPictures';
+import { getPriceUnitText } from '../../utils/formatPriceUnit';
 import '../homepage/Homepage.css';
 import '../homepage/Homepage.css';
 
@@ -441,7 +442,7 @@ export const ListingFeed: React.FC = () => {
                       </div>
                     )}
                     <div style={{ fontWeight: 'bold', color: 'var(--color-positive, #2E7D32)', fontSize: '16px', marginBottom: '6px' }}>
-                      💰 {item.price ? `${item.price.toLocaleString('vi-VN')} ₫/giờ` : 'Thỏa thuận'} • {item.area ? `${item.area}m²` : 'N/A'}
+                      💰 {item.price ? `${item.price.toLocaleString('vi-VN')} ₫/${item.priceUnit ? getPriceUnitText(item.priceUnit) : 'giờ'}` : 'Thỏa thuận'} • {item.area ? `${item.area}m²` : 'N/A'}
                     </div>
                     <ExpandableDescription text={item.description} />
                   </div>
