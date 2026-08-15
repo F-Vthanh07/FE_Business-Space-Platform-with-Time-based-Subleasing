@@ -10,6 +10,7 @@ import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-
 import { SiZalo } from "react-icons/si";
 import { formatDate } from '../../utils/dateUtils';
 import { getListingPictureUrl, getListingPictureUrls } from '../shared/listingPictures';
+import { getPriceUnitText } from '../../utils/formatPriceUnit';
 
 // --- COMPONENT NÚT CHIA SẺ DÙNG LẠI (SHARE BUTTON) ---
 const ExpandableDescription: React.FC<{ text: string }> = ({ text }) => {
@@ -560,7 +561,7 @@ export const ListingDetail: React.FC = () => {
                 <div>
                   <div style={{ fontSize: '13px', color: '#777', marginBottom: '4px' }}>Mức giá</div>
                   <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--color-positive)' }}>
-                    {listing.price ? `${listing.price.toLocaleString('vi-VN')} ₫/giờ` : 'Thỏa thuận'}
+                    {listing.price ? `${listing.price.toLocaleString('vi-VN')} ₫/${listing.priceUnit ? getPriceUnitText(listing.priceUnit) : 'giờ'}` : 'Thỏa thuận'}
                   </div>
                 </div>
                 <div>

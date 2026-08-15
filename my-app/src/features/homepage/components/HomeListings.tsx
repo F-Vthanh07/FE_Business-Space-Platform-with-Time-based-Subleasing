@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Globe, ShieldCheck, Clock3, Camera, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getPriceUnitText } from '../../../utils/formatPriceUnit';
 
 interface HomeListingsProps {
   onCardClick: (id: string) => void;
@@ -203,7 +204,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
     const mainImage = imageCount > 0 ? realImages[0] : FALLBACK_IMAGE;
 
     const isHourly = category === 'hourly';
-    const priceUnit = isHourly ? 'đ/giờ' : 'đ/tháng';
+    const priceUnit = item.priceUnit ? getPriceUnitText(item.priceUnit) : (isHourly ? 'giờ' : 'tháng');
     const typeLabel = isHourly ? 'Share theo giờ' : 'Mặt bằng kinh doanh';
     const actionLabel = isHourly ? 'Đặt giờ' : 'Nhắn tin';
 
@@ -239,7 +240,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
 
           <div className="rental-card-price-row">
             <span className={`rental-card-price rental-card-price--${category}`}>
-              {item.price ? `${item.price.toLocaleString('vi-VN')} ${priceUnit}` : 'Thỏa thuận'}
+              {item.price ? `${item.price.toLocaleString('vi-VN')} đ/${priceUnit}` : 'Thỏa thuận'}
             </span>
             <span className="dot-sep">•</span>
             <span>{item.area ? `${item.area} m²` : 'N/A'}</span>
