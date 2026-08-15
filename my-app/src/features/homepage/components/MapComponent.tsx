@@ -137,7 +137,7 @@ export const MapComponent: React.FC = () => {
                   {popupInfo.name || popupInfo.description || 'Mặt bằng cho thuê'}
                 </div>
                 <div style={{ fontSize: '11px', color: '#777' }}>
-                  {popupInfo.area ? `${popupInfo.area} m² • ` : ''}{popupInfo.location?.substring(0, 15) || 'TP.HCM'}
+                  {popupInfo.area ? `${popupInfo.area} m² • ` : ''}{(popupInfo.spaceCity || popupInfo.spaceAddress || 'TP.HCM').substring(0, 30)}
                 </div>
               </div>
             </div>
