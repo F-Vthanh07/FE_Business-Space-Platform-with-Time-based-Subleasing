@@ -115,9 +115,9 @@ export const FloatingChat: React.FC = () => {
       const myRooms: any[] = await res.json();
       
       // Sắp xếp cuộc trò chuyện có tin nhắn mới nhất lên đầu
-      myRooms.sort((a, b) => {
-        const timeA = new Date(a.lastMessageAt || a.LastMessageAt || a.createdAt || a.CreatedAt || 0).getTime();
-        const timeB = new Date(b.lastMessageAt || b.LastMessageAt || b.createdAt || b.CreatedAt || 0).getTime();
+      myRooms.sort((a: any, b: any) => {
+        const timeA = new Date(a.lastMessageTime || a.lastMessage || a.lastMessageAt || a.LastMessageAt || a.createdAt || a.CreatedAt || 0).getTime();
+        const timeB = new Date(b.lastMessageTime || b.lastMessage || b.lastMessageAt || b.LastMessageAt || b.createdAt || b.CreatedAt || 0).getTime();
         return timeB - timeA;
       });
 
@@ -151,10 +151,12 @@ export const FloatingChat: React.FC = () => {
 
   useEffect(() => {
     if (!currentUserId || !token) return;
-    let globalConnection: HubConnection;
+    let isMounted = true;
+    let globalConnection: HubConnection | null = null;
     const initGlobalChat = async () => {
       try {
         const myRooms = (await fetchAndSyncConversations()) || [];
+        if (!isMounted) return;
 
         globalConnection = new HubConnectionBuilder()
           .withUrl("https://flexi-space-capstone-project.onrender.com/chatHub", { accessTokenFactory: () => token || "" })
@@ -182,7 +184,7 @@ export const FloatingChat: React.FC = () => {
               
               // Nếu đang mở khung chat này và có tin nhắn của người kia tới, đánh dấu đã đọc ngay
               if (!isMyOwnMessage && activeChatIdRef.current === String(incomingRoomId)) {
-                globalConnection.invoke("MarkConversationAsRead", incomingRoomId).catch(console.error);
+                globalConnection.invoke("MarkConversationAsRead", incomingRoomId, currentUserId).catch(console.error);
               }
             } else { 
               if (!isMyOwnMessage) setUnreadCount(prev => prev + 1); 
@@ -195,7 +197,8 @@ export const FloatingChat: React.FC = () => {
             const updated = [...prev];
             const idx = updated.findIndex((r) => String(r.id) === String(incomingRoomId) || String(r.Id) === String(incomingRoomId));
             if (idx > -1) {
-              const [room] = updated.splice(idx, 1);
+              const room = { ...updated[idx] };
+              updated.splice(idx, 1);
               room.lastMessageAt = savedMessage.createdAt || new Date();
               room.lastMessageContent = savedMessage.content || savedMessage.message; // Cập nhật preview tin nhắn
               if (!isMyOwnMessage && activeChatIdRef.current !== String(incomingRoomId)) {
@@ -237,9 +240,17 @@ export const FloatingChat: React.FC = () => {
         });
 
         await globalConnection.start();
+        if (!isMounted) {
+          globalConnection.stop();
+          return;
+        }
         for (const room of myRooms) {
           const roomId = room.id || room.Id;
           await globalConnection.invoke("JoinConversation", roomId);
+          if (!isMounted) {
+            globalConnection.stop();
+            return;
+          }
           joinedRoomIdsRef.current.add(roomId);
         }
         connectionRef.current = globalConnection;
@@ -248,7 +259,12 @@ export const FloatingChat: React.FC = () => {
     };
     initGlobalChat();
     return () => {
-      if (globalConnection) globalConnection.stop();
+      isMounted = false;
+      if (globalConnection) {
+        globalConnection.stop();
+      } else if (connectionRef.current) {
+        connectionRef.current.stop();
+      }
       connectionRef.current = null;
       joinedRoomIdsRef.current.clear();
     };
@@ -348,7 +364,7 @@ export const FloatingChat: React.FC = () => {
     if (connection) {
       connection.invoke("JoinConversation", roomId).catch(err => console.log(err));
       // Bắn sự kiện đánh dấu đã đọc khi mở chat
-      connection.invoke("MarkConversationAsRead", roomId).catch(err => console.log(err));
+      connection.invoke("MarkConversationAsRead", roomId, currentUserId).catch(err => console.log(err));
     }
     
     // Cập nhật local state: Đặt lại unreadCount của phòng chat này về 0
@@ -386,7 +402,8 @@ export const FloatingChat: React.FC = () => {
         const updated = [...prev];
         const idx = updated.findIndex((r) => String(r.id) === String(roomId) || String(r.Id) === String(roomId));
         if (idx > -1) {
-          const [room] = updated.splice(idx, 1);
+          const room = { ...updated[idx] };
+          updated.splice(idx, 1);
           room.lastMessageAt = new Date();
           room.lastMessageContent = `Bạn: ${textToSend}`;
           updated.unshift(room);
@@ -471,15 +488,25 @@ export const FloatingChat: React.FC = () => {
 
     const contractRegex = /Hợp đồng \(Mã: #(\d+)\)/i;
     const match = text.match(contractRegex);
+    const isOnlyNumber = /^\d+$/.test(text.trim());
 
-    if (match && match[1]) {
-      const cId = match[1];
+    let cId = null;
+    let displayText = text;
+
+    if (isOnlyNumber) {
+      cId = text.trim();
+      displayText = `📄 Tôi vừa tạo và gửi một Hợp đồng (Mã: #${cId}). Vui lòng kiểm tra và xác nhận nhé!`;
+    } else if (match && match[1]) {
+      cId = match[1];
+    }
+
+    if (cId) {
       const revokedIds = getRevokedContractIds();
       const isThisContractRevoked = revokedIds.has(cId);
 
       return (
         <div>
-          <span>{text}</span>
+          <span>{displayText}</span>
           <div style={{ marginTop: '8px' }}>
             {isThisContractRevoked ? (
               <span style={{ fontSize: '12px', color: '#EF4444', fontStyle: 'italic' }}>
@@ -533,7 +560,10 @@ export const FloatingChat: React.FC = () => {
                   conversations.map((room, idx) => {
                     const displayName = getOtherPersonName(room);
                     const hasUnread = (room.unreadCount || room.UnreadCount) > 0;
-                    const previewText = room.lastMessageContent || room.LastMessageContent || 'Nhấp để bắt đầu trò chuyện...';
+                    let previewText = room.lastMessageContent || room.LastMessageContent || 'Nhấp để bắt đầu trò chuyện...';
+                    if (/^\d+$/.test(previewText.trim())) {
+                      previewText = `📄 Đã gửi hợp đồng #${previewText.trim()}`;
+                    }
                     return (
                       <div key={idx} onClick={() => openChatRoom(room)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #F0F0F0', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                         <div onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:5173/profile/${getOtherPersonId(room)}`, '_blank'); }} style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#E4E6EB', color: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{displayName.substring(0, 2).toUpperCase()}</div>
@@ -542,11 +572,6 @@ export const FloatingChat: React.FC = () => {
                             <div style={{ fontWeight: '600', fontSize: '14px', color: hasUnread ? '#1E293B' : '#2C2C2C', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {displayName}
                             </div>
-                            {hasUnread && (
-                              <div style={{ backgroundColor: '#ef4444', color: '#fff', fontSize: '10px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '10px', marginLeft: '8px' }}>
-                                {room.unreadCount || room.UnreadCount}
-                              </div>
-                            )}
                           </div>
                           <div style={{ fontSize: '12px', color: hasUnread ? '#1E293B' : '#777', fontWeight: hasUnread ? '600' : 'normal', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
                             {previewText}
@@ -649,6 +674,7 @@ export const FloatingChat: React.FC = () => {
                   const senderName = isMe ? 'Bạn' : getOtherPersonName(activeChat);
 
                   const isSystemMsg = msg.text && (
+                    /^\d+$/.test(msg.text.trim()) ||
                     msg.text.includes('Chủ mặt bằng đã xác nhận hợp đồng') ||
                     msg.text.includes('Khách thuê đã ký') ||
                     msg.text.includes('thu hồi Hợp đồng') ||
