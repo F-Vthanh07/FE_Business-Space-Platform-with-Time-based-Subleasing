@@ -437,7 +437,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     const startCheck = new Date(allowedStartTime);
     startCheck.setHours(0, 0, 0, 0);
 
-    if (!isEditingListing && startCheck < today) {
+    if (mode === 'full' && !isEditingListing && startCheck < today) {
       setError('Thời gian bắt đầu không được ở quá khứ!');
       return;
     }
