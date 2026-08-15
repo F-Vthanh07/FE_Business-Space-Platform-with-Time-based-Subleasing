@@ -174,6 +174,12 @@ export const OwnerSpaces: React.FC = () => {
   };
 
   const handleOpenSpacePartForm = (space: Space) => {
+    const currentUserId = localStorage.getItem('current_user_id');
+    const spaceOwnerId = (space as any).ownerId || (space as any).OwnerId;
+    if (spaceOwnerId && currentUserId !== spaceOwnerId) {
+      alert("Bạn không có quyền chia nhỏ space được lấy từ người chủ");
+      return;
+    }
     setParentSpaceForPart(space);
     setEditingSpacePart(null);
     setIsSpacePartFormOpen(true);
@@ -436,7 +442,7 @@ export const OwnerSpaces: React.FC = () => {
                     const hours = viewingSpace.operatingHours || [];
                     if (hours.length === 0) return <span className="text-muted text-xs">{language === 'en' ? 'Not configured' : 'Chưa thiết lập'}</span>;
                     
-                    const isFullWeek = hours.length === 7 && hours.every((h: any, i: number, arr: any[]) => h.openTime === arr[0].openTime && h.closeTime === arr[0].closeTime);
+                    const isFullWeek = hours.length === 7 && hours.every((h: any, _i: number, arr: any[]) => h.openTime === arr[0].openTime && h.closeTime === arr[0].closeTime);
                     
                     if (isFullWeek) {
                       return <div className="space-detail-row"><span className="space-detail-label"><Clock size={12}/> {language === 'en' ? 'Full week' : 'Cả tuần'}</span><span className="space-detail-value">{hours[0].openTime?.substring(0, 5)} - {hours[0].closeTime?.substring(0, 5)}</span></div>;

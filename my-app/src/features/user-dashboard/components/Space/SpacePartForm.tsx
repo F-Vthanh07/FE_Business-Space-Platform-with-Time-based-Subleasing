@@ -48,6 +48,10 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
   const [customAmenityText, setCustomAmenityText] = useState(initialCustomAmenities.join(', '));
 
   const [operatingHours, setOperatingHours] = useState<any[]>([]);
+  const [operatingHourOption, setOperatingHourOption] = useState<'full' | 'custom'>('full');
+  const [availableDays, setAvailableDays] = useState<number[]>([]);
+  const [fullWeekOpen, setFullWeekOpen] = useState('08:00');
+  const [fullWeekClose, setFullWeekClose] = useState('22:00');
 
   const [apiCategories, setApiCategories] = useState<any[]>([]);
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(false);
@@ -71,16 +75,48 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
           const parts = Array.isArray(data) ? data : (data?.items || []);
           const totalArea = parts.reduce((sum: number, p: any) => sum + (p.isActive ? p.area : 0), 0);
           setExistingPartsTotalArea(totalArea);
+
+          const usedBackendDays = new Set<number>();
+          
+          // Fetch chi tiết từng space part để lấy operatingHours
+          const detailPromises = parts
+            .filter((p: any) => p.isActive && (!initialData || (p.id || p.Id) !== (initialData.id || initialData.Id)))
+            .map((p: any) => {
+              const partId = p.id || p.Id;
+              if (!partId) return Promise.resolve(null);
+              return fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetById/${partId}`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+              }).then(r => r.ok ? r.json() : null);
+            });
+            
+          const detailedParts = await Promise.all(detailPromises);
+          
+          detailedParts.forEach((dp: any) => {
+            const opHours = dp?.operatingHours || dp?.OperatingHours;
+            if (opHours && Array.isArray(opHours)) {
+              opHours.forEach((h: any) => {
+                const day = h.dayOfWeek !== undefined ? h.dayOfWeek : h.DayOfWeek;
+                usedBackendDays.add(day);
+              });
+            }
+          });
+
+          const parentBackendDays = Array.isArray(parentSpace.operatingHours) && parentSpace.operatingHours.length > 0 
+            ? parentSpace.operatingHours.map((h: any) => h.dayOfWeek)
+            : [0, 1, 2, 3, 4, 5, 6]; 
+
+          const available = DAYS_OF_WEEK_CONFIG.map(d => d.id).filter(frontendId => {
+            const backendId = frontendId === 0 ? 0 : frontendId - 1;
+            return parentBackendDays.includes(backendId) && !usedBackendDays.has(backendId);
+          });
+          setAvailableDays(available);
         }
       } catch (err) {
         console.error("Lỗi lấy thông tin space parts hiện tại:", err);
       }
     };
-    if (parentSpace?.id && !initialData) {
+    if (parentSpace?.id) {
       fetchExistingParts();
-    } else if (initialData) {
-      // If editing, we shouldn't count the current part's area against the limit,
-      // or we just skip this strict check on edit and rely on backend for now.
     }
   }, [parentSpace, initialData]);
 
@@ -106,6 +142,15 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
 
   useEffect(() => {
     if (initialData?.operatingHours && initialData.operatingHours.length > 0) {
+      const isFullWeek = initialData.operatingHours.length >= availableDays.length && availableDays.length > 0 && initialData.operatingHours.every((h: any, _i: number, arr: any[]) => h.openTime === arr[0].openTime && h.closeTime === arr[0].closeTime);
+      if (isFullWeek) {
+        setOperatingHourOption('full');
+        setFullWeekOpen(initialData.operatingHours[0].openTime ? initialData.operatingHours[0].openTime.substring(0, 5) : '08:00');
+        setFullWeekClose(initialData.operatingHours[0].closeTime ? initialData.operatingHours[0].closeTime.substring(0, 5) : '22:00');
+      } else {
+        setOperatingHourOption('custom');
+      }
+
       const mappedHours = DAYS_OF_WEEK_CONFIG.map(day => {
         const backendDayId = day.id === 0 ? 0 : day.id - 1;
         const found = initialData.operatingHours.find((h: any) => h.dayOfWeek === backendDayId);
@@ -121,16 +166,17 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
       });
       setOperatingHours(mappedHours);
     } else {
+      setOperatingHourOption('full');
       setOperatingHours(
         DAYS_OF_WEEK_CONFIG.map(day => ({
           dayOfWeek: day.id,
-          enabled: day.id !== 0,
+          enabled: availableDays.includes(day.id),
           openTime: '08:00',
           closeTime: '22:00',
         }))
       );
     }
-  }, [initialData]);
+  }, [initialData, availableDays]);
 
   const handleAmenityToggle = (id: string) => {
     setSelectedAmenities(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
@@ -198,11 +244,17 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
         quantity: 1,
         isActive: true
       })),
-      operatingHours: operatingHours.filter(h => h.enabled).map(h => ({
-        dayOfWeek: h.dayOfWeek === 0 ? 0 : h.dayOfWeek - 1,
-        openTime: h.openTime.length === 5 ? `${h.openTime}:00` : h.openTime,
-        closeTime: h.closeTime.length === 5 ? `${h.closeTime}:00` : h.closeTime
-      })),
+      operatingHours: operatingHourOption === 'full' 
+        ? availableDays.map(dId => ({
+            dayOfWeek: dId === 0 ? 0 : dId - 1,
+            openTime: fullWeekOpen.length === 5 ? `${fullWeekOpen}:00` : fullWeekOpen,
+            closeTime: fullWeekClose.length === 5 ? `${fullWeekClose}:00` : fullWeekClose
+          }))
+        : operatingHours.filter(h => h.enabled && availableDays.includes(h.dayOfWeek)).map(h => ({
+            dayOfWeek: h.dayOfWeek === 0 ? 0 : h.dayOfWeek - 1,
+            openTime: h.openTime.length === 5 ? `${h.openTime}:00` : h.openTime,
+            closeTime: h.closeTime.length === 5 ? `${h.closeTime}:00` : h.closeTime
+          })),
       spaceAllowedCategories: selectedCategoryId !== ''
         ? [{ bussinessCategoryId: selectedCategoryId }]
         : []
@@ -375,8 +427,59 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
             <h3 className="form-section-title">{t('spaceForm.formSectionOperating')} (Tùy chọn)</h3>
             <p className="section-desc text-secondary">Tắt tất cả các ngày nếu bạn chưa muốn thiết lập giờ cố định</p>
 
+            <div className="radio-group-horizontal" style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
+              <label className="radio-label">
+                <input
+                  type="radio"
+                  name="operatingHourOption"
+                  value="full"
+                  checked={operatingHourOption === 'full'}
+                  onChange={() => setOperatingHourOption('full')}
+                />
+                Áp dụng tất cả ngày khả dụng ({availableDays.length})
+              </label>
+              <label className="radio-label">
+                <input
+                  type="radio"
+                  name="operatingHourOption"
+                  value="custom"
+                  checked={operatingHourOption === 'custom'}
+                  onChange={() => setOperatingHourOption('custom')}
+                />
+                {t('spaceForm.customDays') !== 'spaceForm.customDays' ? t('spaceForm.customDays') : 'Tùy chỉnh theo ngày'}
+              </label>
+            </div>
+
+            {operatingHourOption === 'full' && (
+              <div className="full-week-time-picker" style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--color-bg-secondary)', borderRadius: '8px', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <span className="text-secondary" style={{ fontSize: '0.9rem' }}>Áp dụng chung cho tất cả ngày khả dụng:</span>
+                <div className="day-time-pickers" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <div className="time-picker-group">
+                    <Clock size={12} className="time-icon" />
+                    <input
+                      type="time"
+                      value={fullWeekOpen}
+                      onChange={(e) => setFullWeekOpen(e.target.value)}
+                      className="time-input"
+                    />
+                  </div>
+                  <span className="time-separator">-</span>
+                  <div className="time-picker-group">
+                    <Clock size={12} className="time-icon" />
+                    <input
+                      type="time"
+                      value={fullWeekClose}
+                      onChange={(e) => setFullWeekClose(e.target.value)}
+                      className="time-input"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {operatingHourOption === 'custom' && (
             <div className="operating-hours-list">
-              {operatingHours.map(item => (
+              {operatingHours.filter(item => availableDays.includes(item.dayOfWeek) || (initialData && item.enabled)).map(item => (
                 <div key={item.dayOfWeek} className={`operating-day-row ${item.enabled ? '' : 'day-disabled'}`}>
                   <label className={`day-toggle-label ${item.enabled ? 'checkbox-item--checked' : ''}`}>
                     <input type="checkbox" checked={item.enabled} onChange={() => handleDayToggle(item.dayOfWeek)} className="hidden-checkbox" disabled={isLoading} />
@@ -398,6 +501,7 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
                 </div>
               ))}
             </div>
+            )}
           </div>
 
           {error && (

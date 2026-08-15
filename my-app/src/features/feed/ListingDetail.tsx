@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Clock, Tag, Flag, Star } from 'lucide-react';
+import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Clock, Tag, Flag, Star, Sofa, Wand2 } from 'lucide-react';
 import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
 import { SiZalo } from "react-icons/si";
 import { formatDate } from '../../utils/dateUtils';
 import { getListingPictureUrl, getListingPictureUrls } from '../shared/listingPictures';
+import { getPriceUnitText } from '../../utils/formatPriceUnit';
 
 // --- COMPONENT NÚT CHIA SẺ DÙNG LẠI (SHARE BUTTON) ---
 const ExpandableDescription: React.FC<{ text: string }> = ({ text }) => {
@@ -180,6 +181,8 @@ export const ListingDetail: React.FC = () => {
   const [reviewStarFilter, setReviewStarFilter] = useState<number | 'all'>('all');
 
   const [businessCategoriesById, setBusinessCategoriesById] = useState<Record<number, string>>({});
+
+  const [furnitureImageIndex, setFurnitureImageIndex] = useState(0);
 
   const currentUserId = localStorage.getItem('current_user_id');
   const token = localStorage.getItem('portal_token');
@@ -558,7 +561,7 @@ export const ListingDetail: React.FC = () => {
                 <div>
                   <div style={{ fontSize: '13px', color: '#777', marginBottom: '4px' }}>Mức giá</div>
                   <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--color-positive)' }}>
-                    {listing.price ? `${listing.price.toLocaleString('vi-VN')} ₫/giờ` : 'Thỏa thuận'}
+                    {listing.price ? `${listing.price.toLocaleString('vi-VN')} ₫/${listing.priceUnit ? getPriceUnitText(listing.priceUnit) : 'giờ'}` : 'Thỏa thuận'}
                   </div>
                 </div>
                 <div>
@@ -919,6 +922,82 @@ export const ListingDetail: React.FC = () => {
                 </>
               )}
             </div>
+
+            {realImages.length > 0 && (
+              <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #E0E0E0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginTop: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <Sofa size={18} color="var(--color-primary)" />
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#2C2C2C' }}>Thử đặt đồ vật lên mặt bằng</h4>
+                </div>
+                <p style={{ margin: '0 0 14px', fontSize: '12.5px', color: '#6B7280', lineHeight: 1.5 }}>
+                  Chọn 1 ảnh mặt bằng và dùng AI để thử đặt bàn ghế, đồ trang trí... giúp bạn dễ hình dung không gian.
+                </p>
+
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '8px' }}>
+                  Bước 1 · Chọn ảnh muốn chỉnh
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', marginBottom: '10px' }}>
+                  {realImages.map((img: string, idx: number) => {
+                    const isSelected = idx === furnitureImageIndex;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setFurnitureImageIndex(idx)}
+                        aria-pressed={isSelected}
+                        title={`Ảnh ${idx + 1}${isSelected ? ' (đang chọn)' : ' — bấm để chọn'}`}
+                        style={{
+                          position: 'relative',
+                          flex: '0 0 auto',
+                          width: '56px',
+                          height: '56px',
+                          borderRadius: '6px',
+                          overflow: 'hidden',
+                          padding: 0,
+                          cursor: 'pointer',
+                          border: isSelected ? '2px solid var(--color-primary)' : '2px solid #E5E7EB',
+                          opacity: isSelected ? 1 : 0.75,
+                          background: 'none',
+                          boxShadow: isSelected ? '0 0 0 3px rgba(59,130,246,0.18)' : 'none',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <img src={img} alt={`furniture-thumb-${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {isSelected && (
+                          <span style={{
+                            position: 'absolute', top: '2px', right: '2px', width: '16px', height: '16px', borderRadius: '50%',
+                            backgroundColor: 'var(--color-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '10px', lineHeight: 1, boxShadow: '0 0 0 1.5px #fff',
+                          }}>
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#9CA3AF' }}>
+                  Đang chọn ảnh {furnitureImageIndex + 1}/{realImages.length} — bấm nút bên dưới để tiếp tục.
+                </p>
+
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '8px' }}>
+                  Bước 2 · Chỉnh ảnh với AI
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (!currentUserId) { navigate('/login'); return; }
+                    const selectedUrl = realImages[Math.min(furnitureImageIndex, realImages.length - 1)];
+                    navigate('/ai-image-editor', { state: { sourceImageUrl: selectedUrl, sourceListingId: listing.id } });
+                  }}
+                  style={{ width: '100%', padding: '11px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--color-primary)', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', fontSize: '13.5px' }}
+                >
+                  <Wand2 size={16} /> Chỉnh ảnh với AI
+                </button>
+              </div>
+            )}
           </div>
 
         </div>

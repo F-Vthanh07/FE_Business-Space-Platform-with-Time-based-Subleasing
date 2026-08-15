@@ -13,6 +13,7 @@ import { useThemeLanguage } from "../../../../context/ThemeLanguageContext";
 import { ListingForm } from './ListingForm';
 import { formatDate } from '../../../../utils/dateUtils';
 import { getListingPictureUrl, getListingPictureUrls } from '../../../shared/listingPictures';
+import { getPriceUnitText } from '../../../../utils/formatPriceUnit';
 
 // Chỉ có đúng 2 status thật từ BE: Accepted / Ban
 const statusConfig: Record<string, { className: string; icon: React.ReactNode; label: string }> = {
@@ -377,7 +378,7 @@ export const OwnerListings: React.FC = () => {
 
                 <div className="listing-price-row">
                   <span className="listing-price">{listing.price ? `${listing.price.toLocaleString('vi-VN')}₫` : 'Thỏa thuận'}</span>
-                  <span className="text-secondary" style={{ fontSize: 12 }}>/giờ</span>
+                  <span className="text-secondary" style={{ fontSize: 12 }}>/{getPriceUnitText(listing.priceUnit)}</span>
                 </div>
 
                 {listing.rating > 0 && (
@@ -435,7 +436,7 @@ export const OwnerListings: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: '700px', width: '95%', padding: 0, overflow: 'hidden' }}
           >
-            <div className="modal-header" style={{ padding: '16px 20px' }}>
+            <div className="modal-header" style={{ padding: '16px 20px', margin: 0, top: 0 }}>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>Chi tiết bài đăng</h2>
               <button type="button" className="btn-icon" onClick={() => setViewingListing(null)}>
                 <X size={20} />

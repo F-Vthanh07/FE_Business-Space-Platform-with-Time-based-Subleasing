@@ -88,6 +88,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
   const [spaceId, setSpaceId] = useState<number | ''>(initialData?.spaceId || '');
   const [price, setPrice] = useState<number>(initialData?.price || 0);
+  const [priceUnit, setPriceUnit] = useState<string>(initialData?.priceUnit || 'PerHour');
   const [name, setName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
 
@@ -511,6 +512,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         name,   
         description,
         price: Number(price),
+        priceUnit,
         shareSpaceDetailMaxSubRenter: Number(maxSubRenter),
         shareSpaceDetailIsOwner: false,
         shareSpaceDetailIsLegalCommitted: isLegalCommitted,
@@ -593,6 +595,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         name,
         description: description,
         price: Number(price),
+        priceUnit,
         listingPictures: []
       };
 
@@ -808,15 +811,31 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 <label className="form-label">
                   Đơn giá {mode === 'share' ? 'chia sẻ' : 'cơ bản'} (VNĐ) <span className="required-mark">*</span>
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  className="form-input form-input--flat"
-                  value={price === 0 ? '' : price}
-                  onChange={e => setPrice(e.target.value === '' ? 0 : Number(e.target.value))}
-                  disabled={isLoading}
-                  required
-                />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="number"
+                    min="0"
+                    className="form-input form-input--flat"
+                    value={price === 0 ? '' : price}
+                    onChange={e => setPrice(e.target.value === '' ? 0 : Number(e.target.value))}
+                    disabled={isLoading}
+                    required
+                    style={{ flex: 2 }}
+                  />
+                  <select
+                    className="form-input form-input--flat"
+                    value={priceUnit}
+                    onChange={e => setPriceUnit(e.target.value)}
+                    disabled={isLoading}
+                    style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)' }}
+                  >
+                    <option value="PerHour">/ Giờ</option>
+                    <option value="PerDay">/ Ngày</option>
+                    <option value="PerWeek">/ Tuần</option>
+                    <option value="PerMonth">/ Tháng</option>
+                    <option value="PerYear">/ Năm</option>
+                  </select>
+                </div>
               </div>
             </div>
 

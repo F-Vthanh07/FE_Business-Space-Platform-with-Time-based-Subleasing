@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Layers, Clock, ShieldAlert, Edit3, Trash2 } from 'lucide-react';
+import { X, Layers, Clock, ShieldAlert, Edit3, Trash2, Eye } from 'lucide-react';
 import '../../../shared/ModalShell.css';
 
 interface SpacePart {
@@ -21,6 +21,10 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
   const [spaceParts, setSpaceParts] = useState<SpacePart[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  const [viewingPartId, setViewingPartId] = useState<number | null>(null);
+  const [partDetails, setPartDetails] = useState<any>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   useEffect(() => {
     const fetchSpaceParts = async () => {
@@ -71,6 +75,10 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
       });
       if (response.ok) {
         setSpaceParts(prev => prev.filter(p => p.id !== id));
+        if (viewingPartId === id) {
+          setViewingPartId(null);
+          setPartDetails(null);
+        }
       } else {
         const errData = await response.json().catch(() => ({}));
         setError(errData.message || 'Lỗi khi xoá không gian con.');
@@ -79,6 +87,33 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
       setError(err.message || 'Lỗi kết nối máy chủ.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleViewDetails = async (id: number) => {
+    if (viewingPartId === id) {
+      setViewingPartId(null);
+      setPartDetails(null);
+      return;
+    }
+    
+    setViewingPartId(id);
+    setIsLoadingDetails(true);
+    try {
+      const token = localStorage.getItem('portal_token');
+      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetById/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPartDetails(data);
+      } else {
+        setError('Không thể tải chi tiết không gian con.');
+      }
+    } catch (err) {
+      setError('Lỗi kết nối máy chủ khi tải chi tiết.');
+    } finally {
+      setIsLoadingDetails(false);
     }
   };
 
@@ -118,12 +153,16 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {spaceParts.map(part => (
-                <div key={part.id} className="glass-card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <React.Fragment key={part.id}>
+                <div className="glass-card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <h4 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>{part.name}</h4>
                     <p className="text-secondary" style={{ margin: 0, fontSize: '13px' }}>Diện tích: {part.area} m²</p>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn-icon" onClick={() => handleViewDetails(part.id)} title="Xem chi tiết">
+                      <Eye size={16} />
+                    </button>
                     <button className="btn-icon" onClick={() => onEditPart(part)} title="Sửa">
                       <Edit3 size={16} />
                     </button>
@@ -132,6 +171,47 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
                     </button>
                   </div>
                 </div>
+                {viewingPartId === part.id && (
+                  <div className="space-part-details" style={{ padding: '16px', background: 'var(--color-bg-secondary)', borderRadius: '8px', marginTop: '-8px', marginBottom: '12px', fontSize: '13px' }}>
+                    {isLoadingDetails ? (
+                      <div className="text-secondary" style={{ textAlign: 'center' }}><Clock size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }}/> Đang tải chi tiết...</div>
+                    ) : partDetails ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div><strong>Trạng thái:</strong> {partDetails.isActive ?? partDetails.IsActive ? 'Đang hoạt động' : 'Đang tạm dừng'}</div>
+                        {(partDetails.operatingHours || partDetails.OperatingHours) && (partDetails.operatingHours || partDetails.OperatingHours).length > 0 ? (
+                          <div>
+                            <strong>Giờ hoạt động:</strong>
+                            <ul style={{ paddingLeft: '20px', margin: '4px 0' }}>
+                              {(partDetails.operatingHours || partDetails.OperatingHours).map((h: any, i: number) => {
+                                const dayOfWeek = h.dayOfWeek !== undefined ? h.dayOfWeek : h.DayOfWeek;
+                                const openTime = h.openTime || h.OpenTime;
+                                const closeTime = h.closeTime || h.CloseTime;
+                                return (
+                                  <li key={i}>
+                                    Thứ {dayOfWeek === 0 ? 'CN' : dayOfWeek + 1}: {openTime?.substring(0,5)} - {closeTime?.substring(0,5)}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        ) : (
+                          <div><strong>Giờ hoạt động:</strong> Chưa thiết lập</div>
+                        )}
+                        {(partDetails.amenities || partDetails.Amenities) && (partDetails.amenities || partDetails.Amenities).length > 0 && (
+                          <div>
+                            <strong>Tiện ích:</strong> {(partDetails.amenities || partDetails.Amenities).map((a: any) => a.name || a.Name).join(', ')}
+                          </div>
+                        )}
+                        {(partDetails.spaceAllowedCategories || partDetails.SpaceAllowedCategories) && (partDetails.spaceAllowedCategories || partDetails.SpaceAllowedCategories).length > 0 && (
+                          <div>
+                            <strong>Ngành nghề cho phép:</strong> Có giới hạn
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </React.Fragment>
               ))}
             </div>
           )}
