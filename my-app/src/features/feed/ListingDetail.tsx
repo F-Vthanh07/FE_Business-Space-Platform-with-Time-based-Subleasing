@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Clock, Tag, Flag, Star, Sofa, Wand2 } from 'lucide-react';
+import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Tag, Flag, Star, Sofa, Wand2 } from 'lucide-react';
 import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
@@ -105,19 +105,6 @@ const getAmenityInfo = (name: string) => {
   return AMENITY_MAP[key] || { label: name, icon: <Sparkles size={16} /> };
 };
 
-// --- MAP DAYOFWEEK (.NET: 0=Chủ Nhật ... 6=Thứ 7) -> NHÃN TIẾNG VIỆT, SẮP THỨ TỰ THỨ 2 -> CN ---
-const DAY_LABELS: Record<number, string> = {
-  0: 'Chủ Nhật',
-  1: 'Thứ 2',
-  2: 'Thứ 3',
-  3: 'Thứ 4',
-  4: 'Thứ 5',
-  5: 'Thứ 6',
-  6: 'Thứ 7',
-};
-const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
-
-const formatTime = (t: string) => (t ? t.substring(0, 5) : '');
 
 // --- REVIEW / ĐÁNH GIÁ ---
 interface SpaceReview {
@@ -231,7 +218,7 @@ export const ListingDetail: React.FC = () => {
 
           const found = safeData.find((item: any) => (item.id?.toString() === id || item.Id?.toString() === id));
 
-          // BƯỚC 3: GHÉP area/address/amenities/operatingHours/allowedCategories (TỪ SPACE CHA)
+          // BƯỚC 3: GHÉP area/address/amenities/allowedCategories (TỪ SPACE CHA)
           let foundWithSpaceInfo = found || null;
           if (found) {
             const parentSpace = spaces.find(s => (s.id || s.Id) === (found.spaceId || found.SpaceId));
@@ -243,7 +230,6 @@ export const ListingDetail: React.FC = () => {
               spaceLatitude: found.spaceLatitude ?? parentSpace?.latitude ?? parentSpace?.Latitude ?? null,
               spaceLongitude: found.spaceLongitude ?? parentSpace?.longitude ?? parentSpace?.Longitude ?? null,
               amenities: found.amenities || parentSpace?.amenities || [],
-              operatingHours: found.operatingHours || parentSpace?.operatingHours || [],
               allowedCategories: found.spaceAllowedCategories || parentSpace?.spaceAllowedCategories || []
             };
           }
@@ -486,7 +472,7 @@ export const ListingDetail: React.FC = () => {
 
   const amenities: any[] = listing.amenities || [];
   const activeAmenities = amenities.filter((a: any) => a.isActive !== false);
-  const operatingHours: any[] = listing.operatingHours || [];
+
   const allowedCategories: any[] = listing.allowedCategories || [];
 
   const reviewCount = reviews.length;
@@ -638,39 +624,6 @@ export const ListingDetail: React.FC = () => {
                         }}
                       >
                         <Tag size={13} /> {label}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {/* GIỜ HOẠT ĐỘNG */}
-            {operatingHours.length > 0 && (
-              <>
-                <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Clock size={18} /> Giờ hoạt động
-                </h3>
-                <div style={{ border: '1px solid #E0E0E0', borderRadius: '8px', backgroundColor: '#fff', marginBottom: '40px', overflow: 'hidden' }}>
-                  {DAY_ORDER.map((day, idx) => {
-                    const entry = operatingHours.find((h: any) => h.dayOfWeek === day);
-                    return (
-                      <div
-                        key={day}
-                        style={{
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          padding: '12px 20px',
-                          borderBottom: idx !== DAY_ORDER.length - 1 ? '1px solid #F0F0F0' : 'none'
-                        }}
-                      >
-                        <span style={{ fontSize: '14px', color: '#333', fontWeight: 500 }}>{DAY_LABELS[day]}</span>
-                        {entry ? (
-                          <span style={{ fontSize: '14px', color: '#16A34A', fontWeight: 500 }}>
-                            {formatTime(entry.openTime)} - {formatTime(entry.closeTime)}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '14px', color: '#999' }}>Đóng cửa</span>
-                        )}
                       </div>
                     );
                   })}
