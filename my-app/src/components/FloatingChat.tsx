@@ -182,7 +182,7 @@ export const FloatingChat: React.FC = () => {
               
               // Nếu đang mở khung chat này và có tin nhắn của người kia tới, đánh dấu đã đọc ngay
               if (!isMyOwnMessage && activeChatIdRef.current === String(incomingRoomId)) {
-                globalConnection.invoke("MarkConversationAsRead", incomingRoomId).catch(console.error);
+                globalConnection.invoke("MarkConversationAsRead", incomingRoomId, currentUserId).catch(console.error);
               }
             } else { 
               if (!isMyOwnMessage) setUnreadCount(prev => prev + 1); 
@@ -348,7 +348,7 @@ export const FloatingChat: React.FC = () => {
     if (connection) {
       connection.invoke("JoinConversation", roomId).catch(err => console.log(err));
       // Bắn sự kiện đánh dấu đã đọc khi mở chat
-      connection.invoke("MarkConversationAsRead", roomId).catch(err => console.log(err));
+      connection.invoke("MarkConversationAsRead", roomId, currentUserId).catch(err => console.log(err));
     }
     
     // Cập nhật local state: Đặt lại unreadCount của phòng chat này về 0
