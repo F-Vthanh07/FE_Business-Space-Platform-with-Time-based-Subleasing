@@ -572,11 +572,6 @@ export const FloatingChat: React.FC = () => {
                             <div style={{ fontWeight: '600', fontSize: '14px', color: hasUnread ? '#1E293B' : '#2C2C2C', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {displayName}
                             </div>
-                            {hasUnread && (
-                              <div style={{ backgroundColor: '#ef4444', color: '#fff', fontSize: '10px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '10px', marginLeft: '8px' }}>
-                                {room.unreadCount || room.UnreadCount}
-                              </div>
-                            )}
                           </div>
                           <div style={{ fontSize: '12px', color: hasUnread ? '#1E293B' : '#777', fontWeight: hasUnread ? '600' : 'normal', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
                             {previewText}
