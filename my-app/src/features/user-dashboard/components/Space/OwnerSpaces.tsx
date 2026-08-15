@@ -186,6 +186,12 @@ export const OwnerSpaces: React.FC = () => {
   };
 
   const handleOpenSpacePartList = (space: Space) => {
+    const currentUserId = localStorage.getItem('current_user_id');
+    const spaceOwnerId = (space as any).ownerId || (space as any).OwnerId;
+    if (spaceOwnerId && currentUserId !== spaceOwnerId) {
+      alert("Bạn không có quyền quản lý không gian chia nhỏ của mặt bằng này!");
+      return;
+    }
     setParentSpaceForPart(space);
     setIsSpacePartListOpen(true);
   };
