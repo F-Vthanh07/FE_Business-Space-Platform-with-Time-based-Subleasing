@@ -117,7 +117,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
 
   useEffect(() => {
     if (initialData?.operatingHours && initialData.operatingHours.length > 0) {
-      const isFullWeek = initialData.operatingHours.length === 7 && initialData.operatingHours.every((h: any, i: number, arr: any[]) => h.openTime === arr[0].openTime && h.closeTime === arr[0].closeTime);
+      const isFullWeek = initialData.operatingHours.length === 7 && initialData.operatingHours.every((h: any, _i: number, arr: any[]) => h.openTime === arr[0].openTime && h.closeTime === arr[0].closeTime);
       if (isFullWeek) {
         setOperatingMode('full');
         setFullWeekOpen(initialData.operatingHours[0].openTime ? initialData.operatingHours[0].openTime.substring(0, 5) : '08:00');
