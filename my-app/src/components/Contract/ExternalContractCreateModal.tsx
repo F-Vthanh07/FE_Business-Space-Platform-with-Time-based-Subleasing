@@ -297,17 +297,19 @@ export const ExternalContractCreateModal: React.FC<ExternalContractCreateModalPr
             </div>
           )}
 
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                checked={canShareSpace}
-                onChange={(e) => setCanShareSpace(e.target.checked)}
-                style={{ width: '18px', height: '18px', marginRight: '10px', cursor: 'pointer', accentColor: '#3B82F6' }}
-              />
-              <span style={{ fontSize: '14px', color: '#334155', fontWeight: '500' }}>Cho phép tạo hợp đồng dựa vào mặt bằng này</span>
-            </label>
-          </div>
+          {!contractData.spaceId && (
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={canShareSpace}
+                  onChange={(e) => setCanShareSpace(e.target.checked)}
+                  style={{ width: '18px', height: '18px', marginRight: '10px', cursor: 'pointer', accentColor: '#3B82F6' }}
+                />
+                <span style={{ fontSize: '14px', color: '#334155', fontWeight: '500' }}>Cho phép tạo hợp đồng dựa vào mặt bằng này</span>
+              </label>
+            </div>
+          )}
 
           <div style={{ marginBottom: '24px' }}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#334155', marginBottom: '8px' }}>

@@ -115,9 +115,9 @@ export const FloatingChat: React.FC = () => {
       const myRooms: any[] = await res.json();
       
       // Sắp xếp cuộc trò chuyện có tin nhắn mới nhất lên đầu
-      myRooms.sort((a, b) => {
-        const timeA = new Date(a.lastMessageAt || a.LastMessageAt || a.createdAt || a.CreatedAt || 0).getTime();
-        const timeB = new Date(b.lastMessageAt || b.LastMessageAt || b.createdAt || b.CreatedAt || 0).getTime();
+      myRooms.sort((a: any, b: any) => {
+        const timeA = new Date(a.lastMessageTime || a.lastMessage || a.lastMessageAt || a.LastMessageAt || a.createdAt || a.CreatedAt || 0).getTime();
+        const timeB = new Date(b.lastMessageTime || b.lastMessage || b.lastMessageAt || b.LastMessageAt || b.createdAt || b.CreatedAt || 0).getTime();
         return timeB - timeA;
       });
 
@@ -471,15 +471,25 @@ export const FloatingChat: React.FC = () => {
 
     const contractRegex = /Hợp đồng \(Mã: #(\d+)\)/i;
     const match = text.match(contractRegex);
+    const isOnlyNumber = /^\d+$/.test(text.trim());
 
-    if (match && match[1]) {
-      const cId = match[1];
+    let cId = null;
+    let displayText = text;
+
+    if (isOnlyNumber) {
+      cId = text.trim();
+      displayText = `📄 Tôi vừa tạo và gửi một Hợp đồng (Mã: #${cId}). Vui lòng kiểm tra và xác nhận nhé!`;
+    } else if (match && match[1]) {
+      cId = match[1];
+    }
+
+    if (cId) {
       const revokedIds = getRevokedContractIds();
       const isThisContractRevoked = revokedIds.has(cId);
 
       return (
         <div>
-          <span>{text}</span>
+          <span>{displayText}</span>
           <div style={{ marginTop: '8px' }}>
             {isThisContractRevoked ? (
               <span style={{ fontSize: '12px', color: '#EF4444', fontStyle: 'italic' }}>
@@ -533,7 +543,10 @@ export const FloatingChat: React.FC = () => {
                   conversations.map((room, idx) => {
                     const displayName = getOtherPersonName(room);
                     const hasUnread = (room.unreadCount || room.UnreadCount) > 0;
-                    const previewText = room.lastMessageContent || room.LastMessageContent || 'Nhấp để bắt đầu trò chuyện...';
+                    let previewText = room.lastMessageContent || room.LastMessageContent || 'Nhấp để bắt đầu trò chuyện...';
+                    if (/^\d+$/.test(previewText.trim())) {
+                      previewText = `📄 Đã gửi hợp đồng #${previewText.trim()}`;
+                    }
                     return (
                       <div key={idx} onClick={() => openChatRoom(room)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #F0F0F0', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                         <div onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:5173/profile/${getOtherPersonId(room)}`, '_blank'); }} style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#E4E6EB', color: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{displayName.substring(0, 2).toUpperCase()}</div>
@@ -649,6 +662,7 @@ export const FloatingChat: React.FC = () => {
                   const senderName = isMe ? 'Bạn' : getOtherPersonName(activeChat);
 
                   const isSystemMsg = msg.text && (
+                    /^\d+$/.test(msg.text.trim()) ||
                     msg.text.includes('Chủ mặt bằng đã xác nhận hợp đồng') ||
                     msg.text.includes('Khách thuê đã ký') ||
                     msg.text.includes('thu hồi Hợp đồng') ||
