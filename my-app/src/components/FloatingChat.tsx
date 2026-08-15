@@ -23,6 +23,9 @@ export const FloatingChat: React.FC = () => {
   // Lưu lại connection hiện tại bằng ref để dùng trong các hàm không nằm trong closure
   // của useEffect khởi tạo (vd hàm refetch được gọi từ event listener bên ngoài).
   const connectionRef = useRef<HubConnection | null>(null);
+  
+  // Dùng để biết chat nào đang được mở để xử lý Real-time Đã xem
+  const activeChatIdRef = useRef<string | null>(null);
 
   // Theo dõi các phòng chat đã Join qua SignalR, tránh gọi JoinConversation lặp lại
   // nhiều lần cho cùng 1 phòng mỗi khi refetch danh sách.
@@ -93,6 +96,9 @@ export const FloatingChat: React.FC = () => {
 
   useEffect(() => {
     if (view === 'CHAT') scrollToBottom();
+    if (view !== 'CHAT') {
+      activeChatIdRef.current = null;
+    }
   }, [chatHistory, view]);
 
   // HÀM DÙNG CHUNG: fetch lại danh sách phòng chat từ BE, cập nhật state,
@@ -107,6 +113,14 @@ export const FloatingChat: React.FC = () => {
       });
       if (!res.ok) return;
       const myRooms: any[] = await res.json();
+      
+      // Sắp xếp cuộc trò chuyện có tin nhắn mới nhất lên đầu
+      myRooms.sort((a, b) => {
+        const timeA = new Date(a.lastMessageAt || a.LastMessageAt || a.createdAt || a.CreatedAt || 0).getTime();
+        const timeB = new Date(b.lastMessageAt || b.LastMessageAt || b.createdAt || b.CreatedAt || 0).getTime();
+        return timeB - timeA;
+      });
+
       setConversations(myRooms);
 
       // Cập nhật số tin nhắn chưa đọc nếu BE có hỗ trợ trả về
@@ -154,7 +168,7 @@ export const FloatingChat: React.FC = () => {
           const isMyOwnMessage = String(savedMessage.senderId) === String(currentUserId);
 
           setActiveChat((currentActive: any) => {
-            if (currentActive && (currentActive.id === incomingRoomId || currentActive.conversationId === incomingRoomId)) {
+            if (currentActive && (String(currentActive.id) === String(incomingRoomId) || String(currentActive.conversationId) === String(incomingRoomId))) {
               setChatHistory(prev => {
                 if (prev.some(m => m.id === savedMessage.id)) return prev;
                 return [...prev, {
@@ -165,8 +179,31 @@ export const FloatingChat: React.FC = () => {
                   isRead: false
                 }];
               });
-            } else { if (!isMyOwnMessage) setUnreadCount(prev => prev + 1); }
+              
+              // Nếu đang mở khung chat này và có tin nhắn của người kia tới, đánh dấu đã đọc ngay
+              if (!isMyOwnMessage && activeChatIdRef.current === String(incomingRoomId)) {
+                globalConnection.invoke("MarkConversationAsRead", incomingRoomId).catch(console.error);
+              }
+            } else { 
+              if (!isMyOwnMessage) setUnreadCount(prev => prev + 1); 
+            }
             return currentActive;
+          });
+
+          // Đẩy phòng chat có tin nhắn mới lên đầu danh sách
+          setConversations((prev) => {
+            const updated = [...prev];
+            const idx = updated.findIndex((r) => String(r.id) === String(incomingRoomId) || String(r.Id) === String(incomingRoomId));
+            if (idx > -1) {
+              const [room] = updated.splice(idx, 1);
+              room.lastMessageAt = savedMessage.createdAt || new Date();
+              room.lastMessageContent = savedMessage.content || savedMessage.message; // Cập nhật preview tin nhắn
+              if (!isMyOwnMessage && activeChatIdRef.current !== String(incomingRoomId)) {
+                room.unreadCount = (room.unreadCount || room.UnreadCount || 0) + 1;
+              }
+              updated.unshift(room);
+            }
+            return updated;
           });
 
           if (!isMyOwnMessage) {
@@ -185,6 +222,18 @@ export const FloatingChat: React.FC = () => {
         // đây là chỗ FE đã chờ sẵn để khi BE bổ sung thì chỉ cần đúng tên event là chạy được luôn.
         globalConnection.on("ReceiveNewConversation", () => {
           fetchAndSyncConversations();
+        });
+
+        // Xử lý sự kiện khi tin nhắn được đọc
+        globalConnection.on("ReceiveReadReceipt", (receipt: any) => {
+          if (String(receipt.readerId) !== String(currentUserId)) {
+             // Người kia đã đọc, cập nhật trạng thái tin nhắn của mình thành Đã xem
+             if (activeChatIdRef.current === String(receipt.conversationId)) {
+                setChatHistory(prev => prev.map(msg => 
+                   String(msg.senderId) === String(currentUserId) ? { ...msg, isRead: true } : msg
+                ));
+             }
+          }
         });
 
         await globalConnection.start();
@@ -294,7 +343,21 @@ export const FloatingChat: React.FC = () => {
     setUnreadCount(0);
 
     const roomId = roomData.conversationId || roomData.id || roomData.Id;
-    if (connection) connection.invoke("JoinConversation", roomId).catch(err => console.log(err));
+    activeChatIdRef.current = String(roomId);
+
+    if (connection) {
+      connection.invoke("JoinConversation", roomId).catch(err => console.log(err));
+      // Bắn sự kiện đánh dấu đã đọc khi mở chat
+      connection.invoke("MarkConversationAsRead", roomId).catch(err => console.log(err));
+    }
+    
+    // Cập nhật local state: Đặt lại unreadCount của phòng chat này về 0
+    setConversations(prev => prev.map(room => {
+      if (String(room.id) === String(roomId) || String(room.Id) === String(roomId)) {
+        return { ...room, unreadCount: 0, UnreadCount: 0 };
+      }
+      return room;
+    }));
 
     try {
       const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Message/GetMessageHistory?conversationId=${roomId}&limit=50`, { headers: { 'Authorization': `Bearer ${token}` }});
@@ -315,7 +378,22 @@ export const FloatingChat: React.FC = () => {
     const roomId = activeChat?.conversationId || activeChat?.id || activeChat?.Id;
     if (!textToSend.trim() || !connection || !roomId) return;
     setMessage('');
-    try { await connection.invoke("SendMessageToGroup", roomId, textToSend); }
+    try { 
+      await connection.invoke("SendMessageToGroup", roomId, textToSend); 
+      
+      // Update local preview immediately for own messages
+      setConversations(prev => {
+        const updated = [...prev];
+        const idx = updated.findIndex((r) => String(r.id) === String(roomId) || String(r.Id) === String(roomId));
+        if (idx > -1) {
+          const [room] = updated.splice(idx, 1);
+          room.lastMessageAt = new Date();
+          room.lastMessageContent = `Bạn: ${textToSend}`;
+          updated.unshift(room);
+        }
+        return updated;
+      });
+    }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     catch (err) { alert("Lỗi khi gửi tin nhắn!"); }
   };
@@ -454,15 +532,24 @@ export const FloatingChat: React.FC = () => {
                 ) : (
                   conversations.map((room, idx) => {
                     const displayName = getOtherPersonName(room);
+                    const hasUnread = (room.unreadCount || room.UnreadCount) > 0;
+                    const previewText = room.lastMessageContent || room.LastMessageContent || 'Nhấp để bắt đầu trò chuyện...';
                     return (
                       <div key={idx} onClick={() => openChatRoom(room)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #F0F0F0', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F8F9FA'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                         <div onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:5173/profile/${getOtherPersonId(room)}`, '_blank'); }} style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#E4E6EB', color: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{displayName.substring(0, 2).toUpperCase()}</div>
                         <div style={{ flex: 1, overflow: 'hidden' }}>
-                          <div style={{ fontWeight: '600', fontSize: '14px', color: (room.unreadCount || room.UnreadCount) > 0 ? '#1E293B' : '#2C2C2C', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {displayName}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ fontWeight: '600', fontSize: '14px', color: hasUnread ? '#1E293B' : '#2C2C2C', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {displayName}
+                            </div>
+                            {hasUnread && (
+                              <div style={{ backgroundColor: '#ef4444', color: '#fff', fontSize: '10px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '10px', marginLeft: '8px' }}>
+                                {room.unreadCount || room.UnreadCount}
+                              </div>
+                            )}
                           </div>
-                          <div style={{ fontSize: '12px', color: (room.unreadCount || room.UnreadCount) > 0 ? '#ef4444' : '#777', fontWeight: (room.unreadCount || room.UnreadCount) > 0 ? 'bold' : 'normal', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {(room.unreadCount || room.UnreadCount) > 0 ? `(${room.unreadCount || room.UnreadCount} tin nhắn mới)` : 'Nhấp để xem tin nhắn...'}
+                          <div style={{ fontSize: '12px', color: hasUnread ? '#1E293B' : '#777', fontWeight: hasUnread ? '600' : 'normal', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                            {previewText}
                           </div>
                         </div>
                       </div>
