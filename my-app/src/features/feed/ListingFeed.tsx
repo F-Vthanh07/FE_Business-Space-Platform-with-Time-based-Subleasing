@@ -168,85 +168,104 @@ export const ListingFeed: React.FC = () => {
 
         let safeData: AnyItem[] = [];
         if (response.ok) {
-          const data = await response.json();
-          safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-          safeData = safeData.map((item: AnyItem) => {
+          let data = await response.json();
+          if (data && typeof data === 'object' && data.isSuccess === false) {
+            console.warn('Lỗi từ API Listing/GetAll:', data.message);
+            // Thử fallback gọi API có status=Accepted nếu cache mặc định gặp lỗi
+            try {
+              const fallbackRes = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll?status=Accepted', { headers: { accept: '*/*' } });
+              if (fallbackRes.ok) {
+                const fallbackData = await fallbackRes.json();
+                if (fallbackData?.isSuccess !== false) {
+                  data = fallbackData;
+                }
+              }
+            } catch (fbErr) {
+              console.error('Lỗi fallback Listing/GetAll:', fbErr);
+            }
+          }
+          const listItems = Array.isArray(data) ? data : (data?.data || data?.items || []);
+          const rawItems = Array.isArray(listItems) ? listItems : [];
+          safeData = rawItems.map((item: AnyItem) => {
             const parentSpace = spaces.find((s: AnyItem) => (s.id || s.Id) === (item.spaceId || item.SpaceId));
+            const sCity = item.spaceCity || item.SpaceCity || parentSpace?.city || parentSpace?.spaceCity || '';
+            const sAddr = item.spaceAddress || item.SpaceAddress || parentSpace?.address || parentSpace?.spaceAddress || '';
+            const combinedAddr = [sAddr, sCity].filter(Boolean).join(', ');
             return {
               ...item,
+              spaceCity: sCity,
+              spaceAddress: sAddr,
               area: item.area || parentSpace?.area || null,
-              address: item.spaceAddress || item.location || item.address || parentSpace?.address || parentSpace?.location || ''
+              address: combinedAddr || item.location || item.address || 'Đang cập nhật',
+              city: sCity || item.city || ''
             };
           });
-          // safeData = safeData.reverse();
         }
         setListings(safeData);
 
-        // 3. Lấy bài đăng của tôi
         if (currentUserId) {
           try {
             const spaceRes2 = await fetch(
               `https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(currentUserId)}`,
-              { headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' } }
+              { headers: { accept: '*/*' } }
             );
-            let mySpaceIds: string[] = [];
             if (spaceRes2.ok) {
               const spaceData2 = await spaceRes2.json();
               const mySpaces = Array.isArray(spaceData2) ? spaceData2 : (spaceData2?.data || spaceData2?.items || []);
-              mySpaceIds = mySpaces.map((s: AnyItem) => s.id || s.Id);
-            }
+              const mySpaceIds = new Set(mySpaces.map((s: AnyItem) => (s.id || s.Id)?.toString()));
 
-            const mineKeys = new Set<string>();
-            safeData.forEach((l: AnyItem) => {
-              const spaceId = l.spaceId || l.SpaceId;
-              const isMine = mySpaceIds.includes(spaceId) || l.ownerId === currentUserId || l.createdBy === currentUserId || l.creatorId === currentUserId;
-              if (isMine) mineKeys.add((l.id || l.Id)?.toString());
-            });
-            setMyListingKeys(mineKeys);
-          } catch (innerErr) {
-            console.error('Lỗi khi xác định bài đăng của tôi:', innerErr);
+              const myKeys = new Set<string>();
+              safeData.forEach((l) => {
+                const sId = (l.spaceId || l.SpaceId)?.toString();
+                const cId = (l.creatorId || l.CreatorId)?.toString();
+                if ((sId && mySpaceIds.has(sId)) || (cId && cId === currentUserId.toString())) {
+                  myKeys.add((l.id || l.Id).toString());
+                }
+              });
+              setMyListingKeys(myKeys);
+            }
+          } catch (err) {
+            console.error('Lỗi kiểm tra bài đăng cá nhân:', err);
           }
         }
-      } catch (error) {
-        console.error('Lỗi:', error);
+      } catch (err) {
+        console.error('Lỗi khi nạp dữ liệu trang Feed:', err);
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchFeedAndFavorites();
   }, [currentUserId, token]);
 
-  // HÀM XỬ LÝ LƯU TIN (TOGGLE FAVORITE)
-  const handleToggleFavorite = async (e: React.MouseEvent, listingId: number) => {
-    e.stopPropagation();
-    if (!token) {
-      alert("Vui lòng đăng nhập để lưu mặt bằng!");
-      navigate('/login');
+  const handleToggleFavorite = async (e?: React.MouseEvent, listingId?: number) => {
+    if (e) e.stopPropagation();
+    const targetId = listingId;
+    if (!targetId) return;
+    if (!currentUserId) {
+      alert("Vui lòng đăng nhập để lưu bài đăng yêu thích!");
       return;
     }
 
-    const isFav = favoriteIds.has(listingId);
     try {
-      let response;
-      if (isFav) {
-        response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/FavoriteList/listings/${listingId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-        });
-      } else {
-        response = await fetch('https://flexi-space-capstone-project.onrender.com/api/FavoriteList/listings', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'accept': '*/*' },
-          body: JSON.stringify({ listingIds: [listingId] })
-        });
-      }
+      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/FavoriteList/Toggle/${targetId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "accept": "*/*",
+          "Authorization": `Bearer ${token}`
+        }
+      });
 
-      if (response?.ok) {
+      if (res.ok) {
         setFavoriteIds(prev => {
-          const newSet = new Set(prev);
-          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-          isFav ? newSet.delete(listingId) : newSet.add(listingId);
-          return newSet;
+          const next = new Set(prev);
+          if (next.has(targetId)) {
+            next.delete(targetId);
+          } else {
+            next.add(targetId);
+          }
+          return next;
         });
       } else {
         alert("Có lỗi xảy ra khi cập nhật mục yêu thích.");
@@ -281,36 +300,35 @@ export const ListingFeed: React.FC = () => {
       const matchMine = !onlyMine || myListingKeys.has((item.id || item.Id)?.toString());
       const matchFav = !showFavoritesOnly || favoriteIds.has(Number(item.id || item.Id));
 
-      // 1. Từ khóa tìm kiếm (searchQuery)
       const q = feedFilters.searchQuery.trim().toLowerCase();
       let matchQuery = true;
       if (q) {
         const name = (item.name || '').toLowerCase();
         const desc = (item.description || '').toLowerCase();
-        const addr = (item.address || item.spaceAddress || item.location || '').toLowerCase();
+        const addr = (item.spaceAddress || item.address || item.location || '').toLowerCase();
+        const city = (item.spaceCity || item.city || '').toLowerCase();
         const lessor = (item.lessorName || '').toLowerCase();
-        matchQuery = name.includes(q) || desc.includes(q) || addr.includes(q) || lessor.includes(q);
+        matchQuery = name.includes(q) || desc.includes(q) || addr.includes(q) || city.includes(q) || lessor.includes(q);
       }
 
-      // 2. Lọc theo Tỉnh / Thành phố (lấy từ api/Space/GetAddress)
       let matchProvince = true;
       if (feedFilters.provinceLabel) {
         const fullProv = feedFilters.provinceLabel.toLowerCase();
         const rawProv = cleanLocation(feedFilters.provinceLabel);
-        const itemAddr = (item.address || item.spaceAddress || item.location || '').toLowerCase();
-        matchProvince = itemAddr.includes(fullProv) || (rawProv.length > 0 && itemAddr.includes(rawProv));
+        const targetText = `${item.spaceCity || ''} ${item.city || ''} ${item.spaceAddress || ''} ${item.address || ''}`.toLowerCase();
+
+        matchProvince = targetText.includes(fullProv) || (rawProv.length > 0 && targetText.includes(rawProv));
       }
 
-      // 3. Lọc theo Quận / Huyện (lấy từ api/Space/GetAddress)
       let matchDistrict = true;
       if (feedFilters.districtLabel) {
         const fullDist = feedFilters.districtLabel.toLowerCase();
         const rawDist = cleanLocation(feedFilters.districtLabel);
-        const itemAddr = (item.address || item.spaceAddress || item.location || '').toLowerCase();
-        matchDistrict = itemAddr.includes(fullDist) || (rawDist.length > 0 && itemAddr.includes(rawDist));
+        const targetText = `${item.spaceCity || ''} ${item.spaceAddress || ''} ${item.address || ''}`.toLowerCase();
+
+        matchDistrict = targetText.includes(fullDist) || (rawDist.length > 0 && targetText.includes(rawDist));
       }
 
-      // 4. Lọc theo Khoảng giá
       let matchPrice = true;
       const price = Number(item.price || item.Price || 0);
       if (feedFilters.priceRange === 'under5') {
