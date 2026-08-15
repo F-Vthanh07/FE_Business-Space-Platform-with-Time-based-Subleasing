@@ -25,6 +25,9 @@ interface Space {
   spaceAllowedCategories: any[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   operatingHours?: any[];
+  pictureURLs?: any[];
+  spacePictures?: any[];
+  pictures?: any[];
 }
 
 export const OwnerSpaces: React.FC = () => {
@@ -294,6 +297,9 @@ export const OwnerSpaces: React.FC = () => {
             const safeAmenities = space?.amenities || [];
             const safeCategories = space?.spaceAllowedCategories || [];
 
+            const pic = space.pictureURLs?.[0] || space.spacePictures?.[0] || space.pictures?.[0];
+            const picUrl = pic ? (typeof pic === 'string' ? pic : (pic.imageUrl || pic.url || pic.pictureUrl)) : null;
+
             return (
               <div key={currentId || index} className="glass-card space-card">
                 <div className="space-card-top">
@@ -309,6 +315,13 @@ export const OwnerSpaces: React.FC = () => {
                   </span>
                 </div>
 
+                <div className="space-card-visual" style={picUrl ? { background: `url(${picUrl}) center/cover no-repeat` } : {}}>
+                  {!picUrl && <Building2 className="visual-building-icon" />}
+                  <div className="space-area-tag">
+                    {space?.area || 'N/A'} m²
+                  </div>
+                </div>
+
                 <div className="space-card-info">
                   <h3 className="space-name">{space?.name || 'Mặt bằng chưa có tên'}</h3>
                   <div className="space-address text-secondary">
@@ -319,9 +332,6 @@ export const OwnerSpaces: React.FC = () => {
                     <UserIcon size={12} style={{ flexShrink: 0 }} />
                     <span className="truncate">Chủ mặt bằng: {ownerNames[(space as any).ownerId || (space as any).OwnerId] || 'Unknown'}</span>
                   </div>
-                  <p className="space-area text-secondary">
-                    {space?.area || 'N/A'} m²
-                  </p>
 
                   <div className="space-meta-section">
                     <span className="meta-label">{t('spaces.amenities') || 'Tiện ích'}</span>
