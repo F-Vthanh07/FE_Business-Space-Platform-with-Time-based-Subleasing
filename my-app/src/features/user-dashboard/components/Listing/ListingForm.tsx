@@ -833,7 +833,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                     placeholder="-- Chọn gói bài đăng --"
                     options={priorityLevels.map(p => ({
                       value: p.id,
-                      label: `${p.name} — ${p.price.toLocaleString('vi-VN')} VNĐ`
+                      label: `${p.name} — ${p.price.toLocaleString('vi-VN')} VNĐ${p.durationInDays ? ` (${p.durationInDays} ngày)` : ''}`
                     }))}
                   />
                 </div>

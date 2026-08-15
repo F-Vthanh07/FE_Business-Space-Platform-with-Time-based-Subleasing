@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { Header } from '../../components/Header'; // Chỉnh lại đường dẫn cho đúng nha
 import { useNavigate } from 'react-router-dom';
-import { HomeSearchBar } from '../homepage/components/HomeSearchBar';
+import { HomeSearchBar, type FeedFilterState } from '../homepage/components/HomeSearchBar';
 import { getListingPictureUrl, getListingPictureUrls } from '../shared/listingPictures';
 import '../homepage/Homepage.css';
 import '../homepage/Homepage.css';
@@ -81,6 +81,40 @@ export const ListingFeed: React.FC = () => {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [myListingKeys, setMyListingKeys] = useState<Set<string>>(new Set());
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
+
+  const [feedFilters, setFeedFilters] = useState<FeedFilterState>({
+    searchQuery: '',
+    provinceCode: '',
+    provinceLabel: '',
+    districtCode: '',
+    districtLabel: '',
+    priceRange: 'all',
+    minPrice: '',
+    maxPrice: '',
+    areaRange: 'all',
+    minArea: '',
+    maxArea: '',
+  });
+
+  const handleFilterChange = (updated: Partial<FeedFilterState>) => {
+    setFeedFilters((prev) => ({ ...prev, ...updated }));
+  };
+
+  const handleResetFilters = () => {
+    setFeedFilters({
+      searchQuery: '',
+      provinceCode: '',
+      provinceLabel: '',
+      districtCode: '',
+      districtLabel: '',
+      priceRange: 'all',
+      minPrice: '',
+      maxPrice: '',
+      areaRange: 'all',
+      minArea: '',
+      maxArea: '',
+    });
+  };
 
   // --- STATE QUẢN LÝ POPUP XEM ẢNH ---
   const [viewingImages, setViewingImages] = useState<AnyItem[] | null>(null);
@@ -236,13 +270,83 @@ export const ListingFeed: React.FC = () => {
   }, [listings, myListingKeys]);
 
   const filteredListings = useMemo(() => {
+    const cleanLocation = (text: string) => {
+      if (!text) return '';
+      return text.replace(/(Thành phố|Tỉnh|Quận|Huyện|Phường|Xã|TP\.?)\s+/gi, '').trim().toLowerCase();
+    };
+
     return listings.filter((item) => {
       const matchCategory = categoryFilter === 'all' || getRentalCategory(item) === categoryFilter;
       const matchMine = !onlyMine || myListingKeys.has((item.id || item.Id)?.toString());
       const matchFav = !showFavoritesOnly || favoriteIds.has(Number(item.id || item.Id));
-      return matchCategory && matchMine && matchFav;
+
+      // 1. Từ khóa tìm kiếm (searchQuery)
+      const q = feedFilters.searchQuery.trim().toLowerCase();
+      let matchQuery = true;
+      if (q) {
+        const name = (item.name || '').toLowerCase();
+        const desc = (item.description || '').toLowerCase();
+        const addr = (item.address || item.spaceAddress || item.location || '').toLowerCase();
+        const lessor = (item.lessorName || '').toLowerCase();
+        matchQuery = name.includes(q) || desc.includes(q) || addr.includes(q) || lessor.includes(q);
+      }
+
+      // 2. Lọc theo Tỉnh / Thành phố (lấy từ api/Space/GetAddress)
+      let matchProvince = true;
+      if (feedFilters.provinceLabel) {
+        const fullProv = feedFilters.provinceLabel.toLowerCase();
+        const rawProv = cleanLocation(feedFilters.provinceLabel);
+        const itemAddr = (item.address || item.spaceAddress || item.location || '').toLowerCase();
+        matchProvince = itemAddr.includes(fullProv) || (rawProv.length > 0 && itemAddr.includes(rawProv));
+      }
+
+      // 3. Lọc theo Quận / Huyện (lấy từ api/Space/GetAddress)
+      let matchDistrict = true;
+      if (feedFilters.districtLabel) {
+        const fullDist = feedFilters.districtLabel.toLowerCase();
+        const rawDist = cleanLocation(feedFilters.districtLabel);
+        const itemAddr = (item.address || item.spaceAddress || item.location || '').toLowerCase();
+        matchDistrict = itemAddr.includes(fullDist) || (rawDist.length > 0 && itemAddr.includes(rawDist));
+      }
+
+      // 4. Lọc theo Khoảng giá
+      let matchPrice = true;
+      const price = Number(item.price || item.Price || 0);
+      if (feedFilters.priceRange === 'under5') {
+        matchPrice = price > 0 && price <= 5000000;
+      } else if (feedFilters.priceRange === '5-15') {
+        matchPrice = price >= 5000000 && price <= 15000000;
+      } else if (feedFilters.priceRange === '15-30') {
+        matchPrice = price >= 15000000 && price <= 30000000;
+      } else if (feedFilters.priceRange === 'over30') {
+        matchPrice = price > 30000000;
+      }
+
+      // 5. Lọc theo Diện tích
+      let matchArea = true;
+      const area = Number(item.area || item.Area || 0);
+      if (feedFilters.areaRange === 'under30') {
+        matchArea = area > 0 && area <= 30;
+      } else if (feedFilters.areaRange === '30-70') {
+        matchArea = area >= 30 && area <= 70;
+      } else if (feedFilters.areaRange === '70-150') {
+        matchArea = area >= 70 && area <= 150;
+      } else if (feedFilters.areaRange === 'over150') {
+        matchArea = area > 150;
+      }
+
+      return (
+        matchCategory &&
+        matchMine &&
+        matchFav &&
+        matchQuery &&
+        matchProvince &&
+        matchDistrict &&
+        matchPrice &&
+        matchArea
+      );
     });
-  }, [listings, categoryFilter, onlyMine, myListingKeys, showFavoritesOnly, favoriteIds]);
+  }, [listings, categoryFilter, onlyMine, myListingKeys, showFavoritesOnly, favoriteIds, feedFilters]);
 
   const renderImages = (rawImages: AnyItem[]) => {
     const images = getListingPictureUrls(rawImages);
@@ -343,7 +447,11 @@ export const ListingFeed: React.FC = () => {
         {/* CỘT GIỮA: FEED BÀI ĐĂNG */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-          <HomeSearchBar />
+          <HomeSearchBar
+            filters={feedFilters}
+            onFilterChange={handleFilterChange}
+            onResetFilters={handleResetFilters}
+          />
 
           {/* THANH BỘ LỌC */}
           <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
