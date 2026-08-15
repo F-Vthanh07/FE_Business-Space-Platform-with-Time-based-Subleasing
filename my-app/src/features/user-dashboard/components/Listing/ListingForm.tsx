@@ -437,7 +437,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     const startCheck = new Date(allowedStartTime);
     startCheck.setHours(0, 0, 0, 0);
 
-    if (mode === 'full' && !isEditingListing && startCheck < today) {
+    if (mode === 'longterm' && !isEditingListing && startCheck < today) {
       setError('Thời gian bắt đầu không được ở quá khứ!');
       return;
     }
@@ -537,7 +537,6 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         name,   
         description,
         price: Number(price),
-        priceUnit,
         shareSpaceDetailMaxSubRenter: Number(maxSubRenter),
         shareSpaceDetailIsOwner: false,
         shareSpaceDetailIsLegalCommitted: isLegalCommitted,
