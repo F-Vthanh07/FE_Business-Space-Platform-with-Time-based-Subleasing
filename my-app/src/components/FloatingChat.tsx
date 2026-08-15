@@ -151,10 +151,12 @@ export const FloatingChat: React.FC = () => {
 
   useEffect(() => {
     if (!currentUserId || !token) return;
-    let globalConnection: HubConnection;
+    let isMounted = true;
+    let globalConnection: HubConnection | null = null;
     const initGlobalChat = async () => {
       try {
         const myRooms = (await fetchAndSyncConversations()) || [];
+        if (!isMounted) return;
 
         globalConnection = new HubConnectionBuilder()
           .withUrl("https://flexi-space-capstone-project.onrender.com/chatHub", { accessTokenFactory: () => token || "" })
@@ -237,9 +239,17 @@ export const FloatingChat: React.FC = () => {
         });
 
         await globalConnection.start();
+        if (!isMounted) {
+          globalConnection.stop();
+          return;
+        }
         for (const room of myRooms) {
           const roomId = room.id || room.Id;
           await globalConnection.invoke("JoinConversation", roomId);
+          if (!isMounted) {
+            globalConnection.stop();
+            return;
+          }
           joinedRoomIdsRef.current.add(roomId);
         }
         connectionRef.current = globalConnection;
@@ -248,7 +258,12 @@ export const FloatingChat: React.FC = () => {
     };
     initGlobalChat();
     return () => {
-      if (globalConnection) globalConnection.stop();
+      isMounted = false;
+      if (globalConnection) {
+        globalConnection.stop();
+      } else if (connectionRef.current) {
+        connectionRef.current.stop();
+      }
       connectionRef.current = null;
       joinedRoomIdsRef.current.clear();
     };
