@@ -432,10 +432,35 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       }
     }
 
-    // Bỏ validation ngày quá khứ theo yêu cầu mới
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startCheck = new Date(allowedStartTime);
+    startCheck.setHours(0, 0, 0, 0);
+
+    if (!isEditingListing && startCheck < today) {
+      setError('Thời gian bắt đầu không được ở quá khứ!');
+      return;
+    }
 
     if (new Date(allowedEndTime) <= new Date(allowedStartTime)) {
       setError('Thời gian kết thúc phải sau thời gian bắt đầu!');
+      return;
+    }
+
+    const startD = new Date(allowedStartTime);
+    const endD = new Date(allowedEndTime);
+    const durationDays = Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 3600 * 24));
+
+    if (priceUnit === 'PerWeek' && durationDays < 7) {
+      setError('Để chọn đơn vị "/ Tuần", khoảng thời gian hiệu lực phải ít nhất 7 ngày.');
+      return;
+    }
+    if (priceUnit === 'PerMonth' && durationDays < 30) {
+      setError('Để chọn đơn vị "/ Tháng", khoảng thời gian hiệu lực phải ít nhất 30 ngày.');
+      return;
+    }
+    if (priceUnit === 'PerYear' && durationDays < 365) {
+      setError('Để chọn đơn vị "/ Năm", khoảng thời gian hiệu lực phải ít nhất 365 ngày.');
       return;
     }
 
