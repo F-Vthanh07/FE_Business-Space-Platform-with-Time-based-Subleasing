@@ -122,13 +122,22 @@ export const MapComponent: React.FC = () => {
               {/* Thông tin Popup */}
               <div style={{ padding: '8px 4px 4px 4px' }}>
                 <div style={{ color: 'var(--color-positive)', fontWeight: 'bold', fontSize: '14px', marginBottom: '4px' }}>
-                  {popupInfo.price ? `${popupInfo.price.toLocaleString('vi-VN')} ₫/h` : 'Thỏa thuận'}
+                  {(() => {
+                    const priceH = popupInfo.pricePerHour;
+                    const priceD = popupInfo.pricePerDay;
+                    const priceM = popupInfo.pricePerMonth;
+                    if (priceH) return `${priceH.toLocaleString('vi-VN')} ₫/giờ`;
+                    if (priceD) return `${priceD.toLocaleString('vi-VN')} ₫/ngày`;
+                    if (priceM) return `${priceM.toLocaleString('vi-VN')} ₫/tháng`;
+                    if (popupInfo.price) return `${popupInfo.price.toLocaleString('vi-VN')} ₫/giờ`;
+                    return 'Thỏa thuận';
+                  })()}
                 </div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#333', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: '4px', lineHeight: '1.3' }}>
                   {popupInfo.name || popupInfo.description || 'Mặt bằng cho thuê'}
                 </div>
                 <div style={{ fontSize: '11px', color: '#777' }}>
-                  {popupInfo.area ? `${popupInfo.area} m²` : 'N/A'} • {popupInfo.location?.substring(0, 15) || 'TP.HCM'}
+                  {popupInfo.area ? `${popupInfo.area} m² • ` : ''}{popupInfo.location?.substring(0, 15) || 'TP.HCM'}
                 </div>
               </div>
             </div>

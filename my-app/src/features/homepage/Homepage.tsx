@@ -4,7 +4,7 @@
 // src/features/homepage/Homepage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Map, Navigation, Brain, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { API_BASE_URL } from '../../config/api';
@@ -366,6 +366,66 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
               </div>
             </>
           )}
+        </div>
+      </section>
+
+      {/* =========================================
+          SECTION 3: INTERACTIVE MAP FEATURE
+          ========================================= */}
+      <section className="feature-showcase-section feature-map-section reveal-on-scroll">
+        <div className="feature-showcase-container">
+          <div className="feature-text-content">
+            <h2 className="section-title" style={{ textAlign: 'left' }}>Khám Phá Mặt Bằng Trực Quan</h2>
+            <p className="feature-desc">
+              Trải nghiệm bản đồ tương tác thông minh. Dễ dàng quét các khu vực đắc địa, so sánh khoảng cách tới trung tâm và xem nhanh các tiện ích xung quanh khu vực kinh doanh của bạn.
+            </p>
+            <ul className="feature-list">
+              <li><Map size={18} /> Hiển thị vị trí chính xác trên bản đồ 2D/3D</li>
+              <li><Navigation size={18} /> Lọc bán kính tìm kiếm quanh vị trí hiện tại</li>
+            </ul>
+            <button className="btn-primary feature-cta" style={{ background: '#00d4a0', borderColor: '#00d4a0', color: '#fff' }} onClick={() => {
+              document.getElementById('search-nav')?.scrollIntoView({ behavior: 'smooth' });
+              setIsMapMode(true);
+            }}>
+              Mở Bản Đồ Ngay <ArrowRight size={16} />
+            </button>
+          </div>
+          <div className="feature-visual-content">
+            <div className="mockup-glass" style={{ padding: 0 }}>
+              <img src="/map-mockup.jpg" alt="Bản Đồ" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================
+          SECTION 4: AI IMAGE EDITOR
+          ========================================= */}
+      <section className="feature-showcase-section feature-ai-section reveal-on-scroll">
+        <div className="feature-showcase-container reverse-layout">
+          <div className="feature-text-content">
+            <h2 className="section-title" style={{ textAlign: 'left' }}>AI Image Editor - Nâng Tầm Không Gian Của Bạn</h2>
+            <p className="feature-desc">
+              Sử dụng công nghệ AI tiên tiến để tự động thiết kế, tối ưu hóa và chỉnh sửa hình ảnh mặt bằng của bạn trở nên thu hút nhất trước khi đăng tin.
+            </p>
+            <ul className="feature-list" style={{ marginBottom: '24px' }}>
+              <li><Brain size={18} /> Phân tích & Gợi ý bố cục nội thất thông minh</li>
+              <li><Map size={18} /> Xóa vật thể thừa, tự động làm sáng không gian</li>
+            </ul>
+            <button className="btn-primary feature-cta" style={{ background: '#00d4a0', borderColor: '#00d4a0', color: '#fff' }} onClick={() => {
+              window.open('http://localhost:5173/ai-image-editor', '_blank');
+            }}>
+              Trải Nghiệm AI Editor <ArrowRight size={16} />
+            </button>
+          </div>
+          <div className="feature-visual-content">
+            <div className="ai-sphere-visual">
+              <div className="sphere-core"></div>
+              <div className="sphere-ring ring-1"></div>
+              <div className="sphere-ring ring-2"></div>
+              <div className="sphere-particles"></div>
+            </div>
+          </div>
         </div>
       </section>
 
