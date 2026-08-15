@@ -50,7 +50,7 @@ export const OwnerBookingRequests: React.FC = () => {
         markRequestsAsSeen(myRequests.map((r: any) => r.id || r.Id));
 
         // LẤY THÔNG TIN TIN ĐĂNG (TÊN, ẢNH, GIÁ, ĐỊA CHỈ) CHO TỪNG YÊU CẦU ĐỂ HIỂN THỊ
-        const uniqueListingIds = Array.from(new Set(myRequests.map((r: any) => r.listingId).filter(Boolean)));
+        const uniqueListingIds = Array.from(new Set(myRequests.map((r: any) => r.listingId || r.ListingId).filter(Boolean)));
         const listingResults = await Promise.all(
           uniqueListingIds.map(async (listingId) => {
             try {
@@ -185,15 +185,16 @@ export const OwnerBookingRequests: React.FC = () => {
               </thead>
               <tbody>
                 {requests.map((req) => {
-                  const listing = listingsById[req.listingId];
-                  const listingThumb = getListingPictureUrl(listing?.listingPictures?.[0]);
+                  const listingId = req.listingId || req.ListingId;
+                  const listing = listingsById[listingId];
+                  const listingThumb = getListingPictureUrl(listing?.listingPictures?.[0] || listing?.pictures?.[0]);
                   return (
                   <tr key={req.id || req.Id} style={{ borderBottom: '1px solid rgba(128, 128, 128, 0.1)' }}>
 
                     {/* TIN ĐĂNG */}
                     <td style={{ padding: '16px 12px' }}>
                       <div
-                        onClick={() => navigate(`/listing/${req.listingId}`)}
+                        onClick={() => navigate(`/listing/${req.listingId || req.ListingId}`)}
                         style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
                         title="Xem bài đăng"
                       >
