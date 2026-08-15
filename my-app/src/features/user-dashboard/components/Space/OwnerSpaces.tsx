@@ -174,6 +174,12 @@ export const OwnerSpaces: React.FC = () => {
   };
 
   const handleOpenSpacePartForm = (space: Space) => {
+    const currentUserId = localStorage.getItem('current_user_id');
+    const spaceOwnerId = (space as any).ownerId || (space as any).OwnerId;
+    if (spaceOwnerId && currentUserId !== spaceOwnerId) {
+      alert("Bạn không có quyền chia nhỏ space được lấy từ người chủ");
+      return;
+    }
     setParentSpaceForPart(space);
     setEditingSpacePart(null);
     setIsSpacePartFormOpen(true);
