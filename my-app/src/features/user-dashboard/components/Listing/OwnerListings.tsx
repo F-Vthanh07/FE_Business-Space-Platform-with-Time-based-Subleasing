@@ -683,14 +683,20 @@ export const OwnerListings: React.FC = () => {
                   <span className="text-secondary" style={{ fontSize: 12 }}>/{getPriceUnitText(listing.priceUnit)}</span>
                 </div>
 
-                {listing.rating > 0 && (
-                  <div className="listing-meta">
-                    <div className="listing-meta-item">
+                <div className="listing-meta" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  {listing.rating > 0 && (
+                    <div className="listing-meta-item" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Star size={12} style={{ color: '#D9A05B' }} />
-                      <span style={{ color: '#D9A05B', fontWeight: 600 }}>{listing.rating}</span>
+                      <span style={{ color: '#D9A05B', fontWeight: 600, fontSize: '13px' }}>{listing.rating}</span>
                     </div>
+                  )}
+                  <div className="listing-meta-item" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Eye size={12} style={{ color: 'var(--color-text-secondary)' }} />
+                    <span style={{ color: 'var(--color-text-secondary)', fontWeight: 500, fontSize: '13px' }}>
+                      {listing.viewCount ?? listing.ViewCount ?? 0}
+                    </span>
                   </div>
-                )}
+                </div>
 
                 <p className="listing-date text-secondary">
                   Đăng ngày {formatDate(listing.createdAt)}
