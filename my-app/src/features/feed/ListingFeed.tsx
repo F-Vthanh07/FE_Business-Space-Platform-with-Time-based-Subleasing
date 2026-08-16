@@ -296,6 +296,10 @@ export const ListingFeed: React.FC = () => {
     };
 
     return listings.filter((item) => {
+      const status = item.status ?? item.Status;
+      const isOccupied = status === 1 || status === 'Occupied';
+      if (isOccupied) return false;
+
       const matchCategory = categoryFilter === 'all' || getRentalCategory(item) === categoryFilter;
       const matchMine = !onlyMine || myListingKeys.has((item.id || item.Id)?.toString());
       const matchFav = !showFavoritesOnly || favoriteIds.has(Number(item.id || item.Id));

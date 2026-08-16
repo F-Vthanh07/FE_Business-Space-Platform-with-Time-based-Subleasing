@@ -97,20 +97,40 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
 
     const fetchBanners = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/Banner/GetAll`, {
-          headers: { accept: '*/*' },
-        });
-        if (!res.ok) throw new Error('Failed to fetch banners');
-        const data = await res.json();
+        const [bannerRes, listingRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/Banner/GetAll`, { headers: { accept: '*/*' } }),
+          fetch(`${API_BASE_URL}/api/Listing/GetAll`, { headers: { accept: '*/*' } })
+        ]);
+        if (!bannerRes.ok) throw new Error('Failed to fetch banners');
+        const data = await bannerRes.json();
+        const listingData = listingRes.ok ? await listingRes.json() : [];
+        const safeListings = unwrapApiList(listingData);
+
         const mapped = unwrapApiList(data)
-          .map((item: any, index: number) => ({
-            id: item.id ?? item.bannerId ?? index,
-            title: item.title ?? item.name ?? '',
-            description: item.description ?? '',
-            imageUrl: getBannerImageUrl(item) || heroImage,
-            listingId: item.listingId ?? item.ListingId ?? item.listing?.id ?? null,
-          }))
-          .filter((item: HomepageBanner) => item.title || item.description || item.imageUrl);
+          .map((item: any, index: number) => {
+            const lId = item.listingId ?? item.ListingId ?? item.listing?.id ?? null;
+            let lStatus = item.listing?.status ?? item.Listing?.Status ?? item.listing?.Status ?? 0;
+            
+            if (lId && safeListings.length > 0) {
+              const found = safeListings.find((l: any) => l.id === lId || l.Id === lId);
+              if (found) {
+                lStatus = found.status ?? found.Status;
+              }
+            }
+
+            return {
+              id: item.id ?? item.bannerId ?? index,
+              title: item.title ?? item.name ?? '',
+              description: item.description ?? '',
+              imageUrl: getBannerImageUrl(item) || heroImage,
+              listingId: lId,
+              listingStatus: lStatus,
+            };
+          })
+          .filter((item: HomepageBanner & { listingStatus?: any }) => 
+            (item.title || item.description || item.imageUrl) &&
+            item.listingStatus !== 1 && item.listingStatus !== 'Occupied'
+          );
 
         if (isMounted) {
           setBanners(mapped);
