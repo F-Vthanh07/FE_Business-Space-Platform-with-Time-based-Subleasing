@@ -253,7 +253,16 @@ export const ListingDetail: React.FC = () => {
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
 
-          const found = safeData.find((item: any) => (item.id?.toString() === id || item.Id?.toString() === id));
+          let found = safeData.find((item: any) => (item.id?.toString() === id || item.Id?.toString() === id));
+
+          if (!found) {
+            const occResponse = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll?status=Occupied', { headers });
+            if (occResponse.ok) {
+              const occData = await occResponse.json();
+              const safeOccData = Array.isArray(occData) ? occData : (occData?.data || occData?.items || []);
+              found = safeOccData.find((item: any) => (item.id?.toString() === id || item.Id?.toString() === id));
+            }
+          }
 
           // BƯỚC 3: GHÉP area/address/amenities/allowedCategories (TỪ SPACE CHA)
           let foundWithSpaceInfo = found || null;
@@ -918,19 +927,22 @@ export const ListingDetail: React.FC = () => {
                 </button>
               ) : (
                 <>
-                  <div style={{ fontSize: '12px', color: '#16A34A', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16A34A', display: 'inline-block' }}></span> Đang hoạt động
+                  <div style={{ fontSize: '12px', color: (listing.status === 'Occupied' || listing.status === 1) ? '#E02424' : '#16A34A', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: (listing.status === 'Occupied' || listing.status === 1) ? '#E02424' : '#16A34A', display: 'inline-block' }}></span> 
+                    {(listing.status === 'Occupied' || listing.status === 1) ? 'Mặt bằng này đã được ký' : 'Đang hoạt động'}
                   </div>
 
-                  <button
-                    onClick={() => {
-                      if (!currentUserId) { navigate('/login'); return; }
-                      setIsBookingModalOpen(true);
-                    }}
-                    style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '6px', border: 'none', backgroundColor: '#1E293B', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
-                  >
-                    <Send size={16} /> Gửi yêu cầu thuê
-                  </button>
+                  {listing.status !== 'Occupied' && listing.status !== 1 && (
+                    <button
+                      onClick={() => {
+                        if (!currentUserId) { navigate('/login'); return; }
+                        setIsBookingModalOpen(true);
+                      }}
+                      style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '6px', border: 'none', backgroundColor: '#1E293B', color: '#fff', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
+                    >
+                      <Send size={16} /> Gửi yêu cầu thuê
+                    </button>
+                  )}
                 </>
               )}
             </div>
