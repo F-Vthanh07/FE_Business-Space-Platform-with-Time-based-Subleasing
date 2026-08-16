@@ -19,7 +19,7 @@ const recordListingView = async (listingId: string, token: string | null): Promi
   const headers: Record<string, string> = { accept: '*/*' };
   if (token) headers.Authorization = `Bearer ${token}`;
   const url = `${API_BASE_URL}/api/Listing/ViewCount/${encodeURIComponent(listingId)}`;
-  const candidateMethods = ['PUT', 'POST', 'GET'];
+  const candidateMethods = ['PATCH', 'PUT', 'POST', 'GET'];
 
   try {
     for (const method of candidateMethods) {
@@ -272,7 +272,9 @@ export const ListingDetail: React.FC = () => {
           }
           setListing(foundWithSpaceInfo);
 
-          if (foundWithSpaceInfo && id && trackedViewRef.current !== id) {
+          const isListingOwner = currentUserId && (currentUserId === foundWithSpaceInfo?.creatorId);
+
+          if (foundWithSpaceInfo && id && trackedViewRef.current !== id && !isListingOwner) {
             trackedViewRef.current = id;
             void recordListingView(id, token).then((nextViewCount) => {
               setListing((current: any) => {
