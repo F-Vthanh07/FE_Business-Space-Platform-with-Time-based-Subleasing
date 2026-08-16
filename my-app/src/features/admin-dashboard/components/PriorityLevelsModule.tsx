@@ -314,7 +314,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
     }
     const durationValue = validateNonNegativeInteger(
       bannerDurationInDays,
-      language === 'en' ? 'duration in days' : 'thoi gian banner'
+      language === 'en' ? 'duration in days' : 'thời gian banner'
     );
     if (durationValue === null) return;
 
@@ -338,7 +338,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
 
   const formatDate = (dateStr: string) => {
     if (!dateStr || dateStr === '0001-01-01T00:00:00' || dateStr.startsWith('0001-01-01')) {
-      return language === 'en' ? 'N/A' : 'Chua cap nhat';
+      return language === 'en' ? 'N/A' : 'Chưa cập nhật';
     }
     const d = new Date(dateStr);
     if (Number.isNaN(d.getTime())) return dateStr;
@@ -889,31 +889,31 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '4px' }}>
-                    {language === 'en' ? 'Type' : 'Loai'}
+                    {language === 'en' ? 'Type' : 'Loại'}
                   </div>
                   <span className="badge-status">{getPriorityType(detailLevel)}</span>
                 </div>
                 <div>
                   <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '4px' }}>
-                    {language === 'en' ? 'Status' : 'Trang thai'}
+                    {language === 'en' ? 'Status' : 'Trạng thái'}
                   </div>
                   <span className={`badge-status ${detailLevel.isActive ? 'active' : 'blocked'}`}>
-                    {detailLevel.isActive ? (language === 'en' ? 'Active' : 'Hoat dong') : (language === 'en' ? 'Inactive' : 'Tam dung')}
+                    {detailLevel.isActive ? (language === 'en' ? 'Active' : 'Hoạt động') : (language === 'en' ? 'Inactive' : 'Tạm dừng')}
                   </span>
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '4px' }}>
-                    {language === 'en' ? 'Price' : 'Gia'}
+                    {language === 'en' ? 'Price' : 'Giá'}
                   </div>
                   <strong className="text-neon-green">{detailLevel.price.toLocaleString('vi-VN')} VND</strong>
                 </div>
                 <div>
                   <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '4px' }}>
-                    {language === 'en' ? 'Duration In Days' : 'Thoi gian ton tai'}
+                    {language === 'en' ? 'Duration In Days' : 'Thời gian tồn tại'}
                   </div>
-                  <strong>{detailLevel.durationInDays ?? 0} {language === 'en' ? 'days' : 'ngay'}</strong>
+                  <strong>{detailLevel.durationInDays ?? 0} {language === 'en' ? 'days' : 'ngày'}</strong>
                 </div>
               </div>
               {getPriorityType(detailLevel) === 'Banner' && (
@@ -927,15 +927,15 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '4px' }}>
-                    {language === 'en' ? 'Created Date' : 'Ngay tao'}
+                    {language === 'en' ? 'Created Date' : 'Ngày tạo'}
                   </div>
                   <span>{formatDate(detailLevel.createdAt)}</span>
                 </div>
                 <div>
                   <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '4px' }}>
-                    {language === 'en' ? 'Updated Date' : 'Ngay cap nhat'}
+                    {language === 'en' ? 'Updated Date' : 'Ngày cập nhật'}
                   </div>
-                  <span>{detailLevel.updatedAt ? formatDate(detailLevel.updatedAt) : (language === 'en' ? 'N/A' : 'Chua cap nhat')}</span>
+                  <span>{detailLevel.updatedAt ? formatDate(detailLevel.updatedAt) : (language === 'en' ? 'N/A' : 'Chưa cập nhật')}</span>
                 </div>
               </div>
             </div>
