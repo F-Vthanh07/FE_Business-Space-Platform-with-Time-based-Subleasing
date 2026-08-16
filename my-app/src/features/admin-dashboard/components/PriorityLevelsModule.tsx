@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Check, X, Zap, Edit3, Trash2, Eye, Image, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PriorityLevel } from '../types';
 import type { AdminBannerItem, CreateAdminBannerPayload, PriorityLevelPayload, PriorityLevelType } from '../api/admin.api';
@@ -114,7 +114,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
     setName('');
     setDescription('');
     setPrice('');
-    setDurationInDays('');
+    setDurationInDays(nextType === 'Banner' ? '99' : '');
     setDurationForBanner('');
     setType(nextType);
     setIsActive(true);
@@ -162,7 +162,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
     const confirmed = window.confirm(
       language === 'en'
         ? `Delete "${level.name}"?`
-        : `Xoa goi "${level.name}"?`
+        : `Xóa gói "${level.name}"?`
     );
     if (!confirmed) return;
     await handleDeletePriorityLevel(level.id);
@@ -195,9 +195,9 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
     const priceValue = validatePriceInput();
     if (priceValue === null) return null;
 
-    const durationInDaysValue = validateNonNegativeInteger(
+    const durationInDaysValue = type === 'Banner' ? 99 : validateNonNegativeInteger(
       durationInDays,
-      language === 'en' ? 'duration in days' : 'thoi gian ton tai'
+      language === 'en' ? 'duration in days' : 'thời gian tồn tại'
     );
     if (durationInDaysValue === null) return null;
 
@@ -509,7 +509,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
     <form onSubmit={mode === 'add' ? onAddSubmit : onEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <label style={{ fontSize: '13px', fontWeight: 600 }}>
-          {language === 'en' ? 'Package Name' : 'Ten goi'} <span style={{ color: 'red' }}>*</span>
+          {language === 'en' ? 'Package Name' : 'Tên gói'} <span style={{ color: 'red' }}>*</span>
         </label>
         <input
           type="text"
@@ -518,7 +518,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
           value={name}
           onChange={e => setName(e.target.value)}
           required
-          placeholder={language === 'en' ? 'e.g. Premium Boost' : 'VD: Goi uu tien'}
+          placeholder={language === 'en' ? 'e.g. Premium Boost' : 'VD: Gói ưu tiên'}
         />
       </div>
 
@@ -529,14 +529,14 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
           style={{ minHeight: '80px', width: '100%', boxSizing: 'border-box', padding: '10px 12px', resize: 'vertical' }}
           value={description}
           onChange={e => setDescription(e.target.value)}
-          placeholder={language === 'en' ? 'Package details' : 'Thong tin goi'}
+          placeholder={language === 'en' ? 'Package details' : 'Thông tin gói'}
         />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <label style={{ fontSize: '13px', fontWeight: 600 }}>
-            {language === 'en' ? 'Package Type' : 'Loai goi'} <span style={{ color: 'red' }}>*</span>
+            {language === 'en' ? 'Package Type' : 'Loại gói'} <span style={{ color: 'red' }}>*</span>
           </label>
           <select
             className="slot-input-text"
@@ -551,7 +551,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <label style={{ fontSize: '13px', fontWeight: 600 }}>
-            {language === 'en' ? 'Price (VND)' : 'Gia (VND)'} <span style={{ color: 'red' }}>*</span>
+            {language === 'en' ? 'Price (VND)' : 'Giá (VNĐ)'} <span style={{ color: 'red' }}>*</span>
           </label>
           <input
             type="number"
@@ -567,23 +567,25 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: type === 'Banner' ? '1fr 1fr' : '1fr', gap: '12px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label style={{ fontSize: '13px', fontWeight: 600 }}>
-            {language === 'en' ? 'Duration In Days' : 'Thoi gian ton tai (ngay)'} <span style={{ color: 'red' }}>*</span>
-          </label>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            className="slot-input-text"
-            style={{ height: '40px', width: '100%', boxSizing: 'border-box', padding: '0 12px' }}
-            value={durationInDays}
-            onChange={e => setDurationInDays(e.target.value)}
-            required
-            placeholder="0"
-          />
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+        {type !== 'Banner' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '13px', fontWeight: 600 }}>
+              {language === 'en' ? 'Duration In Days' : 'Thời gian tồn tại (ngày)'} <span style={{ color: 'red' }}>*</span>
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              className="slot-input-text"
+              style={{ height: '40px', width: '100%', boxSizing: 'border-box', padding: '0 12px' }}
+              value={durationInDays}
+              onChange={e => setDurationInDays(e.target.value)}
+              required
+              placeholder="0"
+            />
+          </div>
+        )}
 
         {type === 'Banner' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -619,12 +621,12 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
         <button type="button" className="btn-ghost" onClick={() => mode === 'add' ? setIsAddModalOpen(false) : setIsEditModalOpen(false)}>
-          {language === 'en' ? 'Cancel' : 'Huy'}
+          {language === 'en' ? 'Cancel' : 'Hủy'}
         </button>
         <button type="submit" className="btn-primary" style={{ padding: '0 20px' }} disabled={isLoading}>
           {mode === 'add'
-            ? (language === 'en' ? 'Create' : 'Them moi')
-            : (language === 'en' ? 'Save Changes' : 'Luu thay doi')}
+            ? (language === 'en' ? 'Create' : 'Thêm mới')
+            : (language === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
         </button>
       </div>
     </form>
@@ -644,7 +646,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
         <div className="admin-stat-card glass-card">
           <div className="stat-icon-wrapper blue"><Zap size={20} /></div>
           <div className="stat-data">
-            <span className="stat-label">{language === 'en' ? 'TOTAL PACKAGES' : 'TONG SO GOI'}</span>
+            <span className="stat-label">{language === 'en' ? 'TOTAL PACKAGES' : 'TỔNG SỐ GÓI'}</span>
             <h2 className="stat-value">{priorityLevels.length}</h2>
           </div>
         </div>
@@ -652,7 +654,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
         <div className="admin-stat-card glass-card">
           <div className="stat-icon-wrapper green"><Check size={20} /></div>
           <div className="stat-data">
-            <span className="stat-label">{language === 'en' ? 'ACTIVE PACKAGES' : 'DANG HOAT DONG'}</span>
+            <span className="stat-label">{language === 'en' ? 'ACTIVE PACKAGES' : 'ĐANG HOẠT ĐỘNG'}</span>
             <h2 className="stat-value">{priorityLevels.filter(p => p.isActive).length}</h2>
           </div>
         </div>
@@ -660,7 +662,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
         <div className="admin-stat-card glass-card">
           <div className="stat-icon-wrapper orange"><X size={20} /></div>
           <div className="stat-data">
-            <span className="stat-label">{language === 'en' ? 'INACTIVE PACKAGES' : 'TAM DUNG'}</span>
+            <span className="stat-label">{language === 'en' ? 'INACTIVE PACKAGES' : 'TẠM DỪNG'}</span>
             <h2 className="stat-value">{priorityLevels.filter(p => !p.isActive).length}</h2>
           </div>
         </div>
@@ -689,8 +691,8 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
         <button className="btn-ghost" disabled={isLoading} onClick={handleOpenAdd}>
           <Plus size={16} />
           {activeTypeTab === 'Banner'
-            ? (language === 'en' ? 'Add Banner Package' : 'Them goi banner')
-            : (language === 'en' ? 'Add Listing Package' : 'Them goi listing')}
+            ? (language === 'en' ? 'Add Banner Package' : 'Thêm gói banner')
+            : (language === 'en' ? 'Add Listing Package' : 'Thêm gói listing')}
         </button>
       </div>
 
@@ -699,12 +701,12 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
           <thead>
             <tr>
               <th>ID</th>
-              <th>{language === 'en' ? 'Package Name' : 'Ten goi'}</th>
-              <th>{language === 'en' ? 'Type' : 'Loai'}</th>
-              <th>{language === 'en' ? 'Duration' : 'Thoi han'}</th>
-              <th style={{ textAlign: 'right' }}>{language === 'en' ? 'Price' : 'Gia'}</th>
-              <th>{language === 'en' ? 'Status' : 'Trang thai'}</th>
-              <th>{language === 'en' ? 'Created Date' : 'Ngay tao'}</th>
+              <th>{language === 'en' ? 'Package Name' : 'Tên gói'}</th>
+              <th>{language === 'en' ? 'Type' : 'Loại'}</th>
+              <th>{language === 'en' ? 'Duration' : 'Thời hạn'}</th>
+              <th style={{ textAlign: 'right' }}>{language === 'en' ? 'Price' : 'Giá'}</th>
+              <th>{language === 'en' ? 'Status' : 'Trạng thái'}</th>
+              <th>{language === 'en' ? 'Created Date' : 'Ngày tạo'}</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
@@ -712,7 +714,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
             {visiblePriorityLevels.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-secondary)' }}>
-                  {language === 'en' ? 'No priority packages found.' : 'Chua co goi nao.'}
+                  {language === 'en' ? 'No priority packages found.' : 'Chưa có gói nào.'}
                 </td>
               </tr>
             ) : (
@@ -729,7 +731,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
                   </td>
                   <td><span className="badge-status">{getPriorityType(p)}</span></td>
                   <td>
-                    <div>{p.durationInDays ?? 0} {language === 'en' ? 'days' : 'ngay'}</div>
+                    <div>{p.durationInDays ?? 0} {language === 'en' ? 'days' : 'ngày'}</div>
                     {(getPriorityType(p) === 'Banner' || (p.durationForBanner ?? 0) > 0) && (
                       <div style={{ marginTop: '4px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
                         {language === 'en' ? 'Banner limit' : 'Giới hạn banner'}: {p.durationForBanner ?? 0}
@@ -741,7 +743,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
                   </td>
                   <td>
                     <span className={`badge-status ${p.isActive ? 'active' : 'blocked'}`}>
-                      {p.isActive ? (language === 'en' ? 'Active' : 'Hoat dong') : (language === 'en' ? 'Inactive' : 'Tam dung')}
+                      {p.isActive ? (language === 'en' ? 'Active' : 'Hoạt động') : (language === 'en' ? 'Inactive' : 'Tạm dừng')}
                     </span>
                   </td>
                   <td>{formatDate(p.createdAt)}</td>
@@ -750,7 +752,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
                       <button
                         className="btn-action-icon"
                         onClick={() => handleOpenDetail(p)}
-                        title={language === 'en' ? 'View details' : 'Xem chi tiet'}
+                        title={language === 'en' ? 'View details' : 'Xem chi tiết'}
                         disabled={isLoading}
                       >
                         <Eye size={14} />
@@ -758,7 +760,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
                       <button
                         className="btn-action-icon unblock"
                         onClick={() => handleOpenEdit(p)}
-                        title={language === 'en' ? 'Edit' : 'Sua'}
+                        title={language === 'en' ? 'Edit' : 'Sửa'}
                         disabled={isLoading}
                       >
                         <Edit3 size={14} />
@@ -766,7 +768,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
                       <button
                         className="btn-action-icon block"
                         onClick={() => handleDelete(p)}
-                        title={language === 'en' ? 'Delete' : 'Xoa'}
+                        title={language === 'en' ? 'Delete' : 'Xóa'}
                         disabled={isLoading}
                       >
                         <Trash2 size={14} />

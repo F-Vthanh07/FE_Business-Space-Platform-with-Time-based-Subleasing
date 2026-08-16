@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -1039,7 +1039,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                       <label className="form-label">Gói banner</label>
                       <div className="wallet-balance-display">
                         {selectedBannerPackage
-                          ? `${selectedBannerPackage.name} - ${selectedBannerPackage.price.toLocaleString('vi-VN')} VNĐ${selectedBannerPackage.durationInDays ? ` / ${selectedBannerPackage.durationInDays} ngày` : ''}`
+                          ? `${selectedBannerPackage.name} - ${selectedBannerPackage.price.toLocaleString('vi-VN')} VNĐ`
                           : 'Chưa có gói banner khả dụng'}
                       </div>
                     </div>
