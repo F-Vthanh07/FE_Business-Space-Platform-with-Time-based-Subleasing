@@ -109,8 +109,12 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
             description: item.description ?? '',
             imageUrl: getBannerImageUrl(item) || heroImage,
             listingId: item.listingId ?? item.ListingId ?? item.listing?.id ?? null,
+            listingStatus: item.listing?.status ?? item.Listing?.Status ?? item.listing?.Status ?? 0,
           }))
-          .filter((item: HomepageBanner) => item.title || item.description || item.imageUrl);
+          .filter((item: HomepageBanner & { listingStatus?: any }) => 
+            (item.title || item.description || item.imageUrl) &&
+            item.listingStatus !== 1 && item.listingStatus !== 'Occupied'
+          );
 
         if (isMounted) {
           setBanners(mapped);

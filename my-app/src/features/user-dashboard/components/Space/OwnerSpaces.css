@@ -191,9 +191,12 @@
 }
 
 .space-card-actions button {
-  flex: 1 1 auto;
+  flex: 1 1 0;
+  min-width: 0;
   justify-content: center;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .space-card-actions .btn-danger-icon {

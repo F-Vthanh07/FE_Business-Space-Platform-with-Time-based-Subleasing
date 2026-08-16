@@ -130,7 +130,12 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
 
           // BƯỚC 4: GHÉP ĐỊA CHỈ TỪ MẶT BẰNG VÀO BÀI ĐĂNG
-          const listingsWithAddress = safeData.map((l: any) => {
+          const listingsWithAddress = safeData
+            .filter((l: any) => {
+              const status = l.status ?? l.Status;
+              return status !== 1 && status !== 'Occupied';
+            })
+            .map((l: any) => {
             const parentSpace = spaces.find((s) => (s.id || s.Id) === (l.spaceId || l.SpaceId));
             return {
               ...l,

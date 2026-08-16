@@ -369,17 +369,17 @@ export const OwnerSpaces: React.FC = () => {
                 </div>
 
                 <div className="space-card-actions">
-                  <button className="btn-ghost" onClick={() => handleOpenSpacePartList(space)}>
-                    <Layers size={13} /> D.sách chia nhỏ
+                  <button className="btn-ghost" onClick={() => handleOpenSpacePartList(space)} title="Danh sách chia nhỏ">
+                    <Layers size={13} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>D.sách chia nhỏ</span>
                   </button>
-                  <button className="btn-ghost" onClick={() => handleOpenSpacePartForm(space)}>
-                    <Plus size={13} /> {language === 'en' ? 'Divide' : 'Chia nhỏ'}
+                  <button className="btn-ghost" onClick={() => handleOpenSpacePartForm(space)} title={language === 'en' ? 'Divide' : 'Chia nhỏ'}>
+                    <Plus size={13} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{language === 'en' ? 'Divide' : 'Chia nhỏ'}</span>
                   </button>
                   <button className="btn-ghost" onClick={() => setViewingSpace(space)}>
-                    <Eye size={13} /> {language === 'en' ? 'View' : 'Xem'}
+                    <Eye size={13} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{language === 'en' ? 'View' : 'Xem'}</span>
                   </button>
                   <button className="btn-ghost" onClick={() => handleOpenFormForEdit(space)}>
-                    <Edit3 size={13} /> {t('spaces.edit') || 'Sửa'}
+                    <Edit3 size={13} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('spaces.edit') || 'Sửa'}</span>
                   </button>
                   <button className="btn-ghost btn-danger-icon" onClick={() => handleDeleteSpace(space)} title={t('spaces.delete') || 'Xóa'}>
                     <Trash2 size={13} />
