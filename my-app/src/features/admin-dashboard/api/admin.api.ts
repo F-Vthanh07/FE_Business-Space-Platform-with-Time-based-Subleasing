@@ -20,6 +20,22 @@ export interface CreateAdminBannerPayload {
   listingId: number | null;
 }
 
+export interface AdminBannerItem {
+  id: number;
+  title?: string | null;
+  description?: string | null;
+  listingId?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  createdAt?: string | null;
+  bannerPictures?: any[] | null;
+  pictures?: any[] | null;
+  images?: any[] | null;
+  picture?: any | null;
+  bannerPicture?: any | null;
+  [key: string]: any;
+}
+
 const normalizePriorityLevelType = (type?: string | null): PriorityLevelType => {
   return String(type || '').toLowerCase() === 'banner' ? 'Banner' : 'Listing';
 };
@@ -279,6 +295,57 @@ export const uploadBannerPictures = async (bannerId: number, files: File[], toke
   });
   if (!response.ok) {
     throw new Error('Failed to upload banner pictures');
+  }
+};
+
+export const fetchAdminBanners = async (token: string): Promise<AdminBannerItem[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/Banner/GetAll`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch banners');
+  }
+  const data = await response.json();
+  const items = Array.isArray(data) ? data : (data?.data || data?.items || []);
+  return items.map((item: any) => ({
+    ...item,
+    id: Number(item?.id ?? item?.bannerId ?? item?.Id ?? item?.BannerId),
+  })).filter((item: AdminBannerItem) => Number.isFinite(item.id));
+};
+
+export const updateAdminBanner = async (
+  id: number,
+  payload: CreateAdminBannerPayload,
+  durationInDays: number,
+  token: string
+): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/api/Banner/Update/${id}?durationInDays=${durationInDays}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'accept': '*/*'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update banner');
+  }
+};
+
+export const deleteAdminBanner = async (id: number, token: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/api/Banner/Delete/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete banner');
   }
 };
 

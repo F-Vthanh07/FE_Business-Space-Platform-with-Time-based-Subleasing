@@ -1,9 +1,9 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Tag, Flag, Star, Sofa, Wand2 } from 'lucide-react';
+import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Tag, Flag, Star, Sofa, Wand2, Eye } from 'lucide-react';
 import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
@@ -11,6 +11,42 @@ import { SiZalo } from "react-icons/si";
 import { formatDate } from '../../utils/dateUtils';
 import { getListingPictureUrl, getListingPictureUrls } from '../shared/listingPictures';
 import { getPriceUnitText } from '../../utils/formatPriceUnit';
+import { API_BASE_URL } from '../../config/api';
+
+const recordListingView = async (listingId: string, token: string | null): Promise<number | null> => {
+  if (!listingId) return null;
+
+  const headers: Record<string, string> = { accept: '*/*' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const url = `${API_BASE_URL}/api/Listing/ViewCount/${encodeURIComponent(listingId)}`;
+  const candidateMethods = ['PUT', 'POST', 'GET'];
+
+  try {
+    for (const method of candidateMethods) {
+      const response = await fetch(url, {
+        method,
+        headers,
+        keepalive: true,
+      });
+      if (response.ok) {
+        const data = await response.json().catch(() => null);
+        const nextViewCount = Number(
+          data?.viewCount ??
+          data?.ViewCount ??
+          data?.data?.viewCount ??
+          data?.data?.ViewCount ??
+          data?.listing?.viewCount ??
+          data?.listing?.ViewCount
+        );
+        return Number.isFinite(nextViewCount) ? nextViewCount : null;
+      }
+    }
+  } catch (error) {
+    console.warn('Không thể ghi nhận lượt xem bài đăng:', error);
+  }
+
+  return null;
+};
 
 // --- COMPONENT NÚT CHIA SẺ DÙNG LẠI (SHARE BUTTON) ---
 const ExpandableDescription: React.FC<{ text: string }> = ({ text }) => {
@@ -170,6 +206,7 @@ export const ListingDetail: React.FC = () => {
   const [businessCategoriesById, setBusinessCategoriesById] = useState<Record<number, string>>({});
 
   const [furnitureImageIndex, setFurnitureImageIndex] = useState(0);
+  const trackedViewRef = useRef<string | null>(null);
 
   const currentUserId = localStorage.getItem('current_user_id');
   const token = localStorage.getItem('portal_token');
@@ -234,6 +271,18 @@ export const ListingDetail: React.FC = () => {
             };
           }
           setListing(foundWithSpaceInfo);
+
+          if (foundWithSpaceInfo && id && trackedViewRef.current !== id) {
+            trackedViewRef.current = id;
+            void recordListingView(id, token).then((nextViewCount) => {
+              setListing((current: any) => {
+                if (!current || (current.id?.toString() !== id && current.Id?.toString() !== id)) return current;
+                const currentViewCount = Number(current.viewCount ?? current.ViewCount ?? 0);
+                const viewCount = nextViewCount ?? currentViewCount + 1;
+                return { ...current, viewCount, ViewCount: viewCount };
+              });
+            });
+          }
 
           if (foundWithSpaceInfo && foundWithSpaceInfo.price) {
             setBookingData(prev => ({ ...prev, offeredPrice: foundWithSpaceInfo.price.toString() }));
@@ -474,6 +523,7 @@ export const ListingDetail: React.FC = () => {
   const activeAmenities = amenities.filter((a: any) => a.isActive !== false);
 
   const allowedCategories: any[] = listing.allowedCategories || [];
+  const viewCount = Number(listing.viewCount ?? listing.ViewCount ?? 0);
 
   const reviewCount = reviews.length;
   const averageRating = reviewCount > 0
@@ -553,6 +603,13 @@ export const ListingDetail: React.FC = () => {
                 <div>
                   <div style={{ fontSize: '13px', color: '#777', marginBottom: '4px' }}>Diện tích</div>
                   <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#333' }}>{listing.area ? `${listing.area} m²` : 'N/A'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#777', marginBottom: '4px' }}>Lượt xem</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '18px', fontWeight: 'bold', color: '#333' }}>
+                    <Eye size={18} color="#777" />
+                    {viewCount.toLocaleString('vi-VN')}
+                  </div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '16px' }}>

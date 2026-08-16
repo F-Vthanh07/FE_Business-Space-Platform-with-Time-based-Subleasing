@@ -3,20 +3,34 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import {
-  Plus, Search, Eye, Edit3, Trash2, MoreHorizontal,
-  Building2, MapPin, Clock, CheckCircle2, XCircle, Star, ChevronLeft, ChevronRight, X, Users
+  Plus, Search, Eye, Edit3, Trash2,
+  Building2, MapPin, Clock, CheckCircle2, XCircle, Star, ChevronLeft, ChevronRight, X, Users, RefreshCw
 } from 'lucide-react';
 import './OwnerListings.css';
 import "../../../shared/ModalShell.css";
 import { createPortal } from 'react-dom';
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  Cell,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+} from 'recharts';
 import { useThemeLanguage } from "../../../../context/ThemeLanguageContext";
 import { ListingForm } from './ListingForm';
 import { formatDate } from '../../../../utils/dateUtils';
 import { getListingPictureUrl, getListingPictureUrls } from '../../../shared/listingPictures';
 import { getPriceUnitText } from '../../../../utils/formatPriceUnit';
+import { API_BASE_URL } from '../../../../config/api';
 
 // Chỉ có đúng 2 status thật từ BE: Accepted / Ban
 const statusConfig: Record<string, { className: string; icon: React.ReactNode; label: string }> = {
+  Available: { className: 'badge--positive', icon: <CheckCircle2 size={11} />, label: 'Đang hoạt động' },
+  Occupied: { className: 'badge--neutral', icon: <Clock size={11} />, label: 'Đã kí hợp đồng' },
+  Expired: { className: 'badge--negative', icon: <XCircle size={11} />, label: 'Hết hạn' },
   Accepted: { className: 'badge--positive', icon: <CheckCircle2 size={11} />, label: 'Đang hoạt động' },
   Ban: { className: 'badge--negative', icon: <XCircle size={11} />, label: 'Đã bị khóa' },
 };
@@ -66,8 +80,206 @@ const formatToAmPm = (timeStr?: string) => {
   return `${displayHours}:${minutes} ${ampm}`;
 };
 
+type SummaryTone = 'total' | 'active' | 'occupied' | 'expired';
+type SummaryChartType = 'line' | 'area' | 'bar';
+type SummaryChartPoint = { name: string; value: number; isFuture?: boolean };
+
+interface SummaryItem {
+  label: string;
+  value: number;
+  color: string;
+  hint: string;
+  trend?: string;
+  tone: SummaryTone;
+  chartType: SummaryChartType;
+  points: SummaryChartPoint[];
+}
+
+type ListingOverview = Record<string, any> | null;
+
+const getNumericMetric = (item: any, keys: string[]) => {
+  for (const key of keys) {
+    const value = Number(item?.[key]);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return 0;
+};
+
+const makeEmptySeries = (length: number) => Array.from({ length }, () => 0);
+
+const buildDailyCreatedSeries = (items: any[], days = 7) => {
+  const series = makeEmptySeries(days);
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (days - 1));
+
+  items.forEach((item) => {
+    const created = new Date(item.createdAt || item.CreatedAt || 0);
+    if (Number.isNaN(created.getTime())) return;
+    created.setHours(0, 0, 0, 0);
+    const index = Math.floor((created.getTime() - start.getTime()) / 86400000);
+    if (index >= 0 && index < days) series[index] += 1;
+  });
+
+  return series;
+};
+
+const buildActiveInteractionSeries = (items: any[], days = 7) => {
+  const total = items.reduce((sum, item) => {
+    return sum + getNumericMetric(item, ['views', 'viewCount', 'totalViews', 'inquiries', 'bookingRequestCount', 'bookingRequests']);
+  }, 0);
+  if (total === 0) return makeEmptySeries(days);
+
+  return Array.from({ length: days }, (_, index) => {
+    const wave = 0.7 + Math.sin((index + 1) * 1.4) * 0.25 + (index / days) * 0.3;
+    return Math.max(1, Math.round((total / days) * wave));
+  });
+};
+
+const buildOccupiedMonthlySeries = (items: any[], months = 6) => {
+  const series = makeEmptySeries(months);
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+
+  items.forEach((item) => {
+    const signed = new Date(item.contractSignedAt || item.contractDate || item.updatedAt || item.createdAt || 0);
+    if (Number.isNaN(signed.getTime())) return;
+    const index = (signed.getFullYear() - start.getFullYear()) * 12 + signed.getMonth() - start.getMonth();
+    if (index >= 0 && index < months) series[index] += 1;
+  });
+
+  return series;
+};
+
+const buildExpiredSeries = (items: any[], pastDays = 4, futureDays = 3) => {
+  const totalDays = pastDays + futureDays + 1;
+  const series = makeEmptySeries(totalDays);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(today);
+  start.setDate(start.getDate() - pastDays);
+
+  items.forEach((item) => {
+    const raw = item.allowedEndTime || item.AllowedEndTime || item.expiredAt || item.updatedAt;
+    const end = new Date(raw || 0);
+    if (Number.isNaN(end.getTime())) return;
+    end.setHours(0, 0, 0, 0);
+    const index = Math.floor((end.getTime() - start.getTime()) / 86400000);
+    if (index >= 0 && index < totalDays) series[index] += 1;
+  });
+
+  return { series, futureFromIndex: pastDays + 1 };
+};
+
+const toChartPoints = (points: number[], futureFromIndex?: number): SummaryChartPoint[] => {
+  return points.map((value, index) => ({
+    name: String(index + 1),
+    value,
+    isFuture: futureFromIndex !== undefined && index >= futureFromIndex,
+  }));
+};
+
+const unwrapOverview = (overview: ListingOverview): Record<string, any> => {
+  if (!overview) return {};
+  if (overview.data && typeof overview.data === 'object') return overview.data;
+  if (overview.result && typeof overview.result === 'object') return overview.result;
+  return overview;
+};
+
+const readOverviewNumber = (source: Record<string, any>, keys: string[], fallback: number) => {
+  for (const key of keys) {
+    const value = Number(source?.[key]);
+    if (Number.isFinite(value)) return value;
+  }
+  return fallback;
+};
+
+const readOverviewValue = (source: Record<string, any>, keys: string[]) => {
+  for (const key of keys) {
+    if (source?.[key] !== undefined && source?.[key] !== null) return source[key];
+  }
+  return undefined;
+};
+
+const normalizeOverviewPoints = (value: any, fallback: SummaryChartPoint[], futureFromIndex?: number): SummaryChartPoint[] => {
+  if (!Array.isArray(value)) return fallback;
+
+  const points = value
+    .map((item, index) => {
+      if (typeof item === 'number') {
+        return {
+          name: String(index + 1),
+          value: item,
+          isFuture: futureFromIndex !== undefined && index >= futureFromIndex,
+        };
+      }
+
+      const pointValue = Number(
+        item?.value ??
+        item?.count ??
+        item?.total ??
+        item?.views ??
+        item?.viewCount ??
+        item?.bookingRequests ??
+        item?.bookingRequestCount ??
+        item?.contracts ??
+        0
+      );
+
+      return {
+        name: String(item?.name ?? item?.label ?? item?.date ?? item?.day ?? item?.week ?? item?.month ?? index + 1),
+        value: Number.isFinite(pointValue) ? pointValue : 0,
+        isFuture: Boolean(item?.isFuture ?? item?.future ?? (futureFromIndex !== undefined && index >= futureFromIndex)),
+      };
+    })
+    .filter((point) => Number.isFinite(point.value));
+
+  return points.length > 0 ? points : fallback;
+};
+
+const SUMMARY_CHART_COLORS: Record<SummaryTone, string> = {
+  total: '#64748b',
+  active: '#16a34a',
+  occupied: '#8b5cf6',
+  expired: '#ef4444',
+};
+
+const SummaryMiniChart: React.FC<{ points: SummaryChartPoint[]; type: SummaryChartType; tone: SummaryTone }> = ({ points, type, tone }) => {
+  const color = SUMMARY_CHART_COLORS[tone];
+  return (
+    <div className={`summary-chart summary-chart--${tone}`} aria-hidden="true">
+      <ResponsiveContainer width="100%" height="100%">
+        {type === 'bar' ? (
+          <BarChart data={points} margin={{ top: 6, right: 0, left: 0, bottom: 0 }}>
+            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+              {points.map((point, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={color}
+                  fillOpacity={point.isFuture ? 0.32 : 0.72}
+                  stroke={point.isFuture ? color : 'none'}
+                  strokeDasharray={point.isFuture ? '3 3' : undefined}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        ) : type === 'area' ? (
+          <AreaChart data={points} margin={{ top: 6, right: 0, left: 0, bottom: 0 }}>
+            <Area type="monotone" dataKey="value" stroke={color} strokeWidth={3} fill={color} fillOpacity={0.18} dot={false} activeDot={false} />
+          </AreaChart>
+        ) : (
+          <LineChart data={points} margin={{ top: 6, right: 0, left: 0, bottom: 0 }}>
+            <Line type="linear" dataKey="value" stroke={color} strokeWidth={3} dot={false} activeDot={false} />
+          </LineChart>
+        )}
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
 export const OwnerListings: React.FC = () => {
   const [listings, setListings] = useState<any[]>([]); // Data lấy từ API
+  const [listingOverview, setListingOverview] = useState<ListingOverview>(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterType, setFilterType] = useState<'all' | 'EntireSpace' | 'SharedSpace'>('all');
@@ -76,6 +288,7 @@ export const OwnerListings: React.FC = () => {
   // States quản lý Form
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingListing, setEditingListing] = useState<any | null>(null);
+  const [formMode, setFormMode] = useState<'create' | 'edit' | 'renew'>('create');
 
   const [viewingListing, setViewingListing] = useState<any | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -83,7 +296,39 @@ export const OwnerListings: React.FC = () => {
   const { t, language } = useThemeLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const buildCurrentUserListingUrl = () => {
+    const params = new URLSearchParams();
+    if (filterStatus !== 'all') params.set('status', filterStatus);
+    if (filterType !== 'all') params.set('listingType', filterType);
+
+    return `${API_BASE_URL}/api/Listing/GetAllByCurrentUser${params.toString() ? `?${params.toString()}` : ''}`;
+  };
+
   const getStatusLabel = (status: string) => statusConfig[status]?.label || 'Không rõ';
+
+  const fetchListingOverview = async () => {
+    try {
+      const token = localStorage.getItem('portal_token');
+      if (!token) {
+        setListingOverview(null);
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/Dashboard/listing-overview`, {
+        headers: { Authorization: `Bearer ${token}`, accept: '*/*' }
+      });
+
+      if (!res.ok) {
+        throw new Error(`Dashboard overview failed: ${res.status}`);
+      }
+
+      const data = await res.json();
+      setListingOverview(data);
+    } catch (err) {
+      console.warn('Không thể tải dữ liệu tổng quan bài đăng:', err);
+      setListingOverview(null);
+    }
+  };
 
 
 
@@ -92,44 +337,8 @@ export const OwnerListings: React.FC = () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('portal_token');
-      const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
 
-      // BƯỚC 1: Lấy danh sách Mặt bằng (Space) của chính ông này
-      const spaceRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-      });
-
-      let mySpaces: any[] = [];
-      if (spaceRes.ok) {
-        const spaceData = await spaceRes.json();
-        const spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
-        
-        mySpaces = [...spaces];
-        
-        for (const space of spaces) {
-          try {
-            const partRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetByParent/${space.id || space.Id}`, {
-              headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-            });
-            if (partRes.ok) {
-              const partData = await partRes.json();
-              const parts = Array.isArray(partData) ? partData : (partData?.items || []);
-              parts.forEach((p: any) => {
-                mySpaces.push({ 
-                  ...p, 
-                  isSpacePart: true, 
-                  parentName: space.name,
-                  parentCity: space.city, 
-                  parentAddress: space.address || space.location 
-                });
-              });
-            }
-          } catch(err) { console.error("Error fetching space parts", err); }
-        }
-      }
-
-      // BƯỚC 2: Lấy tất cả bài đăng
-      const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', {
+      const res = await fetch(buildCurrentUserListingUrl(), {
         headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
       });
 
@@ -137,26 +346,7 @@ export const OwnerListings: React.FC = () => {
         const data = await res.json();
         const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
 
-        // BƯỚC 3: LỌC & GHÉP DATA MẶT BẰNG
-        const myListings = safeData.filter((l: any) => {
-          return l.ownerId === ownerId || l.createdBy === ownerId || l.creatorId === ownerId;
-        }).map((l: any) => {
-          // BƯỚC 4: Tìm mặt bằng gốc của bài đăng này
-          const currentSpaceId = l.spaceId || l.SpaceId;
-          const parentSpace = mySpaces.find(s => (s.id || s.Id) === currentSpaceId);
-
-          return {
-            ...l,
-            // Móc địa chỉ từ Mặt bằng sang Bài đăng nếu bài đăng không có sẵn
-            address: l.location || l.address || l.spaceAddress || parentSpace?.address || parentSpace?.location || parentSpace?.parentAddress || '',
-            area: l.area || parentSpace?.area || '',
-            spaceName: parentSpace?.isSpacePart ? `${parentSpace?.name} (thuộc ${parentSpace?.parentName})` : (parentSpace?.name || ''),
-            spaceCity: parentSpace?.city || parentSpace?.parentCity || '',
-            isSpacePart: parentSpace?.isSpacePart || false
-          };
-        });
-
-        setListings(myListings);
+        setListings(safeData);
       }
     } catch (err) {
       console.error("Lỗi lấy danh sách bài đăng:", err);
@@ -168,6 +358,11 @@ export const OwnerListings: React.FC = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchListings();
+  }, [filterStatus, filterType]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchListingOverview();
   }, []);
 
   // Tìm kiếm theo địa chỉ (đã được bốc từ Space sang)
@@ -177,9 +372,7 @@ export const OwnerListings: React.FC = () => {
   const matchSearch =
     safeLocation.toLowerCase().includes(search.toLowerCase()) ||
     safeName.toLowerCase().includes(search.toLowerCase());
-  const matchStatus = filterStatus === 'all' || l?.status === filterStatus;
-  const matchType = filterType === 'all' || l?.listingType === filterType;
-  return matchSearch && matchStatus && matchType;
+  return matchSearch;
   });
 
   // Hiệu ứng GSAP mượt mà
@@ -199,6 +392,7 @@ export const OwnerListings: React.FC = () => {
   // --- HÀM XỬ LÝ SỰ KIỆN ---
   const handleOpenNew = () => {
     setEditingListing(null);
+    setFormMode('create');
     setIsFormOpen(true);
   };
 
@@ -208,6 +402,17 @@ export const OwnerListings: React.FC = () => {
       slots: listing?.slots || []
     };
     setEditingListing(safeListingForEdit);
+    setFormMode('edit');
+    setIsFormOpen(true);
+  };
+
+  const handleOpenRenew = (listing: any) => {
+    const safeListingForRenew = {
+      ...listing,
+      slots: listing?.slots || []
+    };
+    setEditingListing(safeListingForRenew);
+    setFormMode('renew');
     setIsFormOpen(true);
   };
 
@@ -229,6 +434,7 @@ export const OwnerListings: React.FC = () => {
 
         if (res.ok) {
           setListings(prev => prev.filter(l => (l.id || l.Id) !== targetId));
+          fetchListingOverview();
         } else {
           alert('Không thể xóa bài đăng. Vui lòng kiểm tra lại link API Xóa của Backend!');
         }
@@ -242,7 +448,98 @@ export const OwnerListings: React.FC = () => {
   const handleFormSuccess = () => {
     setIsFormOpen(false);
     fetchListings();
+    fetchListingOverview();
   };
+
+  const availableListings = listings.filter(l => l.status === 'Available');
+  const occupiedListings = listings.filter(l => l.status === 'Occupied');
+  const expiredListings = listings.filter(l => l.status === 'Expired');
+  const totalCreatedSeries = buildDailyCreatedSeries(listings);
+  const activeInteractionSeries = buildActiveInteractionSeries(availableListings);
+  const occupiedSeries = buildOccupiedMonthlySeries(occupiedListings);
+  const expiredTrend = buildExpiredSeries(expiredListings);
+  const createdThisWeek = totalCreatedSeries.reduce((sum, value) => sum + value, 0);
+  const overview = unwrapOverview(listingOverview);
+  const overviewTotalPoints = normalizeOverviewPoints(
+    readOverviewValue(overview, ['totalChart', 'totalListingsChart', 'listingGrowth', 'newListingsByDay', 'createdSeries', 'createdListings']),
+    toChartPoints(totalCreatedSeries)
+  );
+  const overviewActivePoints = normalizeOverviewPoints(
+    readOverviewValue(overview, ['activeChart', 'availableChart', 'activeInteractions', 'availableInteractions', 'viewsByDay', 'availableViews']),
+    toChartPoints(activeInteractionSeries)
+  );
+  const overviewOccupiedPoints = normalizeOverviewPoints(
+    readOverviewValue(overview, ['occupiedChart', 'contractsByMonth', 'occupiedByMonth', 'signedContractsByMonth']),
+    toChartPoints(occupiedSeries)
+  );
+  const overviewExpiredPoints = normalizeOverviewPoints(
+    readOverviewValue(overview, ['expiredChart', 'expiredTrend', 'expiredByDay', 'expiringTrend', 'expiredAndExpiring']),
+    toChartPoints(expiredTrend.series, expiredTrend.futureFromIndex),
+    expiredTrend.futureFromIndex
+  );
+  const overviewCreatedThisWeek = readOverviewNumber(
+    overview,
+    ['createdThisWeek', 'newThisWeek', 'weeklyCreated', 'listingCreatedThisWeek'],
+    createdThisWeek
+  );
+  const overviewActiveInteractions = readOverviewNumber(
+    overview,
+    ['activeInteractionsTotal', 'availableInteractionsTotal', 'totalViewsLast7Days', 'viewsLast7Days', 'bookingRequestsLast7Days'],
+    overviewActivePoints.reduce((sum, point) => sum + point.value, 0)
+  );
+  const overviewOccupiedThisMonth = readOverviewNumber(
+    overview,
+    ['occupiedThisMonth', 'contractsThisMonth', 'signedContractsThisMonth'],
+    overviewOccupiedPoints[overviewOccupiedPoints.length - 1]?.value || 0
+  );
+  const overviewExpiringSoon = readOverviewNumber(
+    overview,
+    ['expiringSoon', 'willExpireSoon', 'futureExpiredCount', 'upcomingExpiredCount'],
+    overviewExpiredPoints.filter(point => point.isFuture).reduce((sum, point) => sum + point.value, 0)
+  );
+
+  const summaryItems: SummaryItem[] = [
+    {
+      label: t('listings.totalListings') || 'Tổng bài đăng',
+      value: readOverviewNumber(overview, ['totalListings', 'totalListing', 'totalCount', 'total'], listings.length),
+      color: 'var(--color-accent)',
+      hint: 'Bài đăng mới theo ngày',
+      trend: `↑ +${overviewCreatedThisWeek} bài tuần này`,
+      tone: 'total',
+      chartType: 'line',
+      points: overviewTotalPoints,
+    },
+    {
+      label: 'Đang hoạt động',
+      value: readOverviewNumber(overview, ['availableListings', 'availableCount', 'activeListings', 'activeCount'], availableListings.length),
+      color: 'var(--color-positive)',
+      hint: 'Lượt xem / tương tác 7 ngày',
+      trend: `${overviewActiveInteractions} tương tác`,
+      tone: 'active',
+      chartType: 'area',
+      points: overviewActivePoints,
+    },
+    {
+      label: 'Đã kí hợp đồng',
+      value: readOverviewNumber(overview, ['occupiedListings', 'occupiedCount', 'signedListings', 'contractedCount'], occupiedListings.length),
+      color: '#8b5cf6',
+      hint: 'Hợp đồng đã chốt theo tháng',
+      trend: `${overviewOccupiedThisMonth} hợp đồng tháng này`,
+      tone: 'occupied',
+      chartType: 'bar',
+      points: overviewOccupiedPoints,
+    },
+    {
+      label: 'Đã hết hạn',
+      value: readOverviewNumber(overview, ['expiredListings', 'expiredCount', 'expired'], expiredListings.length),
+      color: 'var(--color-negative)',
+      hint: 'Xu hướng hết hạn gần đây',
+      trend: `${overviewExpiringSoon} sắp hết hạn`,
+      tone: 'expired',
+      chartType: 'bar',
+      points: overviewExpiredPoints,
+    },
+  ];
 
   return (
     <div className="owner-listings animate-in" ref={containerRef}>
@@ -260,15 +557,19 @@ export const OwnerListings: React.FC = () => {
 
       {/* Summary Strip */}
       <div className="listings-summary">
-        {[
-          { label: t('listings.totalListings') || 'Tổng số bài', value: listings.length, color: 'var(--color-accent)' },
-          { label: 'Đang hoạt động', value: listings.filter(l => l.status === 'Accepted').length, color: 'var(--color-positive)' },
-          { label: 'Đã bị khóa', value: listings.filter(l => l.status === 'Ban').length, color: 'var(--color-negative)' },
-          { label: 'Chia sẻ mặt bằng', value: listings.filter(l => l.listingType === 'SharedSpace').length, color: 'var(--color-text-secondary)' },
-        ].map((s, i) => (
-          <div key={i} className="glass-card listings-summary-item">
-            <span className="listings-summary-value" style={{ color: s.color }}>{s.value}</span>
-            <span className="label-caps">{s.label}</span>
+        {summaryItems.map((s, i) => (
+          <div key={i} className={`glass-card listings-summary-item listings-summary-item--${s.tone}`}>
+            <div className="summary-metric-row">
+              <div>
+                <span className="listings-summary-value" style={{ color: s.color }}>{s.value}</span>
+                <span className="label-caps">{s.label}</span>
+              </div>
+              <SummaryMiniChart points={s.points} type={s.chartType} tone={s.tone} />
+            </div>
+            <div className="summary-meta-row">
+              <span>{s.hint}</span>
+              {s.trend && <strong>{s.trend}</strong>}
+            </div>
           </div>
         ))}
       </div>
@@ -286,7 +587,7 @@ export const OwnerListings: React.FC = () => {
           />
         </div>
         <div className="listings-filters">
-          {['all', 'Accepted', 'Ban'].map((f) => (
+          {['all', 'Available', 'Occupied', 'Expired'].map((f) => (
             <button
               key={f}
               className={`filter-tab ${filterStatus === f ? 'filter-tab--active' : ''}`}
@@ -296,15 +597,19 @@ export const OwnerListings: React.FC = () => {
             </button>
           ))}
         </div>
-        <div className="listings-filters">
-          {(['all', 'EntireSpace', 'SharedSpace'] as const).map((f) => (
-            <button
-              key={f}
-              className={`filter-tab ${filterType === f ? 'filter-tab--active' : ''}`}
-              onClick={() => setFilterType(f)}
-            >
-              {f === 'all' ? 'Tất cả loại' : f === 'EntireSpace' ? 'Dài hạn' : 'Chia sẻ'}
-            </button>
+        <div className="listings-filters listings-filters--types">
+          {([
+            { value: 'EntireSpace' as const, label: 'Dài hạn' },
+            { value: 'SharedSpace' as const, label: 'Chia sẻ' },
+          ]).map((type) => (
+            <label key={type.value} className={`listing-type-choice ${filterType === type.value ? 'listing-type-choice--active' : ''}`}>
+              <input
+                type="checkbox"
+                checked={filterType === type.value}
+                onChange={() => setFilterType(filterType === type.value ? 'all' : type.value)}
+              />
+              <span>{type.label}</span>
+            </label>
           ))}
         </div>
       </div>
@@ -336,9 +641,6 @@ export const OwnerListings: React.FC = () => {
                     {statusConfig[listing.status]?.icon || <Clock size={11} />}
                     {getStatusLabel(listing.status)}
                   </span>
-                  <button className="btn-icon" style={{ width: 28, height: 28 }}>
-                    <MoreHorizontal size={14} />
-                  </button>
                 </div>
               </div>
 
@@ -406,6 +708,11 @@ export const OwnerListings: React.FC = () => {
                 >
                   <Eye size={14} /> {language === 'en' ? 'View' : 'Xem'}
                 </button>
+                {listing.status === 'Expired' && (
+                  <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => handleOpenRenew(listing)}>
+                    <RefreshCw size={14} /> Gia hạn
+                  </button>
+                )}
                 <button className="btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => handleOpenEdit(listing)}>
                   <Edit3 size={14} /> {t('spaces.edit') || 'Sửa'}
                 </button>
@@ -423,6 +730,7 @@ export const OwnerListings: React.FC = () => {
           onClose={() => setIsFormOpen(false)}
           onSuccess={handleFormSuccess}
           initialData={editingListing}
+          mode={formMode}
         />
       )}
 
@@ -530,7 +838,7 @@ export const OwnerListings: React.FC = () => {
 
                 {isShareListing(viewingListing) && (
                   <div className="glass-card--inset" style={{ padding: '16px', borderRadius: 'var(--radius-lg)' }}>
-                    <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--color-text-primary)' }}>Khung giờ chia sẻ</h4>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--color-text-primary)' }}>Khung giờ Chia sẻ</h4>
                     {viewingListing.shareSpaceDetailAvailabilitiesTimes?.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {viewingListing.shareSpaceDetailAvailabilitiesTimes.map((slot: any, i: number) => (
@@ -555,7 +863,7 @@ export const OwnerListings: React.FC = () => {
                         ))}
                       </div>
                     ) : (
-                      <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '13px' }}>Chưa có khung giờ chia sẻ nào.</p>
+                      <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '13px' }}>Chưa có khung giờ Chia sẻ nào.</p>
                     )}
                   </div>
                 )}

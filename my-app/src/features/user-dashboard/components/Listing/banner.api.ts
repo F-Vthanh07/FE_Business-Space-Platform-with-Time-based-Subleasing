@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../../../../config/api';
+﻿import { API_BASE_URL } from '../../../../config/api';
 
 export interface CreateUserBannerPayload {
   title: string;
@@ -40,7 +40,7 @@ export const createUserBanner = async (
   });
 
   if (!res.ok) {
-    throw new Error(await parseErrorResponse(res, 'Loi tao banner cho bai dang'));
+    throw new Error(await parseErrorResponse(res, 'Lỗi tạo banner cho bài đăng'));
   }
 
   const text = await res.text();
@@ -68,6 +68,7 @@ export const uploadUserBannerPictures = async (bannerId: number, files: File[]) 
   });
 
   if (!res.ok) {
-    throw new Error(await parseErrorResponse(res, 'Loi upload anh banner'));
+    throw new Error(await parseErrorResponse(res, 'Lỗi upload ảnh banner'));
   }
 };
+

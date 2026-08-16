@@ -184,7 +184,7 @@ export const FloatingChat: React.FC = () => {
               
               // Nếu đang mở khung chat này và có tin nhắn của người kia tới, đánh dấu đã đọc ngay
               if (!isMyOwnMessage && activeChatIdRef.current === String(incomingRoomId)) {
-                globalConnection.invoke("MarkConversationAsRead", incomingRoomId, currentUserId).catch(console.error);
+                globalConnection?.invoke("MarkConversationAsRead", incomingRoomId, currentUserId).catch(console.error);
               }
             } else { 
               if (!isMyOwnMessage) setUnreadCount(prev => prev + 1); 

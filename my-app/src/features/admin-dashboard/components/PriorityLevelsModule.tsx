@@ -1,18 +1,54 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Check, X, Zap, Edit3, Trash2, Eye, Image, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PriorityLevel } from '../types';
-import type { CreateAdminBannerPayload, PriorityLevelPayload, PriorityLevelType } from '../api/admin.api';
+import type { AdminBannerItem, CreateAdminBannerPayload, PriorityLevelPayload, PriorityLevelType } from '../api/admin.api';
 import { RefreshButton } from './RefreshButton';
+import { getPictureUrl } from '../utils/listingPicture';
 
 const ITEMS_PER_PAGE = 10;
+const BANNER_CROP_WIDTH = 2100;
+const BANNER_CROP_HEIGHT = 700;
+
+const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
+
+const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+  const img = document.createElement('img');
+  img.onload = () => resolve(img);
+  img.onerror = reject;
+  img.src = src;
+});
+
+const cropBannerFile = async (file: File, previewUrl: string, position: { x: number; y: number }) => {
+  const img = await loadImage(previewUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = BANNER_CROP_WIDTH;
+  canvas.height = BANNER_CROP_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return file;
+
+  const scale = Math.max(BANNER_CROP_WIDTH / img.naturalWidth, BANNER_CROP_HEIGHT / img.naturalHeight);
+  const cropWidth = BANNER_CROP_WIDTH / scale;
+  const cropHeight = BANNER_CROP_HEIGHT / scale;
+  const sourceX = (img.naturalWidth - cropWidth) * (position.x / 100);
+  const sourceY = (img.naturalHeight - cropHeight) * (position.y / 100);
+
+  ctx.drawImage(img, sourceX, sourceY, cropWidth, cropHeight, 0, 0, BANNER_CROP_WIDTH, BANNER_CROP_HEIGHT);
+
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, file.type || 'image/jpeg', 0.92));
+  if (!blob) return file;
+  return new File([blob], file.name, { type: blob.type || file.type, lastModified: Date.now() });
+};
 
 interface PriorityLevelsModuleProps {
   priorityLevels: PriorityLevel[];
+  adminBanners: AdminBannerItem[];
   handleGetPriorityLevelById: (id: number) => Promise<PriorityLevel>;
   handleCreatePriorityLevel: (payload: PriorityLevelPayload) => Promise<void>;
   handleUpdatePriorityLevel: (id: number, payload: PriorityLevelPayload) => Promise<void>;
   handleDeletePriorityLevel: (id: number) => Promise<void>;
   handleCreateAdminBanner: (payload: CreateAdminBannerPayload, durationInDays: number, files: File[]) => Promise<void>;
+  handleUpdateAdminBanner: (id: number, payload: CreateAdminBannerPayload, durationInDays: number, files: File[]) => Promise<void>;
+  handleDeleteAdminBanner: (id: number) => Promise<void>;
   isLoading: boolean;
   language: 'en' | 'vi';
   onRefresh: () => void;
@@ -21,11 +57,14 @@ interface PriorityLevelsModuleProps {
 
 export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   priorityLevels,
+  adminBanners,
   handleGetPriorityLevelById,
   handleCreatePriorityLevel,
   handleUpdatePriorityLevel,
   handleDeletePriorityLevel,
   handleCreateAdminBanner,
+  handleUpdateAdminBanner,
+  handleDeleteAdminBanner,
   isLoading,
   language,
   onRefresh,
@@ -51,6 +90,10 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   const [bannerDurationInDays, setBannerDurationInDays] = useState('');
   const [bannerFiles, setBannerFiles] = useState<File[]>([]);
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState('');
+  const [bannerImagePosition, setBannerImagePosition] = useState({ x: 50, y: 50 });
+  const [isDraggingBannerImage, setIsDraggingBannerImage] = useState(false);
+  const bannerImageDragRef = useRef(false);
+  const [editingBanner, setEditingBanner] = useState<AdminBannerItem | null>(null);
 
   useEffect(() => {
     if (bannerFiles.length === 0) {
@@ -59,6 +102,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
     }
     const objectUrl = URL.createObjectURL(bannerFiles[0]);
     setBannerPreviewUrl(objectUrl);
+    setBannerImagePosition({ x: 50, y: 50 });
     return () => URL.revokeObjectURL(objectUrl);
   }, [bannerFiles]);
 
@@ -127,7 +171,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   const validatePriceInput = (): number | null => {
     const priceValue = Number(price);
     if (Number.isNaN(priceValue) || priceValue < 0) {
-      alert(language === 'en' ? 'Please enter a valid price' : 'Vui long nhap gia hop le');
+      alert(language === 'en' ? 'Please enter a valid price' : 'Vui lòng nhập giá hợp lệ');
       return null;
     }
     return priceValue;
@@ -136,7 +180,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   const validateNonNegativeInteger = (value: string, label: string): number | null => {
     const numberValue = Number(value);
     if (!Number.isInteger(numberValue) || numberValue < 0) {
-      alert(language === 'en' ? `Please enter a valid ${label}` : `Vui long nhap ${label} hop le`);
+      alert(language === 'en' ? `Please enter a valid ${label}` : `Vui lòng nhập ${label} hợp lệ`);
       return null;
     }
     return numberValue;
@@ -144,7 +188,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
 
   const buildPayload = (): PriorityLevelPayload | null => {
     if (!name.trim()) {
-      alert(language === 'en' ? 'Please enter a package name' : 'Vui long nhap ten goi');
+      alert(language === 'en' ? 'Please enter a package name' : 'Vui lòng nhập tên gói');
       return null;
     }
 
@@ -160,7 +204,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
     const durationForBannerValue = type === 'Banner'
       ? validateNonNegativeInteger(
           durationForBanner,
-          language === 'en' ? 'banner upload limit' : 'gioi han so banner'
+          language === 'en' ? 'banner upload limit' : 'giới hạn số banner'
         )
       : 0;
     if (durationForBannerValue === null) return null;
@@ -194,16 +238,78 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   };
 
   const resetAdminBannerForm = () => {
+    setEditingBanner(null);
     setBannerTitle('');
     setBannerDescription('');
     setBannerDurationInDays('');
     setBannerFiles([]);
+    setBannerImagePosition({ x: 50, y: 50 });
+  };
+
+  const handleBannerPreviewPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!bannerPreviewUrl) return;
+    bannerImageDragRef.current = true;
+    setIsDraggingBannerImage(true);
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handleBannerPreviewPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!bannerImageDragRef.current || !bannerPreviewUrl) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setBannerImagePosition({
+      x: clampPercent(((e.clientX - rect.left) / rect.width) * 100),
+      y: clampPercent(((e.clientY - rect.top) / rect.height) * 100),
+    });
+  };
+
+  const handleBannerPreviewPointerEnd = () => {
+    bannerImageDragRef.current = false;
+    setIsDraggingBannerImage(false);
+  };
+
+  const getBannerImageUrl = (banner: AdminBannerItem): string | null => {
+    const direct = getPictureUrl(banner);
+    if (direct) return direct;
+    const groups = [banner.bannerPictures, banner.pictures, banner.images, banner.bannerPicture, banner.picture];
+    for (const group of groups) {
+      if (Array.isArray(group)) {
+        const found = group.map(getPictureUrl).find(Boolean);
+        if (found) return found;
+      } else {
+        const found = getPictureUrl(group);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const getBannerDuration = (banner: AdminBannerItem) => {
+    const direct = Number(banner.durationInDays ?? banner.duration ?? banner.bannerDurationInDays);
+    if (Number.isFinite(direct) && direct >= 0) return String(direct);
+    if (banner.startDate && banner.endDate) {
+      const start = new Date(banner.startDate).getTime();
+      const end = new Date(banner.endDate).getTime();
+      if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+        return String(Math.ceil((end - start) / 86400000));
+      }
+    }
+    return '';
+  };
+
+  const handleEditBanner = (banner: AdminBannerItem) => {
+    setEditingBanner(banner);
+    setBannerTitle(banner.title || '');
+    setBannerDescription(banner.description || '');
+    setBannerDurationInDays(getBannerDuration(banner));
+    setBannerFiles([]);
+    setBannerImagePosition({ x: 50, y: 50 });
   };
 
   const onAdminBannerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bannerTitle.trim()) {
-      alert(language === 'en' ? 'Please enter a banner title' : 'Vui long nhap tieu de banner');
+      alert(language === 'en' ? 'Please enter a banner title' : 'Vui lòng nhập tiêu đề banner');
       return;
     }
     const durationValue = validateNonNegativeInteger(
@@ -212,15 +318,21 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
     );
     if (durationValue === null) return;
 
-    await handleCreateAdminBanner(
-      {
-        title: bannerTitle.trim(),
-        description: bannerDescription.trim(),
-        listingId: null,
-      },
-      durationValue,
-      bannerFiles
-    );
+    const uploadFiles = bannerFiles.length > 0 && bannerPreviewUrl
+      ? [await cropBannerFile(bannerFiles[0], bannerPreviewUrl, bannerImagePosition), ...bannerFiles.slice(1)]
+      : bannerFiles;
+
+    const payload = {
+      title: bannerTitle.trim(),
+      description: bannerDescription.trim(),
+      listingId: editingBanner?.listingId ?? null,
+    };
+
+    if (editingBanner) {
+      await handleUpdateAdminBanner(editingBanner.id, payload, durationValue, uploadFiles);
+    } else {
+      await handleCreateAdminBanner(payload, durationValue, uploadFiles);
+    }
     resetAdminBannerForm();
   };
 
@@ -284,9 +396,25 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
         <textarea className="slot-input-text" style={{ minHeight: '90px', padding: '10px 12px', resize: 'vertical' }} value={bannerDescription} onChange={e => setBannerDescription(e.target.value)} />
       </div>
 
-      <div className="admin-banner-preview">
+      <div
+        className={`admin-banner-preview ${bannerPreviewUrl ? 'admin-banner-preview--draggable' : ''} ${isDraggingBannerImage ? 'admin-banner-preview--dragging' : ''}`}
+        onPointerDown={handleBannerPreviewPointerDown}
+        onPointerMove={handleBannerPreviewPointerMove}
+        onPointerUp={handleBannerPreviewPointerEnd}
+        onPointerCancel={handleBannerPreviewPointerEnd}
+      >
         {bannerPreviewUrl ? (
-          <img src={bannerPreviewUrl} alt="" />
+          <>
+            <img
+              src={bannerPreviewUrl}
+              alt=""
+              draggable={false}
+              style={{ objectPosition: `${bannerImagePosition.x}% ${bannerImagePosition.y}%` }}
+            />
+            <div className="admin-banner-drag-hint">
+              {language === 'en' ? 'Drag image to reposition' : 'Kéo ảnh để canh khung'}
+            </div>
+          </>
         ) : (
           <div className="admin-banner-preview-empty">
             <Image size={24} />
@@ -300,13 +428,81 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+        {editingBanner && (
+          <button type="button" className="btn-ghost" disabled={isLoading} onClick={resetAdminBannerForm}>
+            <X size={16} />
+            {language === 'en' ? 'Cancel Edit' : 'Hủy sửa'}
+          </button>
+        )}
         <button type="submit" className="btn-primary" disabled={isLoading}>
-          <Plus size={16} />
-          {language === 'en' ? 'Create Banner' : 'Tạo banner'}
+          {editingBanner ? <Check size={16} /> : <Plus size={16} />}
+          {editingBanner
+            ? (language === 'en' ? 'Update Banner' : 'Cập nhật banner')
+            : (language === 'en' ? 'Create Banner' : 'Tạo banner')}
         </button>
       </div>
     </form>
+  );
+
+  const renderAdminBannerManager = () => (
+    <div className="glass-card" style={{ padding: 20, display: 'grid', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 18 }}>{language === 'en' ? 'Created Platform Banners' : 'Banner admin đã tạo'}</h2>
+          <p style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)' }}>
+            {language === 'en' ? 'Edit, delete, or add more platform banners.' : 'Sửa, xóa hoặc thêm các banner quảng cáo nền tảng.'}
+          </p>
+        </div>
+        <RefreshButton onRefresh={onRefresh} isRefreshing={isRefreshing} language={language} />
+      </div>
+
+      {adminBanners.length === 0 ? (
+        <div className="empty-state" style={{ padding: 24 }}>
+          <Image size={28} />
+          <p>{language === 'en' ? 'No platform banners yet.' : 'Chưa có banner nền tảng nào.'}</p>
+        </div>
+      ) : (
+        <div className="admin-banner-grid">
+          {adminBanners.map((banner) => {
+            const imageUrl = getBannerImageUrl(banner);
+            return (
+              <article className="admin-banner-card" key={banner.id}>
+                <div className="admin-banner-card-media">
+                  {imageUrl ? <img src={imageUrl} alt="" /> : <Image size={24} />}
+                </div>
+                <div className="admin-banner-card-body">
+                  <strong>{banner.title || (language === 'en' ? 'Untitled banner' : 'Banner chưa có tiêu đề')}</strong>
+                  <p>{banner.description || (language === 'en' ? 'No description' : 'Chưa có mô tả')}</p>
+                  <span>
+                    ID #{banner.id}
+                    {banner.endDate ? ` · ${formatDate(banner.endDate)}` : ''}
+                  </span>
+                </div>
+                <div className="admin-banner-card-actions">
+                  <button type="button" className="btn-ghost" onClick={() => handleEditBanner(banner)} disabled={isLoading}>
+                    <Edit3 size={14} />
+                    {language === 'en' ? 'Edit' : 'Sửa'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={() => {
+                      const ok = window.confirm(language === 'en' ? 'Delete this banner?' : 'Xóa banner này?');
+                      if (ok) handleDeleteAdminBanner(banner.id);
+                    }}
+                    disabled={isLoading}
+                  >
+                    <Trash2 size={14} />
+                    {language === 'en' ? 'Delete' : 'Xóa'}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 
   const renderForm = (mode: 'add' | 'edit') => (
@@ -327,7 +523,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <label style={{ fontSize: '13px', fontWeight: 600 }}>{language === 'en' ? 'Description' : 'Mo ta'}</label>
+        <label style={{ fontSize: '13px', fontWeight: 600 }}>{language === 'en' ? 'Description' : 'Mô tả'}</label>
         <textarea
           className="slot-input-text"
           style={{ minHeight: '80px', width: '100%', boxSizing: 'border-box', padding: '10px 12px', resize: 'vertical' }}
@@ -392,7 +588,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
         {type === 'Banner' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '13px', fontWeight: 600 }}>
-              {language === 'en' ? 'Banner Upload Limit' : 'Gioi han so banner'} <span style={{ color: 'red' }}>*</span>
+              {language === 'en' ? 'Banner Upload Limit' : 'Giới hạn số banner'} <span style={{ color: 'red' }}>*</span>
             </label>
             <input
               type="number"
@@ -417,7 +613,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
           onChange={e => setIsActive(e.target.checked)}
         />
         <label htmlFor={mode === 'add' ? 'isActiveAdd' : 'isActiveEdit'} style={{ fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-          {language === 'en' ? 'Active' : 'Dang hoat dong'}
+          {language === 'en' ? 'Active' : 'Đang hoạt động'}
         </label>
       </div>
 
@@ -536,7 +732,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
                     <div>{p.durationInDays ?? 0} {language === 'en' ? 'days' : 'ngay'}</div>
                     {(getPriorityType(p) === 'Banner' || (p.durationForBanner ?? 0) > 0) && (
                       <div style={{ marginTop: '4px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-                        {language === 'en' ? 'Banner limit' : 'Gioi han banner'}: {p.durationForBanner ?? 0}
+                        {language === 'en' ? 'Banner limit' : 'Giới hạn banner'}: {p.durationForBanner ?? 0}
                       </div>
                     )}
                   </td>
@@ -621,8 +817,9 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
       )}
 
       {activeTypeTab === 'Banner' && (
-        <div style={{ marginTop: '24px' }}>
+        <div style={{ marginTop: '24px', display: 'grid', gap: 20 }}>
           {renderAdminBannerForm()}
+          {renderAdminBannerManager()}
         </div>
       )}
 
@@ -683,9 +880,9 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
               </div>
               <div>
                 <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '4px' }}>
-                  {language === 'en' ? 'Description' : 'Mo ta'}
+                  {language === 'en' ? 'Description' : 'Mô tả'}
                 </div>
-                <span>{detailLevel.description || (language === 'en' ? 'N/A' : 'Khong co')}</span>
+                <span>{detailLevel.description || (language === 'en' ? 'N/A' : 'Không có')}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
@@ -720,7 +917,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
               {getPriorityType(detailLevel) === 'Banner' && (
                 <div>
                   <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '4px' }}>
-                    {language === 'en' ? 'Banner Upload Limit' : 'Gioi han so banner'}
+                    {language === 'en' ? 'Banner Upload Limit' : 'Giới hạn số banner'}
                   </div>
                   <strong>{detailLevel.durationForBanner ?? 0}</strong>
                 </div>
@@ -746,3 +943,5 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
     </div>
   );
 };
+
+

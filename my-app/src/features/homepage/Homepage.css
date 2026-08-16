@@ -21,7 +21,7 @@ html, body, #root {
 .home-banner-carousel {
   position: relative;
   width: 100%;
-  height: clamp(260px, 34vw, 430px);
+  height: clamp(320px, 40vw, 520px);
   overflow: hidden;
   background: #111827;
 }
@@ -142,7 +142,7 @@ html, body, #root {
 
 @media (max-width: 768px) {
   .home-banner-carousel {
-    height: 280px;
+    height: 340px;
   }
 
   .home-banner-content {

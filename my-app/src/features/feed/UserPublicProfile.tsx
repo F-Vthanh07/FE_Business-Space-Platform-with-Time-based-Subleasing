@@ -3,11 +3,18 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Home, ChevronRight, Building2, Clock3, Eye, Calendar, ShieldCheck, ChevronLeft } from 'lucide-react';
 import { Header } from '../../components/Header';
+import { API_BASE_URL } from '../../config/api';
 
 type AnyItem = any;
 type RentalCategory = 'all' | 'longterm' | 'hourly';
 
 const PAGE_SIZE = 6;
+
+const mapCategoryToListingType = (category: RentalCategory) => {
+  if (category === 'longterm') return 'EntireSpace';
+  if (category === 'hourly') return 'SharedSpace';
+  return null;
+};
 
 const formatTimeAgo = (dateStr?: string) => {
   if (!dateStr) return 'Vừa cập nhật';
@@ -27,7 +34,8 @@ export const UserPublicProfile: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
 
-  const [allListings, setAllListings] = useState<AnyItem[]>([]);
+  const [listings, setListings] = useState<AnyItem[]>([]);
+  const [countListings, setCountListings] = useState<AnyItem[]>([]);
   const [bio, setBio] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,35 +47,49 @@ export const UserPublicProfile: React.FC = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [spaceRes, listingRes, profileRes] = await Promise.all([
-          fetch('https://flexi-space-capstone-project.onrender.com/api/Space/GetAll', { headers: { accept: '*/*' } }),
-          fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', { headers: { accept: '*/*' } }),
+        const listingType = mapCategoryToListingType(categoryFilter);
+        const listingParams = new URLSearchParams();
+        if (listingType) listingParams.set('listingType', listingType);
+        const listingUrl = userId
+          ? `${API_BASE_URL}/api/Listing/GetAllByUserId/${encodeURIComponent(userId)}${listingParams.toString() ? `?${listingParams.toString()}` : ''}`
+          : null;
+
+        const allUserListingsUrl = userId
+          ? `${API_BASE_URL}/api/Listing/GetAllByUserId/${encodeURIComponent(userId)}`
+          : null;
+
+        const [listingRes, countListingRes, profileRes] = await Promise.all([
+          listingUrl
+            ? fetch(listingUrl, { headers: { accept: '*/*' } })
+            : Promise.resolve(null),
+          allUserListingsUrl
+            ? fetch(allUserListingsUrl, { headers: { accept: '*/*' } })
+            : Promise.resolve(null),
           userId
-            ? fetch(`https://flexi-space-capstone-project.onrender.com/api/Profile/user/${userId}`, { headers: { accept: '*/*' } })
+            ? fetch(`${API_BASE_URL}/api/Profile/user/${userId}`, { headers: { accept: '*/*' } })
             : Promise.resolve(null),
         ]);
 
-        let spaces: AnyItem[] = [];
-        if (spaceRes.ok) {
-          const spaceData = await spaceRes.json();
-          spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
-        }
-
         let listings: AnyItem[] = [];
-        if (listingRes.ok) {
+        if (listingRes?.ok) {
           const data = await listingRes.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
-          listings = safeData.map((item: AnyItem) => {
-            const parentSpace = spaces.find((s: AnyItem) => (s.id || s.Id) === (item.spaceId || item.SpaceId));
-            return {
-              ...item,
-              area: item.area || parentSpace?.area || null,
-              address: item.spaceAddress || item.location || item.address || parentSpace?.address || parentSpace?.location || '',
-            };
-          });
+          listings = safeData.map((item: AnyItem) => ({
+            ...item,
+            area: item.area || item.Area || null,
+            address: item.spaceAddress || item.SpaceAddress || item.location || item.address || '',
+          }));
         }
 
-        setAllListings(listings);
+        setListings(listings);
+
+        if (countListingRes?.ok) {
+          const countData = await countListingRes.json();
+          const safeCountData = Array.isArray(countData) ? countData : (countData?.data || countData?.items || []);
+          setCountListings(safeCountData);
+        } else {
+          setCountListings(listings);
+        }
 
         if (profileRes?.ok) {
           const profileData = await profileRes.json();
@@ -82,18 +104,15 @@ export const UserPublicProfile: React.FC = () => {
       }
     };
     fetchData();
-  }, [userId]);
+  }, [categoryFilter, userId]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [categoryFilter, userId]);
 
   const userListings = useMemo(() => {
-    if (!userId) return [];
-    return allListings
-      .filter((item) => (item.creatorId || item.CreatorId)?.toString() === userId)
-      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-  }, [allListings, userId]);
+    return [...listings].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }, [listings]);
 
   const profile = useMemo(() => {
     const first = userListings[0];
@@ -109,18 +128,14 @@ export const UserPublicProfile: React.FC = () => {
   }, [userListings]);
 
   const counts = useMemo(() => {
-    const longterm = userListings.filter((l) => (l.listingType || l.ListingType) !== 'SharedSpace').length;
-    const hourly = userListings.filter((l) => (l.listingType || l.ListingType) === 'SharedSpace').length;
-    return { total: userListings.length, longterm, hourly };
-  }, [userListings]);
+    const longterm = countListings.filter((l) => (l.listingType || l.ListingType) !== 'SharedSpace').length;
+    const hourly = countListings.filter((l) => (l.listingType || l.ListingType) === 'SharedSpace').length;
+    return { total: countListings.length, longterm, hourly };
+  }, [countListings]);
 
   const filteredListings = useMemo(() => {
-    return userListings.filter((item) => {
-      if (categoryFilter === 'all') return true;
-      const isHourly = (item.listingType || item.ListingType) === 'SharedSpace';
-      return categoryFilter === 'hourly' ? isHourly : !isHourly;
-    });
-  }, [userListings, categoryFilter]);
+    return userListings;
+  }, [userListings]);
 
   const totalPages = Math.max(1, Math.ceil(filteredListings.length / PAGE_SIZE));
   const pagedListings = useMemo(() => {

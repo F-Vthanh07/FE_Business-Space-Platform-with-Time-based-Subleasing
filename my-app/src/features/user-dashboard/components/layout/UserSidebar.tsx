@@ -103,7 +103,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ activePage, onNavigate
       const unseen = myRequests.filter((r: any) => !seenIds.has(r.id ?? r.Id));
       setPendingBookingCount(unseen.length);
     } catch (err) {
-      console.error('Lá»—i kiá»ƒm tra booking request:', err);
+      console.error('Lỗi kiểm tra booking request:', err);
     }
   };
 

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+﻿/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -27,6 +27,9 @@ import {
   updatePriorityLevel,
   deletePriorityLevel,
   createAdminBanner,
+  fetchAdminBanners,
+  updateAdminBanner,
+  deleteAdminBanner,
   uploadBannerPictures,
   fetchAllSpaces,
   fetchListingReports,
@@ -35,7 +38,7 @@ import {
   restoreListing,
   fetchDashboardStats
 } from './api/admin.api';
-import type { CreateAdminBannerPayload, PriorityLevelPayload } from './api/admin.api';
+import type { AdminBannerItem, CreateAdminBannerPayload, PriorityLevelPayload } from './api/admin.api';
 
 // Components imports
 import { OverviewModule } from './components/OverviewModule';
@@ -66,6 +69,7 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
   const [categories, setCategories] = useState<BusinessCategory[]>([]);
   const [wallets, setWallets] = useState<AdminWalletAccount[]>([]);
   const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
+  const [adminBanners, setAdminBanners] = useState<AdminBannerItem[]>([]);
   const [spaces, setSpaces] = useState<AdminSpaceItem[]>([]);
   const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats | null>(null);
   const [listingReports, setListingReports] = useState<ListingReportItem[]>([]);
@@ -143,6 +147,13 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
       setPriorityLevels(priorityLevelsData);
     } catch (e) {
       console.warn("Không kết nối được API thật cho Priority Levels.", e);
+    }
+
+    try {
+      const bannersData = await fetchAdminBanners(token);
+      setAdminBanners(bannersData);
+    } catch (e) {
+      console.warn("Không kết nối được API thật cho Admin Banners.", e);
     }
 
     try {
@@ -377,11 +388,11 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     setIsLoading(true);
     try {
       await deletePriorityLevel(id, token || '');
-      showNotification(language === 'en' ? "Priority package deleted successfully!" : "Da xoa goi uu tien thanh cong!");
+      showNotification(language === 'en' ? "Priority package deleted successfully!" : "Đã xóa gói ưu tiên thành công!");
       fetchRealAdminData();
     } catch (err) {
       console.error(err);
-      showNotification(language === 'en' ? "Failed to delete priority package. Please try again." : "Xoa goi uu tien that bai. Vui long thu lai.", 'error');
+      showNotification(language === 'en' ? "Failed to delete priority package. Please try again." : "Xóa gói ưu tiên thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -422,6 +433,43 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     } catch (err) {
       console.error(err);
       showNotification(language === 'en' ? "Failed to create platform banner. Please try again." : "Tạo banner quảng cáo thất bại. Vui lòng thử lại.", 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateAdminBanner = async (
+    id: number,
+    payload: CreateAdminBannerPayload,
+    durationInDays: number,
+    files: File[]
+  ) => {
+    setIsLoading(true);
+    try {
+      await updateAdminBanner(id, payload, durationInDays, token || '');
+      if (files.length > 0) {
+        await uploadBannerPictures(id, files, token || '');
+      }
+      showNotification(language === 'en' ? "Platform banner updated successfully!" : "Đã cập nhật banner quảng cáo thành công!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      showNotification(language === 'en' ? "Failed to update platform banner. Please try again." : "Cập nhật banner quảng cáo thất bại. Vui lòng thử lại.", 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteAdminBanner = async (id: number) => {
+    setIsLoading(true);
+    try {
+      await deleteAdminBanner(id, token || '');
+      setAdminBanners(prev => prev.filter(item => item.id !== id));
+      showNotification(language === 'en' ? "Platform banner deleted successfully!" : "Đã xóa banner quảng cáo thành công!");
+      fetchRealAdminData();
+    } catch (err) {
+      console.error(err);
+      showNotification(language === 'en' ? "Failed to delete platform banner. Please try again." : "Xóa banner quảng cáo thất bại. Vui lòng thử lại.", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -512,11 +560,14 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
         {activeTab === 'priorityLevels' && (
           <PriorityLevelsModule
             priorityLevels={priorityLevels}
+            adminBanners={adminBanners}
             handleGetPriorityLevelById={handleGetPriorityLevelById}
             handleCreatePriorityLevel={handleCreatePriorityLevel}
             handleUpdatePriorityLevel={handleUpdatePriorityLevel}
             handleDeletePriorityLevel={handleDeletePriorityLevel}
             handleCreateAdminBanner={handleCreateAdminBanner}
+            handleUpdateAdminBanner={handleUpdateAdminBanner}
+            handleDeleteAdminBanner={handleDeleteAdminBanner}
             isLoading={isLoading}
             language={language}
             onRefresh={handleManualRefresh}
@@ -542,3 +593,4 @@ export const AdminDashboardPage: React.FC<{ onLogout: () => void }> = ({ onLogou
     </div>
   );
 };
+

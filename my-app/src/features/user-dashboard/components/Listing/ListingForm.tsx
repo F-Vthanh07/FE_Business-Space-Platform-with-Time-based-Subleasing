@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+﻿/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, Users, ShieldCheck, Clock, Megaphone } from 'lucide-react';
 import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
@@ -14,14 +14,18 @@ import { fetchBannerPriorityLevels, fetchPriorityLevels, type PriorityLevel } fr
 import { fetchWalletAccount } from '../../../wallet/api/wallet.api';
 import type { ShareListingPayload } from '../../types';
 import { formatDateISOOnly } from '../../../../utils/dateUtils';
+import { API_BASE_URL } from '../../../../config/api';
 
 interface ListingFormProps {
   onClose: () => void;
   onSuccess: () => void;
   initialData?: any;
+  mode?: 'create' | 'edit' | 'renew';
 }
 
 type ListingMode = 'longterm' | 'share';
+const BANNER_CROP_WIDTH = 2100;
+const BANNER_CROP_HEIGHT = 700;
 
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const DAYS_LABEL_VI: Record<string, string> = {
@@ -64,13 +68,45 @@ const getValidDaysOfWeek = (validFrom?: string, validTo?: string) => {
 
 const getSafeDateOnly = formatDateISOOnly;
 
-export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, initialData }) => {
+const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
+
+const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+  const img = document.createElement('img');
+  img.onload = () => resolve(img);
+  img.onerror = reject;
+  img.src = src;
+});
+
+const cropBannerFile = async (file: File, previewUrl: string, position: { x: number; y: number }) => {
+  const img = await loadImage(previewUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = BANNER_CROP_WIDTH;
+  canvas.height = BANNER_CROP_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return file;
+
+  const scale = Math.max(BANNER_CROP_WIDTH / img.naturalWidth, BANNER_CROP_HEIGHT / img.naturalHeight);
+  const cropWidth = BANNER_CROP_WIDTH / scale;
+  const cropHeight = BANNER_CROP_HEIGHT / scale;
+  const sourceX = (img.naturalWidth - cropWidth) * (position.x / 100);
+  const sourceY = (img.naturalHeight - cropHeight) * (position.y / 100);
+
+  ctx.drawImage(img, sourceX, sourceY, cropWidth, cropHeight, 0, 0, BANNER_CROP_WIDTH, BANNER_CROP_HEIGHT);
+
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, file.type || 'image/jpeg', 0.92));
+  if (!blob) return file;
+  return new File([blob], file.name, { type: blob.type || file.type, lastModified: Date.now() });
+};
+
+export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, initialData, mode: formMode = initialData ? 'edit' : 'create' }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [mySpaces, setMySpaces] = useState<any[]>([]);
   const [error, setError] = useState('');
   const { isVerified } = useIdentityVerification();
 
-  const isEditingListing = !!initialData;
+  const isRenewMode = formMode === 'renew';
+  const isEditingListing = !!initialData && !isRenewMode;
+  const lockRenewFields = isRenewMode;
   const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
   const [bannerPriorityLevels, setBannerPriorityLevels] = useState<PriorityLevel[]>([]);
   const [priorityLevelId, setPriorityLevelId] = useState<number | ''>('');
@@ -81,6 +117,9 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const [bannerDescription, setBannerDescription] = useState(initialData?.description || '');
   const [bannerFiles, setBannerFiles] = useState<File[]>([]);
   const [bannerPreviewUrls, setBannerPreviewUrls] = useState<string[]>([]);
+  const [bannerImagePosition, setBannerImagePosition] = useState({ x: 50, y: 50 });
+  const [isDraggingBannerImage, setIsDraggingBannerImage] = useState(false);
+  const bannerImageDragRef = useRef(false);
 
   // Đã sửa: Dựa vào listingType thật từ API để quyết định form
   const initialMode: ListingMode = initialData?.listingType === 'SharedSpace' ? 'share' : 'longterm';
@@ -268,6 +307,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setBannerFiles(files);
+    setBannerImagePosition({ x: 50, y: 50 });
     setBannerPreviewUrls(prev => {
       prev.forEach(url => URL.revokeObjectURL(url));
       return files.map(file => URL.createObjectURL(file));
@@ -283,6 +323,28 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       next.splice(indexToRemove, 1);
       return next;
     });
+  };
+
+  const handleBannerPreviewPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!bannerPreviewUrls[0]) return;
+    bannerImageDragRef.current = true;
+    setIsDraggingBannerImage(true);
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handleBannerPreviewPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!bannerImageDragRef.current || !bannerPreviewUrls[0]) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setBannerImagePosition({
+      x: clampPercent(((e.clientX - rect.left) / rect.width) * 100),
+      y: clampPercent(((e.clientY - rect.top) / rect.height) * 100),
+    });
+  };
+
+  const handleBannerPreviewPointerEnd = () => {
+    bannerImageDragRef.current = false;
+    setIsDraggingBannerImage(false);
   };
 
   const handleRemoveExistingImage = async (index: number) => {
@@ -354,7 +416,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
     const numericListingId = Number(listingId);
     if (!numericListingId) {
-      throw new Error('Khong doc duoc id bai dang de gan vao banner');
+      throw new Error('Không đọc được id bài đăng để gắn vào banner');
     }
 
     const createdBanner = await createUserBanner(
@@ -376,7 +438,10 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     );
 
     if (bannerFiles.length > 0 && bannerId) {
-      await uploadUserBannerPictures(bannerId, bannerFiles);
+      const uploadFiles = bannerPreviewUrls[0]
+        ? [await cropBannerFile(bannerFiles[0], bannerPreviewUrls[0], bannerImagePosition), ...bannerFiles.slice(1)]
+        : bannerFiles;
+      await uploadUserBannerPictures(bannerId, uploadFiles);
     }
   };
 
@@ -410,17 +475,17 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     }
 
     if (!isEditingListing && createBannerWithListing && bannerPriorityLevelId === '') {
-      setError('Vui long chon goi banner!');
+      setError('Vui lòng chọn gói banner!');
       return;
     }
 
     if (!isEditingListing && createBannerWithListing && !bannerTitle.trim()) {
-      setError('Vui long nhap tieu de banner!');
+      setError('Vui lòng nhập tiêu đề banner!');
       return;
     }
 
     if (!isEditingListing && createBannerWithListing && !bannerDescription.trim()) {
-      setError('Vui long nhap mo ta banner!');
+      setError('Vui lòng nhập mô tả banner!');
       return;
     }
 
@@ -464,17 +529,17 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       return;
     }
 
-    if (mode === 'share' && (!maxSubRenter || maxSubRenter < 1)) {
+    if (mode === 'share' && !isRenewMode && (!maxSubRenter || maxSubRenter < 1)) {
       setError('Số người thuê chung tối đa phải từ 1 trở lên!');
       return;
     }
 
-    if (mode === 'share' && availabilities.some(slot => slot.daysOfWeek.length === 0 && !slot.specificdate)) {
+    if (mode === 'share' && !isRenewMode && availabilities.some(slot => slot.daysOfWeek.length === 0 && !slot.specificdate)) {
       setError('Vui lòng chọn ít nhất 1 ngày hoặc ngày cụ thể cho mỗi khung giờ chia sẻ!');
       return;
     }
 
-    if (mode === 'share') {
+    if (mode === 'share' && !isRenewMode) {
       const allowedEnd = new Date(allowedEndTime);
       const allowedStart = new Date(allowedStartTime);
       allowedEnd.setHours(23, 59, 59, 999);
@@ -517,7 +582,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       }
     }
 
-    if (mode === 'share' && !isLegalCommitted) {
+    if (mode === 'share' && !isRenewMode && !isLegalCommitted) {
       setError('Vui lòng tích "Cam kết pháp lý" để xác nhận thỏa thuận trước khi đăng chia sẻ!');
       return;
     }
@@ -527,6 +592,72 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     const selectedPriorityLevel = priorityLevels.find(p => p.id === priorityLevelId);
     const amount = selectedPriorityLevel?.price ?? 0;
     const durationInDays = selectedPriorityLevel?.durationInDays ?? 0;
+
+    if (isRenewMode) {
+      const token = localStorage.getItem('portal_token');
+      const targetId = initialData?.id || initialData?.Id;
+      if (!targetId || !token) {
+        setError('Không tìm thấy bài đăng cần gia hạn hoặc phiên đăng nhập đã hết hạn.');
+        setIsLoading(false);
+        return;
+      }
+
+      const renewPayload = {
+        ...initialData,
+        id: targetId,
+        spaceId: Number(spaceId),
+        allowedStartTime,
+        allowedEndTime,
+        name,
+        description,
+        price: Number(price),
+        priceUnit,
+        listingPictures: initialData?.listingPictures || [],
+        ...(mode === 'share' ? {
+          shareSpaceDetailMaxSubRenter: Number(maxSubRenter),
+          shareSpaceDetailIsOwner: false,
+          shareSpaceDetailIsLegalCommitted: isLegalCommitted,
+          shareSpaceDetailShareSpaceAmenities: [],
+          shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => ({
+            ...slot,
+            specificdate: (slot.specificdate && !String(slot.specificdate).startsWith('0001')) ? slot.specificdate : undefined
+          })),
+          shareSpaceDetailShareSpaceCategories: []
+        } : {})
+      };
+
+      try {
+        const params = new URLSearchParams({
+          amount: String(amount),
+          durationInDays: String(durationInDays)
+        });
+        const res = await fetch(`${API_BASE_URL}/api/Listing/Renew/${targetId}?${params.toString()}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'accept': '*/*'
+          },
+          body: JSON.stringify(renewPayload)
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          setError(errText || 'Gia han bai dang that bai.');
+          setIsLoading(false);
+          return;
+        }
+
+        await maybeCreateBannerForListing(targetId);
+        onSuccess();
+      } catch (err) {
+        console.error(err);
+        setError('Lỗi kết nối máy chủ khi gia hạn bài đăng.');
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
 
     // ===== NHÁNH 1: CHIA SẺ MẶT BẰNG =====
     if (mode === 'share') {
@@ -842,7 +973,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                     className="form-input form-input--flat"
                     value={price === 0 ? '' : price}
                     onChange={e => setPrice(e.target.value === '' ? 0 : Number(e.target.value))}
-                    disabled={isLoading}
+                    disabled={isLoading || lockRenewFields}
                     required
                     style={{ flex: 2 }}
                   />
@@ -872,7 +1003,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                   <Select
                     value={priorityLevelId}
                     onChange={(v) => setPriorityLevelId(Number(v))}
-                    disabled={isLoading}
+                    disabled={isLoading || lockRenewFields}
                     placeholder="-- Chọn gói bài đăng --"
                     options={priorityLevels.map(p => ({
                       value: p.id,
@@ -974,14 +1105,37 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
                     <div>
                       <label className="form-label"><Megaphone size={14} /> Xem trước banner</label>
-                      <div style={{ position: 'relative', overflow: 'hidden', minHeight: 220, borderRadius: 8, background: 'linear-gradient(135deg, #111827 0%, #0f766e 55%, #d9a05b 100%)', color: '#fff' }}>
+                      <div
+                        className={`user-banner-preview ${bannerPreviewUrls[0] ? 'user-banner-preview--draggable' : ''} ${isDraggingBannerImage ? 'user-banner-preview--dragging' : ''}`}
+                        onPointerDown={handleBannerPreviewPointerDown}
+                        onPointerMove={handleBannerPreviewPointerMove}
+                        onPointerUp={handleBannerPreviewPointerEnd}
+                        onPointerCancel={handleBannerPreviewPointerEnd}
+                        style={{ position: 'relative', overflow: 'hidden', minHeight: 220, borderRadius: 8, background: 'linear-gradient(135deg, #111827 0%, #0f766e 55%, #d9a05b 100%)', color: '#fff' }}
+                      >
                         {bannerPreviewUrls[0] && (
-                          <img src={bannerPreviewUrls[0]} alt="banner preview" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.48 }} />
+                          <>
+                            <img
+                              src={bannerPreviewUrls[0]}
+                              alt="banner preview"
+                              draggable={false}
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                objectPosition: `${bannerImagePosition.x}% ${bannerImagePosition.y}%`,
+                                opacity: 0.48,
+                              }}
+                            />
+                            <div className="user-banner-drag-hint">Kéo ảnh để canh khung</div>
+                          </>
                         )}
                         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(0,0,0,.62), rgba(0,0,0,.18))' }} />
-                        <div style={{ position: 'relative', padding: 22, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', minHeight: 220 }}>
-                          <strong style={{ fontSize: 28, lineHeight: 1.15 }}>{bannerTitle || name || 'Banner của bạn'}</strong>
-                          <p style={{ margin: '8px 0 0', fontSize: 14, lineHeight: 1.45, maxWidth: 620 }}>{bannerDescription || description || 'Nội dung banner sẽ hiển thị tại đây trước khi tạo.'}</p>
+                        <div className="user-banner-preview-content">
+                          <strong>{bannerTitle || name || 'Banner của bạn'}</strong>
+                          <p>{bannerDescription || description || 'Nội dung banner sẽ hiển thị tại đây trước khi tạo.'}</p>
                         </div>
                       </div>
                     </div>
@@ -998,7 +1152,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                   <input
                     type="number" min="1" className="form-input"
                     value={maxSubRenter} onChange={e => setMaxSubRenter(Number(e.target.value))}
-                    disabled={isLoading}
+                    disabled={isLoading || lockRenewFields}
                   />
                 </div>
                 <div className="form-group" style={{ justifyContent: 'flex-end' }}>
@@ -1007,7 +1161,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                       type="checkbox"
                       checked={isLegalCommitted}
                       onChange={e => setIsLegalCommitted(e.target.checked)}
-                      disabled={isLoading}
+                      disabled={isLoading || lockRenewFields}
                     />
                     <ShieldCheck size={14} style={{ flexShrink: 0 }} />
                     <span style={{ textAlign: 'left', lineHeight: '1.4' }}>
@@ -1019,6 +1173,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
             )}
           </div>
 
+          {!lockRenewFields && (
           <div className="form-section">
               <h3 className="form-section-title">Hình ảnh bài đăng (Tùy chọn)</h3>
               <div style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '16px' }}>
@@ -1077,6 +1232,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 </div>
               </div>
             </div>
+          )}
 
           <div className="form-section">
             <h3 className="form-section-title">Thời gian hiệu lực</h3>
@@ -1086,7 +1242,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 <DatePicker
                   value={allowedStartTime}
                   onChange={setAllowedStartTime}
-                  disabled={isLoading || !!(timePolicy && timePolicy.allowedStartTime)}
+                  disabled={isLoading || (!isRenewMode && !!(timePolicy && timePolicy.allowedStartTime))}
                 />
               </div>
               <div className="form-group">
@@ -1094,7 +1250,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 <DatePicker
                   value={allowedEndTime}
                   onChange={setAllowedEndTime}
-                  disabled={isLoading || !!(timePolicy && timePolicy.allowedEndTime)}
+                  disabled={isLoading || (!isRenewMode && !!(timePolicy && timePolicy.allowedEndTime))}
                   min={allowedStartTime}
                 />
               </div>
@@ -1124,7 +1280,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                         type="button" key={day}
                         className={`filter-tab ${slot.daysOfWeek.includes(day) ? 'filter-tab--active' : ''}`}
                         onClick={() => toggleDayInSlot(idx, day)}
-                        disabled={isLoading || !isDayValid}
+                        disabled={isLoading || lockRenewFields || !isDayValid}
                         style={{ opacity: isDayValid ? 1 : 0.5 }}
                       >
                         {DAYS_LABEL_VI[day]}
@@ -1138,19 +1294,19 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                       min={allowedStartTime}
                       max={allowedEndTime}
                       onChange={(v: any) => updateSlotField(idx, 'specificdate', v)}
-                      disabled={isLoading}
+                      disabled={isLoading || lockRenewFields}
                     />
                   </div>
                   <div className="form-grid-2">
                     <div className="form-group">
                       <label className="form-label">Giờ bắt đầu</label>
                       <input type="time" className="form-input" value={slot.startTime}
-                        onChange={e => updateSlotField(idx, 'startTime', e.target.value)} disabled={isLoading} />
+                        onChange={e => updateSlotField(idx, 'startTime', e.target.value)} disabled={isLoading || lockRenewFields} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Giờ kết thúc</label>
                       <input type="time" className="form-input" value={slot.endTime}
-                        onChange={e => updateSlotField(idx, 'endTime', e.target.value)} disabled={isLoading} />
+                        onChange={e => updateSlotField(idx, 'endTime', e.target.value)} disabled={isLoading || lockRenewFields} />
                     </div>
                   </div>
                   <div className="form-grid-2">
@@ -1160,7 +1316,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                         value={slot.validFrom}
                         min={allowedStartTime}
                         onChange={(v: any) => updateSlotField(idx, 'validFrom', v)}
-                        disabled={isLoading}
+                        disabled={isLoading || lockRenewFields}
                       />
                     </div>
                     <div className="form-group">
@@ -1170,7 +1326,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                         max={allowedEndTime}
                         min={slot.validFrom || allowedStartTime}
                         onChange={(v: any) => updateSlotField(idx, 'validTo', v)}
-                        disabled={isLoading}
+                        disabled={isLoading || lockRenewFields}
                       />
                     </div>
                   </div>
@@ -1182,7 +1338,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 </div>
                 );
               })}
-              <button type="button" className="btn-ghost" onClick={addSlot} disabled={isLoading}>
+              <button type="button" className="btn-ghost" onClick={addSlot} disabled={isLoading || lockRenewFields}>
                 <Plus size={14} /> Thêm khung giờ khác
               </button>
             </div>
@@ -1199,7 +1355,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 className="form-input form-input--flat"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                disabled={isLoading}
+                disabled={isLoading || lockRenewFields}
                 required
               />
             </div>
@@ -1211,7 +1367,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 className="form-textarea form-textarea--flat"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                disabled={isLoading}
+                disabled={isLoading || lockRenewFields}
                 required
               />
             </div>
@@ -1244,3 +1400,11 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     document.body
   );
 };
+
+
+
+
+
+
+
+
