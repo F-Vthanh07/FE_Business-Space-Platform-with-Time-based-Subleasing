@@ -338,15 +338,32 @@ export const OwnerListings: React.FC = () => {
     try {
       const token = localStorage.getItem('portal_token');
 
-      const res = await fetch(buildCurrentUserListingUrl(), {
-        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-      });
+      const [spaceRes, res] = await Promise.all([
+        fetch('https://flexi-space-capstone-project.onrender.com/api/Space/GetAll', { headers: { accept: '*/*' } }),
+        fetch(buildCurrentUserListingUrl(), { headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' } })
+      ]);
+
+      let spaces: any[] = [];
+      if (spaceRes.ok) {
+        const spaceData = await spaceRes.json();
+        spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+      }
 
       if (res.ok) {
         const data = await res.json();
         const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
 
-        setListings(safeData);
+        const listingsWithSpaceInfo = safeData.map((l: any) => {
+          const parentSpace = spaces.find((s) => (s.id || s.Id) === (l.spaceId || l.SpaceId));
+          return {
+            ...l,
+            address: l.spaceAddress || l.location || l.address || parentSpace?.address || parentSpace?.location || '',
+            area: l.area || l.Area || parentSpace?.area || parentSpace?.Area || null,
+            city: l.city || parentSpace?.city || '',
+          };
+        });
+
+        setListings(listingsWithSpaceInfo);
       }
     } catch (err) {
       console.error("Lỗi lấy danh sách bài đăng:", err);

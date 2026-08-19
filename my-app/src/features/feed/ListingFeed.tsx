@@ -187,15 +187,28 @@ export const ListingFeed: React.FC = () => {
           const listItems = Array.isArray(data) ? data : (data?.data || data?.items || []);
           const rawItems = Array.isArray(listItems) ? listItems : [];
           safeData = rawItems.map((item: AnyItem) => {
-            const parentSpace = spaces.find((s: AnyItem) => (s.id || s.Id) === (item.spaceId || item.SpaceId));
+            let currentSpaceId = item.spaceId || item.SpaceId;
+            let parentSpace = spaces.find((s: AnyItem) => (s.id || s.Id) == currentSpaceId);
+
+            // Truy ngược nếu currentSpaceId là ID của một Listing (chia nhỏ mặt bằng)
+            let depth = 0;
+            while (!parentSpace && depth < 5) {
+              const parentListing = rawItems.find((pl: any) => (pl.id || pl.Id) == currentSpaceId);
+              if (!parentListing) break;
+              currentSpaceId = parentListing.spaceId || parentListing.SpaceId;
+              parentSpace = spaces.find((s: AnyItem) => (s.id || s.Id) == currentSpaceId);
+              depth++;
+            }
+
             const sCity = item.spaceCity || item.SpaceCity || parentSpace?.city || parentSpace?.spaceCity || '';
             const sAddr = item.spaceAddress || item.SpaceAddress || parentSpace?.address || parentSpace?.spaceAddress || '';
             const combinedAddr = [sAddr, sCity].filter(Boolean).join(', ');
+            const computedArea = item.area || item.Area || parentSpace?.area || parentSpace?.Area || null;
             return {
               ...item,
               spaceCity: sCity,
               spaceAddress: sAddr,
-              area: item.area || parentSpace?.area || null,
+              area: computedArea,
               address: combinedAddr || item.location || item.address || 'Đang cập nhật',
               city: sCity || item.city || ''
             };
@@ -248,14 +261,21 @@ export const ListingFeed: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/FavoriteList/Toggle/${targetId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "accept": "*/*",
-          "Authorization": `Bearer ${token}`
-        }
-      });
+      const isSaved = favoriteIds.has(targetId);
+      let res;
+      
+      if (isSaved) {
+        res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/FavoriteList/listings/${targetId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+        });
+      } else {
+        res = await fetch('https://flexi-space-capstone-project.onrender.com/api/FavoriteList/listings', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'accept': '*/*' },
+          body: JSON.stringify({ listingIds: [targetId] })
+        });
+      }
 
       if (res.ok) {
         setFavoriteIds(prev => {
