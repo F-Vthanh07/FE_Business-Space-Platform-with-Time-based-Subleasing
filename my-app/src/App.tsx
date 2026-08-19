@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { MeshBackground } from './components/MeshBackground';
@@ -16,6 +16,7 @@ import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 import { PaymentSuccess, PaymentFailed } from './features/wallet';
 import { OnboardingProfilePage } from './features/onboarding';
 import { AiImageEditorPage } from './features/ai-image-editor/AiImageEditorPage';
+import { PriorityLevelsPage } from './features/pricing/PriorityLevelsPage';
 import ClickSpark from './components/ClickSpark'; 
 import './App.css';
 
@@ -70,6 +71,8 @@ const App: React.FC = () => {
           path="/feed" 
           element={<ListingFeed />} 
         />
+
+        <Route path="/pricing" element={<PriorityLevelsPage />} />
 
         <Route path="/listing/:id" element={<ListingDetail />} />
 

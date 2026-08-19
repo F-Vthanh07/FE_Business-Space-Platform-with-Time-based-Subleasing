@@ -17,11 +17,12 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const location = useLocation();
   const { isVerified } = useIdentityVerification();
 
-  const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | 'ai' | null => {
+  const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | 'ai' | 'pricing' | null => {
     if (pathname === '/') return 'home';
     if (pathname.startsWith('/user/spaces')) return 'spaces';
     if (pathname === '/feed') return 'feed';
     if (pathname === '/ai-image-editor') return 'ai';
+    if (pathname === '/pricing') return 'pricing';
     return null;
   };
   const activeTab = getActiveTab(location.pathname);
@@ -29,7 +30,6 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const [showNotif, setShowNotif] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-
 
   // State cho toast thông báo nổi.
   const [toastNotif, setToastNotif] = useState<{ show: boolean, title: string, message: string } | null>(null);
@@ -209,6 +209,9 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
             </button>
             <button className={`header-nav-item ${activeTab === 'feed' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/feed')}>
               KHÁM PHÁ
+            </button>
+            <button className={`header-nav-item ${activeTab === 'pricing' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/pricing')}>
+              BẢNG GIÁ
             </button>
             <button className={`header-nav-item ${activeTab === 'ai' ? 'header-nav-item--active' : ''}`} onClick={() => navigate(isLoggedIn ? '/ai-image-editor' : '/login')}>
               AI CHỈNH ẢNH

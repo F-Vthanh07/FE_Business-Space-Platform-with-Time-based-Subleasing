@@ -1031,8 +1031,17 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
             {!isEditingListing && (
               <div className="form-grid-2">
                 <div className="form-group">
-                  <label className="form-label">
-                    Gói bài đăng <span className="required-mark">*</span>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Gói bài đăng <span className="required-mark">*</span></span>
+                    <a
+                      href="/pricing"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: 12, color: '#00d4a0', textDecoration: 'underline', fontWeight: 500 }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Tìm hiểu thêm →
+                    </a>
                   </label>
                   <Select
                     value={priorityLevelId}
@@ -1095,6 +1104,15 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                       (Còn {bannerSlotsInfo.remainingSlots}/{bannerSlotsInfo.maxSlots} chỗ)
                     </span>
                   )}
+                  <a
+                    href="/pricing"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: 12, color: '#00d4a0', textDecoration: 'underline', fontWeight: 500, marginLeft: 'auto' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Tìm hiểu thêm →
+                  </a>
                 </label>
 
                 {createBannerWithListing && isBannerAvailable && (
