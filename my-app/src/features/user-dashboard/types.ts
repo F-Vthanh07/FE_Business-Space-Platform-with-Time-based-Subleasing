@@ -7,7 +7,7 @@ export type UserPage =
   | 'calendar'
   | 'sublease-listings'
   | 'sub-tenants'
-  | 'shared-spaces'    
+  | 'shared-spaces'
   | 'analytics'
   | 'profile'
   | 'settings'
@@ -62,26 +62,26 @@ export interface ShareSpaceCategory {
 }
 
 export interface ShareListingPayload {
-    spaceId: number;
-    allowedStartTime: string;
-    allowedEndTime: string;
-    name: string;
-    description: string;
+  spaceId: number;
+  allowedStartTime: string;
+  allowedEndTime: string;
+  name: string;
+  description: string;
+  price: number;
+  priceUnit: string;
+  shareSpaceDetailMaxSubRenter: number;
+  shareSpaceDetailIsOwner: boolean;
+  shareSpaceDetailIsLegalCommitted: boolean;
+
+  shareSpaceDetailShareSpaceAmenities: {
+    amenityId: number;
+    isIncluded: boolean;
     price: number;
-    priceUnit: string;
-    shareSpaceDetailMaxSubRenter: number;
-    shareSpaceDetailIsOwner: boolean;
-    shareSpaceDetailIsLegalCommitted: boolean;
+  }[];
 
-    shareSpaceDetailShareSpaceAmenities: {
-        amenityId: number;
-        isIncluded: boolean;
-        price: number;
-    }[];
+  shareSpaceDetailAvailabilitiesTimes: any[];
 
-    shareSpaceDetailAvailabilitiesTimes: any[];
-
-    shareSpaceDetailShareSpaceCategories: ShareSpaceCategory[];
+  shareSpaceDetailShareSpaceCategories: ShareSpaceCategory[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

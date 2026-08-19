@@ -46,27 +46,27 @@ export const FeaturedPackages: React.FC = () => {
         <div className="packages-grid">
           {isLoading
             ? Array.from({ length: MAX_FEATURED }).map((_, i) => (
-                <div key={i} className="package-card package-card--skeleton" />
-              ))
+              <div key={i} className="package-card package-card--skeleton" />
+            ))
             : packages.map((pkg) => (
-                <div key={pkg.id} className="package-card">
-                  <span className="package-badge">
-                    <FileText size={11} />
-                    Gói bài đăng
-                  </span>
-                  <h3 className="package-name">{pkg.name}</h3>
-                  {pkg.description && <p className="package-desc">{pkg.description}</p>}
-                  <div className="package-price">
-                    {pkg.price.toLocaleString('vi-VN')} <span className="package-price-unit">VNĐ</span>
-                  </div>
-                  {pkg.durationInDays ? (
-                    <div className="package-meta">
-                      <Clock size={12} />
-                      {pkg.durationInDays} ngày
-                    </div>
-                  ) : null}
+              <div key={pkg.id} className="package-card">
+                <span className="package-badge">
+                  <FileText size={11} />
+                  Gói bài đăng
+                </span>
+                <h3 className="package-name">{pkg.name}</h3>
+                {pkg.description && <p className="package-desc">{pkg.description}</p>}
+                <div className="package-price">
+                  {pkg.price.toLocaleString('vi-VN')} <span className="package-price-unit">VNĐ</span>
                 </div>
-              ))}
+                {pkg.durationInDays ? (
+                  <div className="package-meta">
+                    <Clock size={12} />
+                    {pkg.durationInDays} ngày
+                  </div>
+                ) : null}
+              </div>
+            ))}
         </div>
       </div>
     </section>

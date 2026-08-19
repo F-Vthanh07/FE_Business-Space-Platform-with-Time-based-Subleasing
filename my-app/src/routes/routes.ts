@@ -9,4 +9,5 @@ export const ROUTES = {
   ONBOARDING: '/onboarding/profile',
   ADMIN: '/admin',
   ACCESS_DENIED: '/access-denied',
+  PRICING: '/pricing',
 } as const;

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { MeshBackground } from './components/MeshBackground';
@@ -16,12 +16,13 @@ import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 import { PaymentSuccess, PaymentFailed } from './features/wallet';
 import { OnboardingProfilePage } from './features/onboarding';
 import { AiImageEditorPage } from './features/ai-image-editor/AiImageEditorPage';
-import ClickSpark from './components/ClickSpark'; 
+import { PriorityLevelsPage } from './features/pricing/PriorityLevelsPage';
+import ClickSpark from './components/ClickSpark';
 import './App.css';
 
 import { NotFoundPage } from './components/NotFoundPage'; // Chỉnh đường dẫn nếu cần
 
-import { FloatingChat } from './components/FloatingChat'; 
+import { FloatingChat } from './components/FloatingChat';
 
 import { ROUTES, type PortalRole } from './routes/routes';
 import { ProtectedRoute } from './routes/ProtectedRoute';
@@ -61,15 +62,17 @@ const App: React.FC = () => {
 
       <Routes>
         {/* Landing Page */}
-        <Route 
-          path={ROUTES.HOME} 
-          element={<Homepage onLaunch={() => navigate(ROUTES.LOGIN)} />} 
+        <Route
+          path={ROUTES.HOME}
+          element={<Homepage onLaunch={() => navigate(ROUTES.LOGIN)} />}
         />
 
-        <Route 
-          path="/feed" 
-          element={<ListingFeed />} 
+        <Route
+          path="/feed"
+          element={<ListingFeed />}
         />
+
+        <Route path="/pricing" element={<PriorityLevelsPage />} />
 
         <Route path="/listing/:id" element={<ListingDetail />} />
 
@@ -92,9 +95,9 @@ const App: React.FC = () => {
         />
 
         {/* Login Page */}
-        <Route 
-          path={ROUTES.LOGIN} 
-          element={<LoginPage onLoginSuccess={(selectedRole) => setRole(selectedRole)} />} 
+        <Route
+          path={ROUTES.LOGIN}
+          element={<LoginPage onLoginSuccess={(selectedRole) => setRole(selectedRole)} />}
         />
 
         {/* Register Page */}
@@ -128,15 +131,15 @@ const App: React.FC = () => {
         />
 
         {/* Admin Dashboard - Protected */}
-        <Route 
-          path="/admin/*" 
+        <Route
+          path="/admin/*"
           element={
             <ProtectedRoute allowedRoles={['admin']} currentRole={role}>
               <MeshBackground>
                 <AdminDashboardPage onLogout={handleLogout} />
               </MeshBackground>
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Payment Result Pages (post-gateway redirect landing pages) - Protected */}

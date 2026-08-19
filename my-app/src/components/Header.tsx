@@ -17,11 +17,12 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const location = useLocation();
   const { isVerified } = useIdentityVerification();
 
-  const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | 'ai' | null => {
+  const getActiveTab = (pathname: string): 'home' | 'spaces' | 'feed' | 'ai' | 'pricing' | null => {
     if (pathname === '/') return 'home';
     if (pathname.startsWith('/user/spaces')) return 'spaces';
     if (pathname === '/feed') return 'feed';
     if (pathname === '/ai-image-editor') return 'ai';
+    if (pathname === '/pricing') return 'pricing';
     return null;
   };
   const activeTab = getActiveTab(location.pathname);
@@ -29,7 +30,6 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
   const [showNotif, setShowNotif] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
-
 
   // State cho toast thông báo nổi.
   const [toastNotif, setToastNotif] = useState<{ show: boolean, title: string, message: string } | null>(null);
@@ -98,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     const handleNewNotif = (e: Event) => {
       const customEvent = e as CustomEvent;
       const notifData = customEvent.detail;
-      
+
       fetchUnreadCount();
       if (showNotif) fetchNotifHistory();
 
@@ -113,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
         setToastNotif(null);
       }, 4000);
     };
-    
+
     window.addEventListener('new-notification', handleNewNotif);
     return () => window.removeEventListener('new-notification', handleNewNotif);
   }, [showNotif]);
@@ -125,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     fetchUnreadCount();
 
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, role]);
 
   const handleLogout = () => {
@@ -166,15 +166,15 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     }
 
     setShowNotif(false);
-    
+
     const typeStr = (notif.type || notif.Type || '').toLowerCase();
     const titleStr = (notif.title || notif.Title || '').toLowerCase();
 
     // Nếu thông báo là tin nhắn, dispatch sự kiện mở chat
     if (notif.conversationId || typeStr.includes('message')) {
       const event = new CustomEvent('open-ether-chat', {
-        detail: { 
-          conversationId: notif.conversationId || notif.relatedId, 
+        detail: {
+          conversationId: notif.conversationId || notif.relatedId,
           name: notif.senderName || notif.title || 'Người dùng'
         }
       });
@@ -190,8 +190,8 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
     <>
       <header className="dashboard-header">
         {/* LOGO */}
-        <div 
-          className="header-logo-text" 
+        <div
+          className="header-logo-text"
           onClick={() => navigate('/')}
           style={{ display: 'flex', alignItems: 'center', fontFamily: "'Press Start 2P', cursive", fontSize: '24px', cursor: 'pointer' }}
         >
@@ -210,6 +210,9 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
             <button className={`header-nav-item ${activeTab === 'feed' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/feed')}>
               KHÁM PHÁ
             </button>
+            <button className={`header-nav-item ${activeTab === 'pricing' ? 'header-nav-item--active' : ''}`} onClick={() => navigate('/pricing')}>
+              BẢNG GIÁ
+            </button>
             <button className={`header-nav-item ${activeTab === 'ai' ? 'header-nav-item--active' : ''}`} onClick={() => navigate(isLoggedIn ? '/ai-image-editor' : '/login')}>
               AI CHỈNH ẢNH
             </button>
@@ -221,7 +224,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
           <button className="btn-post-listing" onClick={handlePostListing}>
             Đăng tin <span className="arrow-icon">→</span>
           </button>
-          
+
           {isLoggedIn ? (
             <>
               {/* Khu vực chuông thông báo */}
@@ -229,21 +232,21 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                 <button className="header-icon-btn" title="Thông báo" onClick={() => setShowNotif(!showNotif)}>
                   <Bell size={15} />
                   {unreadNotifCount > 0 && (
-                    <span 
-                      style={{ 
-                        position: 'absolute', 
-                        top: '2px', 
-                        right: '2px', 
-                        backgroundColor: '#ef4444', 
-                        color: '#fff', 
-                        fontSize: '10px', 
-                        fontWeight: 700, 
-                        borderRadius: '999px', 
-                        padding: '0 4px', 
-                        minWidth: '15px', 
-                        textAlign: 'center', 
-                        lineHeight: '15px', 
-                        border: '1px solid #0D1117' 
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '2px',
+                        right: '2px',
+                        backgroundColor: '#ef4444',
+                        color: '#fff',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        borderRadius: '999px',
+                        padding: '0 4px',
+                        minWidth: '15px',
+                        textAlign: 'center',
+                        lineHeight: '15px',
+                        border: '1px solid #0D1117'
                       }}
                     >
                       {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
@@ -273,7 +276,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                               key={notifId}
                               className="notif-dropdown-item"
                               onClick={() => handleNotifClick(notif)}
-                              style={{ 
+                              style={{
                                 backgroundColor: isRead ? 'transparent' : 'rgba(0, 212, 160, 0.1)',
                                 borderLeft: isRead ? 'none' : '3px solid #00D4A0'
                               }}
@@ -295,7 +298,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
                   </div>
                 )}
               </div>
-              
+
 
               {/* Avatar: bấm để đi thẳng đến trang Profile */}
               <div
@@ -325,17 +328,17 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
               </button>
             </>
           ) : (
-             <button className="btn-primary" onClick={() => navigate('/login')} style={{ padding: '8px 20px', fontSize: '12px', marginLeft: '8px', cursor: 'pointer' }}>
-               <User size={14} style={{ marginRight: '6px' }} /> Đăng nhập
-             </button>
+            <button className="btn-primary" onClick={() => navigate('/login')} style={{ padding: '8px 20px', fontSize: '12px', marginLeft: '8px', cursor: 'pointer' }}>
+              <User size={14} style={{ marginRight: '6px' }} /> Đăng nhập
+            </button>
           )}
         </div>
       </header>
 
       {/* Toast notification */}
       {toastNotif && toastNotif.show && (
-        <div 
-          className="toast-notification animate-in" 
+        <div
+          className="toast-notification animate-in"
           style={{
             position: 'fixed',
             top: '80px',
@@ -358,14 +361,14 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
           onClick={() => setToastNotif(null)}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <strong style={{ fontSize: '14px', color: '#4ADE80' }}>Tin nhắn từ {toastNotif.title}</strong>
+            <strong style={{ fontSize: '14px', color: '#4ADE80' }}>Tin nhắn từ {toastNotif.title}</strong>
           </div>
           <div style={{ fontSize: '13px', opacity: 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {toastNotif.message}
           </div>
         </div>
       )}
-      
+
       {/* KEYFRAME ANIMATION CHO TOAST */}
       <style>
         {`
