@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/immutability */
+  /* eslint-disable react-hooks/immutability */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Minus, Send, ArrowLeft, BellRing, FileSignature, FileText } from 'lucide-react';
@@ -173,6 +173,10 @@ export const FloatingChat: React.FC = () => {
             if (currentActive && (String(currentActive.id) === String(incomingRoomId) || String(currentActive.conversationId) === String(incomingRoomId))) {
               setChatHistory(prev => {
                 if (prev.some(m => m.id === savedMessage.id)) return prev;
+                
+                // Ignore ContractProposal messages since we already have the Text message notification
+                if (savedMessage.messageType === 'ContractProposal' || savedMessage.MessageType === 'ContractProposal') return prev;
+
                 return [...prev, {
                   id: savedMessage.id || Date.now(),
                   senderId: savedMessage.senderId,
@@ -379,10 +383,12 @@ export const FloatingChat: React.FC = () => {
       const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Message/GetMessageHistory?conversationId=${roomId}&limit=50`, { headers: { 'Authorization': `Bearer ${token}` }});
       if (res.ok) {
         const historyData = await res.json();
-        const mappedHistory = historyData.map((msg: any) => ({
-          id: msg.id, senderId: msg.senderId, text: msg.content || msg.message || '', time: new Date(msg.createdAt || msg.sentAt || new Date()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-          isRead: msg.isRead || msg.IsRead || false
-        }));
+        const mappedHistory = historyData
+          .filter((msg: any) => msg.messageType !== 'ContractProposal' && msg.MessageType !== 'ContractProposal')
+          .map((msg: any) => ({
+            id: msg.id, senderId: msg.senderId, text: msg.content || msg.message || '', time: new Date(msg.createdAt || msg.sentAt || new Date()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+            isRead: msg.isRead || msg.IsRead || false
+          }));
         setChatHistory(mappedHistory);
       }
     } catch (err) { console.error(err); }
@@ -488,15 +494,11 @@ export const FloatingChat: React.FC = () => {
 
     const contractRegex = /Hợp đồng \(Mã: #(\d+)\)/i;
     const match = text.match(contractRegex);
-    const isOnlyNumber = /^\d+$/.test(text.trim());
 
     let cId = null;
     let displayText = text;
 
-    if (isOnlyNumber) {
-      cId = text.trim();
-      displayText = `📄 Tôi vừa tạo và gửi một Hợp đồng (Mã: #${cId}). Vui lòng kiểm tra và xác nhận nhé!`;
-    } else if (match && match[1]) {
+    if (match && match[1]) {
       cId = match[1];
     }
 
@@ -674,7 +676,6 @@ export const FloatingChat: React.FC = () => {
                   const senderName = isMe ? 'Bạn' : getOtherPersonName(activeChat);
 
                   const isSystemMsg = msg.text && (
-                    /^\d+$/.test(msg.text.trim()) ||
                     msg.text.includes('Chủ mặt bằng đã xác nhận hợp đồng') ||
                     msg.text.includes('Khách thuê đã ký') ||
                     msg.text.includes('thu hồi Hợp đồng') ||
