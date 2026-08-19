@@ -267,10 +267,24 @@ export const ListingDetail: React.FC = () => {
           // BƯỚC 3: GHÉP area/address/amenities/allowedCategories (TỪ SPACE CHA)
           let foundWithSpaceInfo = found || null;
           if (found) {
-            const parentSpace = spaces.find(s => (s.id || s.Id) === (found.spaceId || found.SpaceId));
+            let currentSpaceId = found.spaceId || found.SpaceId;
+            let parentSpace = spaces.find(s => (s.id || s.Id) == currentSpaceId);
+
+            // Truy ngược nếu currentSpaceId là ID của một Listing (chia nhỏ mặt bằng)
+            let depth = 0;
+            while (!parentSpace && depth < 5) {
+              const allListings = (data?.data || data?.items || data || []);
+              const parentListing = allListings.find((pl: any) => (pl.id || pl.Id) == currentSpaceId);
+              if (!parentListing) break;
+              currentSpaceId = parentListing.spaceId || parentListing.SpaceId;
+              parentSpace = spaces.find(s => (s.id || s.Id) == currentSpaceId);
+              depth++;
+            }
+
+            const computedArea = found.area || found.Area || parentSpace?.area || parentSpace?.Area || null;
             foundWithSpaceInfo = {
               ...found,
-              area: found.area || parentSpace?.area || null,
+              area: computedArea,
               address: found.spaceAddress || found.location || found.address || parentSpace?.address || parentSpace?.location || '',
               city: found.city || parentSpace?.city || '',
               spaceLatitude: found.spaceLatitude ?? parentSpace?.latitude ?? parentSpace?.Latitude ?? null,

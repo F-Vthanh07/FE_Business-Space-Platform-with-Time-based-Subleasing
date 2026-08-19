@@ -136,15 +136,29 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
               return status !== 1 && status !== 'Occupied';
             })
             .map((l: any) => {
-            const parentSpace = spaces.find((s) => (s.id || s.Id) === (l.spaceId || l.SpaceId));
+            let currentSpaceId = l.spaceId || l.SpaceId;
+            let parentSpace = spaces.find((s) => (s.id || s.Id) == currentSpaceId);
+            
+            // Truy ngược nếu currentSpaceId là ID của một Listing (chia nhỏ mặt bằng)
+            let depth = 0;
+            while (!parentSpace && depth < 5) {
+              const parentListing = safeData.find((pl: any) => (pl.id || pl.Id) == currentSpaceId);
+              if (!parentListing) break;
+              currentSpaceId = parentListing.spaceId || parentListing.SpaceId;
+              parentSpace = spaces.find((s) => (s.id || s.Id) == currentSpaceId);
+              depth++;
+            }
+
+            const computedArea = l.area || l.Area || parentSpace?.area || parentSpace?.Area || null;
             return {
               ...l,
               address: l.spaceAddress || l.location || l.address || parentSpace?.address || parentSpace?.location || '',
-              area: l.area || parentSpace?.area || null,
+              area: computedArea,
               city: l.city || parentSpace?.city || '',
             };
           });
 
+          console.log("listingsWithAddress mapped:", listingsWithAddress.map(l => ({id: l.id, area: l.area})));
           setListings(listingsWithAddress);
         }
       } catch (error) {
