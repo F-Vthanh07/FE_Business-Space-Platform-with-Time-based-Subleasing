@@ -1351,16 +1351,6 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                       </button>
                     )})}
                   </div>
-                  <div className="form-group" style={{ marginBottom: '10px' }}>
-                    <label className="form-label">Ngày cụ thể (tùy chọn)</label>
-                    <DatePicker
-                      value={slot.specificdate || ''}
-                      min={allowedStartTime}
-                      max={allowedEndTime}
-                      onChange={(v: any) => updateSlotField(idx, 'specificdate', v)}
-                      disabled={isLoading || lockRenewFields}
-                    />
-                  </div>
                   <div className="form-grid-2">
                     <div className="form-group">
                       <label className="form-label">Giờ bắt đầu</label>
