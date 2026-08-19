@@ -500,6 +500,10 @@ export const FloatingChat: React.FC = () => {
 
     if (match && match[1]) {
       cId = match[1];
+    } else if (/^\d+$/.test(text.trim())) {
+      // Bắt trường hợp BE chỉ trả về đúng 1 con số ID
+      cId = text.trim();
+      displayText = `📄 Tôi vừa tạo và gửi một Hợp đồng (Mã: #${cId}). Vui lòng kiểm tra và xác nhận nhé!`;
     }
 
     if (cId) {
