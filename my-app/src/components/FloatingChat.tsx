@@ -1,7 +1,7 @@
   /* eslint-disable react-hooks/immutability */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Minus, Send, ArrowLeft, BellRing, FileSignature, FileText } from 'lucide-react';
+import { MessageCircle, X, Minus, Send, ArrowLeft, FileSignature, FileText } from 'lucide-react';
 import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr';
 import { ContractViewModal } from './Contract/ContractViewModal';
 import { ContractCreateModal } from './Contract/ContractCreateModal';
@@ -745,8 +745,8 @@ export const FloatingChat: React.FC = () => {
             <MessageCircle size={28} />
           </button>
           {unreadCount > 0 && (
-            <div style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: '#ef4444', color: '#fff', fontSize: '12px', fontWeight: 'bold', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-              <BellRing size={12} style={{ marginRight: '1px' }} />
+            <div style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: '#ef4444', color: '#fff', fontSize: '11px', fontWeight: 'bold', minWidth: '22px', height: '22px', padding: '0 5px', borderRadius: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', lineHeight: 1 }}>
+              {unreadCount > 99 ? '99+' : unreadCount}
             </div>
           )}
         </div>

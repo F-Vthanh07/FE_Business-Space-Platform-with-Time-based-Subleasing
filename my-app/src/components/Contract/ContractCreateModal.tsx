@@ -112,6 +112,9 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
 
   const [canShareSpace, setCanShareSpace] = useState(false);
   const [canShowShareCheckbox, setCanShowShareCheckbox] = useState(false);
+  // Text hiển thị riêng cho ô Diện tích để người dùng gõ được dấu phẩy thập phân (VD: 123,00)
+  // trong lúc gõ, tách biệt với contractData.acreage (number thật gửi lên API).
+  const [acreageText, setAcreageText] = useState('0');
 
   const lessorId = activeChat?.lessorId || activeChat?.LessorId;
   const lesseeId = activeChat?.lesseeId || activeChat?.LesseeId;
@@ -143,6 +146,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
             ? existingContract.contractSchedules
             : [],
       });
+      setAcreageText(String(existingContract.acreage ?? 0).replace('.', ','));
       setCanShareSpace(existingContract.canShare || false);
     } else {
       // --- CHẾ ĐỘ TẠO MỚI: reset trắng như cũ ---
@@ -162,6 +166,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         businessPurpose: '',
         contractSchedules: [],
       }));
+      setAcreageText('0');
       setCanShareSpace(false);
     }
   }, [isOpen, existingContract, activeChat?.id, activeChat?.conversationId]);
@@ -930,10 +935,19 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
               <label className="cc-label">Diện tích thực tế (m²)</label>
               <input
                 className="cc-input"
-                type="number"
+                type="text"
+                inputMode="decimal"
+                placeholder="VD: 123,00"
                 required
-                value={contractData.acreage}
-                onChange={(e) => setContractData({ ...contractData, acreage: Number(e.target.value) })}
+                value={acreageText}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  // Chỉ cho phép chữ số và 1 dấu phẩy, tối đa 2 số sau dấu phẩy — VD: 123,00 / 129,9
+                  if (!/^\d*(,\d{0,2})?$/.test(raw)) return;
+                  setAcreageText(raw);
+                  const numericValue = Number(raw.replace(',', '.'));
+                  setContractData({ ...contractData, acreage: isNaN(numericValue) ? 0 : numericValue });
+                }}
               />
             </div>
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
-import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X, Layers, Briefcase, User as UserIcon } from 'lucide-react';
+import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X, Layers, User as UserIcon } from 'lucide-react';
 import { SpaceForm } from './SpaceForm';
 import { SpacePartForm } from './SpacePartForm';
 import { SpacePartListModal } from './SpacePartListModal';
@@ -299,13 +299,7 @@ export const OwnerSpaces: React.FC = () => {
 
             return (
               <div key={currentId || index} className="glass-card space-card">
-                <div className="space-card-top">
-                  <div className="space-card-type">
-                    <Briefcase size={12} />
-                    {safeCategories.length > 0
-                      ? (apiCategories.find(cat => cat.id === safeCategories[0].businessCategoryId)?.name || '...')
-                      : t('spaces.notSpecified') || 'Chưa xác định'}
-                  </div>
+                <div className="space-card-top" style={{ justifyContent: 'flex-end' }}>
                   <span className={`badge ${space.isActive !== false ? 'badge--positive' : 'badge--warning'}`}>
                     {space.isActive !== false ? <CheckCircle2 size={11} /> : <Clock size={11} />}
                     {space.isActive !== false ? 'Hoạt động' : 'Tạm khóa'}
@@ -370,16 +364,16 @@ export const OwnerSpaces: React.FC = () => {
 
                 <div className="space-card-actions">
                   <button className="btn-ghost" onClick={() => handleOpenSpacePartList(space)} title="Danh sách chia nhỏ">
-                    <Layers size={13} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>D.sách chia nhỏ</span>
+                    <Layers size={13} /> <span>D.sách chia nhỏ</span>
                   </button>
                   <button className="btn-ghost" onClick={() => handleOpenSpacePartForm(space)} title={language === 'en' ? 'Divide' : 'Chia nhỏ'}>
-                    <Plus size={13} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{language === 'en' ? 'Divide' : 'Chia nhỏ'}</span>
+                    <Plus size={13} /> <span>{language === 'en' ? 'Divide' : 'Chia nhỏ'}</span>
                   </button>
                   <button className="btn-ghost" onClick={() => setViewingSpace(space)}>
-                    <Eye size={13} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{language === 'en' ? 'View' : 'Xem'}</span>
+                    <Eye size={13} /> <span>{language === 'en' ? 'View' : 'Xem'}</span>
                   </button>
                   <button className="btn-ghost" onClick={() => handleOpenFormForEdit(space)}>
-                    <Edit3 size={13} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('spaces.edit') || 'Sửa'}</span>
+                    <Edit3 size={13} /> <span>{t('spaces.edit') || 'Sửa'}</span>
                   </button>
                   <button className="btn-ghost btn-danger-icon" onClick={() => handleDeleteSpace(space)} title={t('spaces.delete') || 'Xóa'}>
                     <Trash2 size={13} />

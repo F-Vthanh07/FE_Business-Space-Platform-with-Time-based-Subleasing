@@ -909,6 +909,7 @@ export const AiImageEditorPage: React.FC = () => {
       toast.error(error instanceof Error ? error.message : 'Không thể tạo ảnh.', { id: loadingToast });
     } finally {
       setIsProcessing(false);
+      loadWalletBalance();
     }
   };
 

@@ -391,6 +391,14 @@ const translations: Translations = {
     en: 'Are you sure you want to delete this space?',
     vi: 'Bạn có chắc chắn muốn xóa mặt bằng này không?',
   },
+  'spaces.notSpecified': {
+    en: 'Not specified',
+    vi: 'Chưa xác định',
+  },
+  'spaces.loading': {
+    en: 'Loading...',
+    vi: 'Đang tải...',
+  },
 
   // Space Form (modal)
   'spaceForm.editSpace': {

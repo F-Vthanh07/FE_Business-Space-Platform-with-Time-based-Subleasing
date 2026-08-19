@@ -283,7 +283,6 @@ export const OwnerTenants: React.FC = () => {
     });
 
   const activeTenants = tenants.filter((t) => t.status === 'Active');
-  const totalRevenue = activeTenants.reduce((sum, t) => sum + t.monthlyRent, 0);
   const needsAttentionCount = tenants.filter((t) => t.status === 'Draft' || t.status === 'Cancelled').length;
 
   return (
@@ -299,8 +298,7 @@ export const OwnerTenants: React.FC = () => {
       {/* Summary Strip */}
       <div className="tenants-summary">
         {[
-          { label: language === 'en' ? 'Total Tenants' : 'Tổng người thuê', value: tenants.length, sub: t('tenants.current'), color: 'var(--color-accent)' },
-          { label: t('tenants.revenueThisMonth'), value: (totalRevenue / 1000000).toFixed(1) + (language === 'en' ? 'M VND' : 'tr ₫'), sub: t('tenants.fromAllContracts'), color: 'var(--color-positive)' },
+          { label: language === 'en' ? 'Total Tenants' : 'Tổng hợp đồng', value: tenants.length, sub: t('tenants.current'), color: 'var(--color-accent)' },
           { label: getStatusLabel('Active'), value: activeTenants.length, sub: language === 'en' ? 'contracts' : 'hợp đồng', color: 'var(--color-positive)' },
           { label: language === 'en' ? 'Needs attention' : 'Cần chú ý', value: needsAttentionCount, sub: t('tenants.needAction'), color: 'var(--color-gold)' },
         ].map((s, i) => (

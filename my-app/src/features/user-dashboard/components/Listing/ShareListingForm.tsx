@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Users, ShieldCheck, ShieldAlert, Plus, Trash2, Clock, Type } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, Users, ShieldCheck, ShieldAlert, Plus, Trash2, Clock, Type, Wallet } from 'lucide-react';
 import "../../../shared/ModalShell.css";
 import { Select } from '../../../../components/Select';
 import { createShareListing, updateShareListing } from './shareListing.api';
@@ -68,6 +69,7 @@ const getSafeDateString = formatDateISOOnly;
 export const ShareListingForm: React.FC<ShareListingFormProps> = ({
   onClose, onSuccess, initialData, spaceOptions, apiCategories, apiAmenities
 }) => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -536,8 +538,18 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                 </div>
                 <div className="form-group">
                   <label className="form-label">Số dư ví</label>
-                  <div className="wallet-balance-display">
-                    {walletBalance === null ? 'Đang tải...' : `${walletBalance.toLocaleString('vi-VN')} VNĐ`}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="wallet-balance-display" style={{ flex: 1 }}>
+                      {walletBalance === null ? 'Đang tải...' : `${walletBalance.toLocaleString('vi-VN')} VNĐ`}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      style={{ height: 42, padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
+                      onClick={() => navigate('/user/wallet-deposit')}
+                    >
+                      <Wallet size={14} /> Nạp tiền
+                    </button>
                   </div>
                 </div>
               </div>
@@ -629,18 +641,6 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                       {DAYS_LABEL_VI[day]}
                     </button>
                   )})}
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Ngày cụ thể (tùy chọn)</label>
-                  <input
-                    type="date"
-                    lang="vi-VN"
-                    className="form-input"
-                    value={slot.specificdate || ''}
-                    onChange={e => updateSlotField(idx, 'specificdate', e.target.value)}
-                    disabled={isLoading}
-                  />
                 </div>
 
                 <div className="form-grid-2">

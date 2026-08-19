@@ -269,7 +269,7 @@ export const OwnerBookingRequests: React.FC = () => {
                           onClick={() => handleUpdateStatus(req.id || req.Id, 'Approved', req.lesseeId)}
                           style={{ padding: '8px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#16A34A', color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
                         >
-                          <CheckCircle2 size={16} /> Duyệt đơn
+                          <CheckCircle2 size={16} /> Thương thảo
                         </button>
                       </div>
                     </td>
