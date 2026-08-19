@@ -64,6 +64,7 @@ const getPageLabels = (id: string, lang: string) => {
     case 'sub-tenants': return { title: isEn ? 'Sub-tenants' : 'Khách thuê phụ', sub: isEn ? 'Secondary renters' : 'Người thuê lại' };
     case 'shared-spaces': return { title: isEn ? 'Shared Spaces' : 'Mặt bằng chia sẻ', sub: isEn ? 'Spaces shared with others' : 'Chia sẻ lại cho người khác' };
     case 'wallet': return { title: isEn ? 'Wallet' : 'Ví của tôi', sub: isEn ? 'Balance & transactions' : 'Số dư & giao dịch' };
+    case 'pricing-plans': return { title: isEn ? 'Listing Packages' : 'Gói bài đăng', sub: isEn ? 'Compare packages' : 'So sánh các gói' };
     case 'analytics': return { title: isEn ? 'Analytics' : 'Doanh thu', sub: isEn ? 'Financial reports' : 'Báo cáo tài chính' };
     case 'profile': return { title: isEn ? 'Profile' : 'Hồ sơ cá nhân', sub: isEn ? 'Identity verification' : 'Xác thực định danh' };
     case 'settings': return { title: isEn ? 'Settings' : 'Cài đặt', sub: isEn ? 'Account prefs' : 'Hệ thống' };

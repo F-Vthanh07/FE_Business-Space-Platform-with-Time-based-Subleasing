@@ -64,6 +64,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   onCreated,
   existingContract,
 }) => {
+  void onCreated;
   const [mySpaces, setMySpaces] = useState<any[]>([]);
   const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
   const [matchedBookingRequests, setMatchedBookingRequests] = useState<any[]>([]);
@@ -605,7 +606,8 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
           throw new Error('Lỗi cập nhật hợp đồng: ' + (errBody || updateRes.status));
         }
 
-        await onCreated(`✏️ Tôi vừa cập nhật Hợp đồng (Mã: #${existingContract.id}). Vui lòng kiểm tra lại nhé!`);
+        // Đã bỏ dòng FE tự gửi tin nhắn, vì BE sẽ tự động bắn ID hợp đồng về.
+        // await onCreated(`✏️ Tôi vừa cập nhật Hợp đồng (Mã: #${existingContract.id}). Vui lòng kiểm tra lại nhé!`);
         alert('Cập nhật hợp đồng thành công!');
         onClose();
       } else {
@@ -631,7 +633,8 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
           });
           if (!shareRes.ok) throw new Error('Lỗi share hợp đồng');
 
-          await onCreated(`📄 Tôi vừa tạo và gửi một Hợp đồng (Mã: #${newContractId}). Vui lòng kiểm tra và xác nhận nhé!`);
+          // Đã bỏ dòng FE tự gửi tin nhắn, để cho FloatingChat tự parse ID từ BE.
+          // await onCreated(`📄 Tôi vừa tạo và gửi một Hợp đồng (Mã: #${newContractId}). Vui lòng kiểm tra và xác nhận nhé!`);
           alert('Tạo hợp đồng thành công!');
           onClose();
         }

@@ -493,7 +493,18 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error('Mã OTP không hợp lệ hoặc đã hết hạn!');
+        const raw = await response.text().catch(() => '');
+        let serverMsg = raw;
+        try {
+          // BE có thể trả string JSON kiểu "Mã OTP không hợp lệ..." (có ngoặc kép bao ngoài)
+          const parsed = JSON.parse(raw);
+          if (typeof parsed === 'string') serverMsg = parsed;
+          else if (parsed?.message) serverMsg = parsed.message;
+        } catch {
+          // raw không phải JSON, giữ nguyên chuỗi thô
+        }
+
+        throw new Error(serverMsg || 'Mã OTP không hợp lệ hoặc đã hết hạn!');
       }
 
       setSignStep('success');
