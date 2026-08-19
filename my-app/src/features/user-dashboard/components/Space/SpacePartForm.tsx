@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import { X, Building2, Check, ShieldAlert, Briefcase } from 'lucide-react';
+import { X, Building2, Check, ShieldAlert, Briefcase, Camera, Plus, Trash2 } from 'lucide-react';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
 import '../../../shared/ModalShell.css';
@@ -31,6 +31,10 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
   );
   const [customAmenityChecked, setCustomAmenityChecked] = useState(initialCustomAmenities.length > 0);
   const [customAmenityText, setCustomAmenityText] = useState(initialCustomAmenities.join(', '));
+
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<any[]>(initialData?.pictureURLs || initialData?.spacePictures || initialData?.pictures || []);
 
 
   const [apiCategories, setApiCategories] = useState<any[]>([]);
@@ -88,6 +92,30 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
 
   const handleAmenityToggle = (id: string) => {
     setSelectedAmenities(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const filesArray = Array.from(files);
+    setSelectedFiles(prev => [...prev, ...filesArray]);
+
+    const newPreviewUrls = filesArray.map(f => URL.createObjectURL(f));
+    setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setPreviewUrls(prev => {
+      const urls = [...prev];
+      URL.revokeObjectURL(urls[index]);
+      return urls.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleRemoveExistingImage = (index: number) => {
+    setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
 
@@ -176,6 +204,36 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
           errorMessage = 'Tổng diện tích các không gian chia nhỏ vượt quá diện tích không gian gốc.';
         }
         throw new Error(errorMessage);
+      }
+
+      let createdSpaceId = initialData?.id || initialData?.Id;
+      if (!isEditing) {
+          const text = await response.text();
+          try {
+              const data = JSON.parse(text);
+              createdSpaceId = data.id || data.Id || data;
+          } catch (e) {
+              createdSpaceId = text;
+          }
+      }
+
+      if (selectedFiles.length > 0 && createdSpaceId) {
+          const formData = new FormData();
+          selectedFiles.forEach(file => formData.append('file', file));
+          formData.append('spaceId', createdSpaceId.toString());
+
+          const picRes = await fetch('https://flexi-space-capstone-project.onrender.com/api/Picture', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' },
+            body: formData
+          });
+
+          if (!picRes.ok) {
+            console.error("LỖI UP ẢNH:", await picRes.text());
+            setError('Không gian chia nhỏ đã lưu nhưng đẩy ảnh thất bại!');
+            setIsLoading(false);
+            return;
+          }
       }
 
       onSubmit();
@@ -315,6 +373,65 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
           </div>
 
 
+
+          <div className="form-section">
+              <h3 className="form-section-title">Hình ảnh (Tùy chọn)</h3>
+              <div style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '16px' }}>
+                <div className="form-group" style={{ gap: '10px' }}>
+                  <label className="form-label"><Camera size={14} /> Chọn ảnh từ máy</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      id="spacepart-file-upload"
+                      style={{ display: 'none' }}
+                      onChange={handleFileChange}
+                    />
+                    <label
+                      htmlFor="spacepart-file-upload"
+                      className="btn-primary"
+                      style={{ height: 36, padding: '0 16px', display: 'flex', gap: '6px', alignItems: 'center', cursor: 'pointer', width: 'fit-content' }}
+                    >
+                      <Plus size={14} /> Chọn ảnh từ máy
+                    </label>
+                  </div>
+                  {(existingImages.length > 0 || previewUrls.length > 0) && (
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '4px' }}>
+                      {existingImages.map((img: any, index: number) => {
+                        const url = typeof img === 'string' ? img : (img.imageUrl || img.url || img.pictureUrl);
+                        return (
+                          <div key={`existing-${index}`} style={{ position: 'relative', width: 80, height: 80, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+                            <img src={url} alt={`existing-${index}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveExistingImage(index)}
+                              style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(239,68,68,0.9)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                              disabled={isLoading}
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                      {previewUrls.map((url, index) => (
+                        <div key={`preview-${index}`} style={{ position: 'relative', width: 80, height: 80, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+                          <img src={url} alt={`preview-${index}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFile(index)}
+                            style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(239,68,68,0.9)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                            disabled={isLoading}
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+          </div>
 
           {error && (
             <div className="form-error-box">

@@ -152,12 +152,25 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {spaceParts.map(part => (
+              {spaceParts.map(part => {
+                const pic = (part as any).pictureURLs?.[0] || (part as any).spacePictures?.[0] || (part as any).pictures?.[0];
+                const picUrl = pic ? (typeof pic === 'string' ? pic : (pic.imageUrl || pic.url || pic.pictureUrl)) : null;
+
+                return (
                 <React.Fragment key={part.id}>
                 <div className="glass-card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>{part.name}</h4>
-                    <p className="text-secondary" style={{ margin: 0, fontSize: '13px' }}>Diện tích: {part.area} m²</p>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    {picUrl ? (
+                      <img src={picUrl} alt={part.name} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }} />
+                    ) : (
+                      <div style={{ width: 48, height: 48, background: 'var(--color-bg-secondary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-secondary)' }}>
+                        <Layers size={20} />
+                      </div>
+                    )}
+                    <div>
+                      <h4 style={{ margin: '0 0 4px 0', fontSize: '15px' }}>{part.name}</h4>
+                      <p className="text-secondary" style={{ margin: 0, fontSize: '13px' }}>Diện tích: {part.area} m²</p>
+                    </div>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button className="btn-icon" onClick={() => handleViewDetails(part.id)} title="Xem chi tiết">
@@ -194,7 +207,7 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
                   </div>
                 )}
               </React.Fragment>
-              ))}
+              )})}
             </div>
           )}
         </div>
