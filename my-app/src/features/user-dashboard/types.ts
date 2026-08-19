@@ -67,7 +67,7 @@ export interface ShareListingPayload {
     name: string;
     description: string;
     price: number;
-
+    priceUnit: string;
     shareSpaceDetailMaxSubRenter: number;
     shareSpaceDetailIsOwner: boolean;
     shareSpaceDetailIsLegalCommitted: boolean;

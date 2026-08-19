@@ -668,6 +668,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         name,   
         description,
         price: Number(price),
+        priceUnit,
         shareSpaceDetailMaxSubRenter: Number(maxSubRenter),
         shareSpaceDetailIsOwner: false,
         shareSpaceDetailIsLegalCommitted: isLegalCommitted,
