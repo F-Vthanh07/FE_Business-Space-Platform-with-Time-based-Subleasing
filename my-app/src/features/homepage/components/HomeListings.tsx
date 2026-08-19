@@ -158,7 +158,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
             };
           });
 
-          console.log("listingsWithAddress mapped:", listingsWithAddress.map(l => ({id: l.id, area: l.area})));
+          console.log("listingsWithAddress mapped:", listingsWithAddress.map((l: any) => ({id: l.id, area: l.area})));
           setListings(listingsWithAddress);
         }
       } catch (error) {
