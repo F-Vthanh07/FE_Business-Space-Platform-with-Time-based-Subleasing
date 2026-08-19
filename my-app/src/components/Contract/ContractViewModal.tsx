@@ -588,7 +588,39 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
           </span>
           <div style={{ display: 'flex', gap: '16px' }}>
             <button
-              onClick={() => window.print()}
+              onClick={() => {
+                if (!displayDescription) return;
+                const { header, body } = splitContractHeaderBody(displayDescription);
+                const printWindow = window.open('', '_blank');
+                if (printWindow) {
+                  printWindow.document.write(`
+                    <html>
+                      <head>
+                        <title>In Hợp Đồng</title>
+                        <style>
+                          body { font-family: 'Times New Roman', serif; font-size: 14pt; padding: 40px; line-height: 1.5; color: #000; }
+                          .header { text-align: center; margin-bottom: 20px; font-weight: bold; }
+                          .body { text-align: justify; }
+                          @media print {
+                            @page { margin: 2cm; }
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="header">${header.replace(/\n/g, '<br/>')}</div>
+                        <div class="body">${body.replace(/\n/g, '<br/>')}</div>
+                        <script>
+                          window.onload = () => {
+                            window.print();
+                            window.onafterprint = () => window.close();
+                          }
+                        </script>
+                      </body>
+                    </html>
+                  `);
+                  printWindow.document.close();
+                }
+              }}
               style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}
             >
               <Printer size={20} />
