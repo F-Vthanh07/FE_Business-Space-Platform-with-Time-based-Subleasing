@@ -34,7 +34,7 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const [existingImages, setExistingImages] = useState<any[]>(initialData?.spacePictures || initialData?.pictures || []);
+  const [existingImages, setExistingImages] = useState<any[]>(initialData?.pictureURLs || initialData?.spacePictures || initialData?.pictures || []);
 
 
   const [apiCategories, setApiCategories] = useState<any[]>([]);
