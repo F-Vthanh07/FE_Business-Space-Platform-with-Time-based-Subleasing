@@ -115,6 +115,12 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const [bannerPriorityLevelId, setBannerPriorityLevelId] = useState<number | ''>('');
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [createBannerWithListing, setCreateBannerWithListing] = useState(false);
+  const [bannerSlotsInfo, setBannerSlotsInfo] = useState<{
+    maxSlots: number;
+    usedSlots: number;
+    remainingSlots: number;
+    isAvailable: boolean;
+  } | null>(null);
   const [bannerTitle, setBannerTitle] = useState(initialData?.name || '');
   const [bannerDescription, setBannerDescription] = useState(initialData?.description || '');
   const [bannerFiles, setBannerFiles] = useState<File[]>([]);
@@ -160,8 +166,9 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
   const selectedListingPackage = priorityLevels.find(p => p.id === priorityLevelId);
   const selectedBannerPackage = bannerPriorityLevels.find(p => p.id === bannerPriorityLevelId);
+  const isBannerAvailable = bannerSlotsInfo ? bannerSlotsInfo.isAvailable : bannerPriorityLevels.length > 0;
   const listingPackagePrice = selectedListingPackage?.price ?? 0;
-  const bannerPackagePrice = createBannerWithListing ? (selectedBannerPackage?.price ?? 0) : 0;
+  const bannerPackagePrice = (createBannerWithListing && isBannerAvailable) ? (selectedBannerPackage?.price ?? 0) : 0;
   const totalPublishPrice = listingPackagePrice + bannerPackagePrice;
 
   useEffect(() => {
@@ -172,7 +179,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     const fetchTimePolicy = async () => {
       try {
         const token = localStorage.getItem('portal_token') || '';
-        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/ShareListing/TimePolicy/${spaceId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/Listing/ShareListing/TimePolicy/${spaceId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
@@ -199,7 +206,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       try {
         const token = localStorage.getItem('portal_token');
         const ownerId = localStorage.getItem('current_user_id') || '01KVJGBEXR0X7A2PN520FJTVZT';
-        const url = `https://flexi-space-capstone-project.onrender.com/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
+        const url = `${API_BASE_URL}/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId)}`;
 
         const res = await fetch(url, {
           headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
@@ -214,7 +221,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
           for (const space of spaces) {
             allSpacesAndParts.push({ ...space, isPart: false });
             try {
-              const partRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetByParent/${space.id || space.Id}`, {
+              const partRes = await fetch(`${API_BASE_URL}/api/SpacePart/GetByParent/${space.id || space.Id}`, {
                 headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
               });
               if (partRes.ok) {
@@ -228,7 +235,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
               console.error("Lỗi lấy space part", err);
             }
           }
-            const usageRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpaceUsageRight/Mine`, {
+            const usageRes = await fetch(`${API_BASE_URL}/api/SpaceUsageRight/Mine`, {
               headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
             });
             if (usageRes.ok) {
@@ -236,7 +243,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
               const rights = Array.isArray(usageData) ? usageData : usageData?.data || [];
               const shareableRights = rights.filter((r: any) => r.canShare === true);
               const spacePromises = shareableRights.map((r: any) =>
-                  fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetById/${r.spaceId}`, {
+                  fetch(`${API_BASE_URL}/api/Space/GetById/${r.spaceId}`, {
                       headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
                   }).then(r => r.ok ? r.json() : null)
               );
@@ -261,12 +268,36 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   useEffect(() => {
     if (isEditingListing) return;
     const loadPriorityLevels = async () => {
-      const levels = await fetchPriorityLevels();
-      const bannerLevels = await fetchBannerPriorityLevels();
-      setPriorityLevels(levels);
-      setBannerPriorityLevels(bannerLevels);
-      if (levels.length > 0) setPriorityLevelId(levels[0].id);
-      if (bannerLevels.length > 0) setBannerPriorityLevelId(bannerLevels[0].id);
+      try {
+        const [levels, bannerLevels, bannerRes] = await Promise.all([
+          fetchPriorityLevels(),
+          fetchBannerPriorityLevels(),
+          fetch(`${API_BASE_URL}/api/Banner/GetAll`, { headers: { accept: '*/*' } }).then(r => r.ok ? r.json() : null)
+        ]);
+        setPriorityLevels(levels);
+        setBannerPriorityLevels(bannerLevels);
+        if (levels.length > 0) setPriorityLevelId(levels[0].id);
+        if (bannerLevels.length > 0) setBannerPriorityLevelId(bannerLevels[0].id);
+
+        const maxSlots = bannerLevels.length > 0 ? (bannerLevels[0].durationForBanner ?? 0) : 0;
+        const allBanners = Array.isArray(bannerRes) ? bannerRes : (bannerRes?.data || bannerRes?.items || bannerRes?.result || []);
+        const userBannersCount = allBanners.filter((b: any) => !b.isDeleted && b.createdBy !== 'Admin' && b.CreatedBy !== 'Admin').length;
+        const remaining = Math.max(0, maxSlots - userBannersCount);
+        const available = maxSlots > 0 && remaining > 0;
+
+        setBannerSlotsInfo({
+          maxSlots,
+          usedSlots: userBannersCount,
+          remainingSlots: remaining,
+          isAvailable: available
+        });
+
+        if (!available) {
+          setCreateBannerWithListing(false);
+        }
+      } catch (err) {
+        console.error("Lỗi kiểm tra cấu hình banner:", err);
+      }
     };
     loadPriorityLevels();
 
@@ -1035,18 +1066,38 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
             {!isEditingListing && (
               <div style={{ marginTop: 14, border: '1px solid var(--color-border)', borderRadius: 8, padding: 14, background: 'rgba(0,0,0,0.02)' }}>
-                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 12 }}>
+                <label
+                  className="form-label"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    cursor: (isLoading || !isBannerAvailable) ? 'not-allowed' : 'pointer',
+                    opacity: !isBannerAvailable ? 0.65 : 1,
+                    marginBottom: (createBannerWithListing && isBannerAvailable) ? 12 : 0
+                  }}
+                >
                   <input
                     type="checkbox"
-                    checked={createBannerWithListing}
+                    checked={createBannerWithListing && isBannerAvailable}
                     onChange={(e) => setCreateBannerWithListing(e.target.checked)}
-                    disabled={isLoading || bannerPriorityLevels.length === 0}
+                    disabled={isLoading || !isBannerAvailable}
                   />
                   <Megaphone size={14} />
                   <span>Đăng kèm banner quảng cáo cho tin này</span>
+                  {bannerSlotsInfo && !bannerSlotsInfo.isAvailable && (
+                    <span style={{ fontSize: 12, color: '#ef4444', marginLeft: 4, fontWeight: 500 }}>
+                      (Đã hết vị trí banner quảng cáo)
+                    </span>
+                  )}
+                  {bannerSlotsInfo && bannerSlotsInfo.isAvailable && (
+                    <span style={{ fontSize: 12, color: '#10b981', marginLeft: 4, fontWeight: 500 }}>
+                      (Còn {bannerSlotsInfo.remainingSlots}/{bannerSlotsInfo.maxSlots} chỗ)
+                    </span>
+                  )}
                 </label>
 
-                {createBannerWithListing && (
+                {createBannerWithListing && isBannerAvailable && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div className="form-group">
                       <label className="form-label">Gói banner</label>
