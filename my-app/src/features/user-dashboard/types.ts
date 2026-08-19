@@ -14,6 +14,7 @@ export type UserPage =
   | 'wallet'
   | 'wallet-deposit'
   | 'wallet-history'
+  | 'pricing-plans'
   | 'booking-requests'
   | 'my-booking-requests'
   | 'change-password'

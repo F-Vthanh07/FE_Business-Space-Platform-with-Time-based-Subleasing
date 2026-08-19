@@ -26,6 +26,7 @@ import { UploadedContractsPage } from './components/contract/UploadedContractsPa
 import { RenterBookingRequests } from './components/booking/RenterBookingRequests';
 import { SharedSpaceManagement } from './components/Space/SharedSpaceManagement';
 import { OwnerListings } from './components/Listing/OwnerListings';
+import { PricingPlansPage } from './components/Pricing/PricingPlansPage';
 
 const initialMockSlots: SubSlot[] = [
   { id: 's1', date: '2025-05-26', startTime: '08:00', endTime: '12:00', tenantName: 'Trần Văn B', tenantInitials: 'TB', status: 'booked', price: '500.000₫', spaceId: 'space-leloi' },
@@ -165,6 +166,8 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
         return <WalletDeposit onNavigate={(page) => navigate(`/user/${page}`)} />;
       case 'wallet-history':
         return <WalletHistory onNavigate={(page) => navigate(`/user/${page}`)} />;
+      case 'pricing-plans':
+        return <PricingPlansPage />;
       case 'change-password':
         return <ChangePasswordPage />;
       case 'forgot-password':

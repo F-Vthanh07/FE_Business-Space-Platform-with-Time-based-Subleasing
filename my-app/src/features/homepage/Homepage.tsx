@@ -15,6 +15,7 @@ import { Header } from '../../components/Header';
 import { Footer } from '../../components/Footer';
 
 import { HomeListings } from './components/HomeListings';
+import { FeaturedPackages } from './components/FeaturedPackages';
 import heroImage from '../../assets/hero.png';
 
 import './Homepage.css';
@@ -448,6 +449,11 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
           </div>
         </div>
       </section>
+
+      {/* =========================================
+          SECTION 5: FEATURED LISTING PACKAGES
+          ========================================= */}
+      <FeaturedPackages />
 
       <Footer />
     </div>

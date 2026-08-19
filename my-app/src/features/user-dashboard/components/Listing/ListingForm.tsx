@@ -1031,8 +1031,15 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
             {!isEditingListing && (
               <div className="form-grid-2">
                 <div className="form-group">
-                  <label className="form-label">
-                    Gói bài đăng <span className="required-mark">*</span>
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span>Gói bài đăng <span className="required-mark">*</span></span>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/user/pricing-plans')}
+                      style={{ background: 'none', border: 'none', padding: 0, color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      Xem các gói bài đăng
+                    </button>
                   </label>
                   <Select
                     value={priorityLevelId}
