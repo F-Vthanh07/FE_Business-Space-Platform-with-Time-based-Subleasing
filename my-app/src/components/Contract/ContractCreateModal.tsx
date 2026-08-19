@@ -64,6 +64,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   onCreated,
   existingContract,
 }) => {
+  void onCreated;
   const [mySpaces, setMySpaces] = useState<any[]>([]);
   const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
   const [matchedBookingRequests, setMatchedBookingRequests] = useState<any[]>([]);
