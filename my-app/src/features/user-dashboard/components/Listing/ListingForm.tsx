@@ -2,7 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, Users, ShieldCheck, Clock, Megaphone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, Users, ShieldCheck, Clock, Megaphone, Wallet } from 'lucide-react';
 import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
 import { Select } from '../../../../components/Select';
 import { DatePicker } from '../../../../components/DatePicker';
@@ -99,6 +100,7 @@ const cropBannerFile = async (file: File, previewUrl: string, position: { x: num
 };
 
 export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, initialData, mode: formMode = initialData ? 'edit' : 'create' }) => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [mySpaces, setMySpaces] = useState<any[]>([]);
   const [error, setError] = useState('');
@@ -1014,8 +1016,18 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 </div>
                 <div className="form-group">
                   <label className="form-label">Số dư ví</label>
-                  <div className="wallet-balance-display">
-                    {walletBalance === null ? 'Đang tải...' : `${walletBalance.toLocaleString('vi-VN')} VNĐ`}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="wallet-balance-display" style={{ flex: 1 }}>
+                      {walletBalance === null ? 'Đang tải...' : `${walletBalance.toLocaleString('vi-VN')} VNĐ`}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      style={{ height: 42, padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
+                      onClick={() => navigate('/user/wallet-deposit')}
+                    >
+                      <Wallet size={14} /> Nạp tiền
+                    </button>
                   </div>
                 </div>
               </div>
