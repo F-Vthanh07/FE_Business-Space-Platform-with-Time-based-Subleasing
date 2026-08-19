@@ -131,7 +131,7 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
       case 'contracts': return <MyContractsPage />;
       case 'external-contracts': return <UploadedContractsPage />;
       case 'calendar':
-        
+
         return (
           <div className="renter-page-wrap">
             <div className="page-header animate-in">

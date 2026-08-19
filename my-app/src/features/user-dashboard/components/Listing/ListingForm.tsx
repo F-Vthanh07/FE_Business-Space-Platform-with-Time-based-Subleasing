@@ -36,7 +36,7 @@ const DAYS_LABEL_VI: Record<string, string> = {
 
 const getValidDaysOfWeek = (validFrom?: string, validTo?: string) => {
   if (!validFrom || !validTo) return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  
+
   const parseDate = (dStr: string) => {
     const parts = dStr.split('-');
     if (parts.length === 3) {
@@ -156,12 +156,12 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const [availabilities, setAvailabilities] = useState<any[]>(
     initialData?.shareSpaceDetailAvailabilitiesTimes?.length
       ? initialData.shareSpaceDetailAvailabilitiesTimes.map((slot: any) => ({
-          ...slot,
-          specificdate: (slot.specificdate && String(slot.specificdate).startsWith('0001')) ? '' : slot.specificdate
-        }))
+        ...slot,
+        specificdate: (slot.specificdate && String(slot.specificdate).startsWith('0001')) ? '' : slot.specificdate
+      }))
       : [{ daysOfWeek: [], specificdate: '', startTime: '08:00', endTime: '12:00', validFrom: getSafeDateOnly(null), validTo: getSafeDateOnly(null) }]
   );
-  
+
   const [timePolicy, setTimePolicy] = useState<any>(null);
 
   const selectedListingPackage = priorityLevels.find(p => p.id === priorityLevelId);
@@ -215,9 +215,9 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         if (res.ok) {
           const data = await res.json();
           const spaces = Array.isArray(data) ? data : (data?.data || []);
-          
+
           let allSpacesAndParts: any[] = [];
-          
+
           for (const space of spaces) {
             allSpacesAndParts.push({ ...space, isPart: false });
             try {
@@ -235,26 +235,26 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
               console.error("Lỗi lấy space part", err);
             }
           }
-            const usageRes = await fetch(`${API_BASE_URL}/api/SpaceUsageRight/Mine`, {
-              headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-            });
-            if (usageRes.ok) {
-              const usageData = await usageRes.json();
-              const rights = Array.isArray(usageData) ? usageData : usageData?.data || [];
-              const shareableRights = rights.filter((r: any) => r.canShare === true);
-              const spacePromises = shareableRights.map((r: any) =>
-                  fetch(`${API_BASE_URL}/api/Space/GetById/${r.spaceId}`, {
-                      headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
-                  }).then(r => r.ok ? r.json() : null)
-              );
-              const resolvedSpaces = await Promise.all(spacePromises);
-              const validUsageSpaces = resolvedSpaces.filter(Boolean);
-              for (const space of validUsageSpaces) {
-                if (!allSpacesAndParts.some(s => (s.id || s.Id) === (space.id || space.Id))) {
-                   allSpacesAndParts.push({ ...space, isPart: false });
-                }
+          const usageRes = await fetch(`${API_BASE_URL}/api/SpaceUsageRight/Mine`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+          });
+          if (usageRes.ok) {
+            const usageData = await usageRes.json();
+            const rights = Array.isArray(usageData) ? usageData : usageData?.data || [];
+            const shareableRights = rights.filter((r: any) => r.canShare === true);
+            const spacePromises = shareableRights.map((r: any) =>
+              fetch(`${API_BASE_URL}/api/Space/GetById/${r.spaceId}`, {
+                headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+              }).then(r => r.ok ? r.json() : null)
+            );
+            const resolvedSpaces = await Promise.all(spacePromises);
+            const validUsageSpaces = resolvedSpaces.filter(Boolean);
+            for (const space of validUsageSpaces) {
+              if (!allSpacesAndParts.some(s => (s.id || s.Id) === (space.id || space.Id))) {
+                allSpacesAndParts.push({ ...space, isPart: false });
               }
             }
+          }
 
           setMySpaces(allSpacesAndParts);
         }
@@ -383,7 +383,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const handleRemoveExistingImage = async (index: number) => {
     const imgToRemove = existingImages[index];
     const publicId = imgToRemove?.publicId || imgToRemove?.id;
-    
+
     if (publicId) {
       try {
         setIsLoading(true);
@@ -395,7 +395,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
             'accept': '*/*'
           }
         });
-        
+
         if (res.ok) {
           setExistingImages(prev => prev.filter((_, i) => i !== index));
         } else {
@@ -698,7 +698,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         spaceId: Number(spaceId),
         allowedStartTime,
         allowedEndTime,
-        name,   
+        name,
         description,
         price: Number(price),
         priceUnit,
@@ -750,9 +750,9 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         // Bắt text lỗi chuẩn xác
         let errorMsg = err.message || 'Lỗi xử lý hệ thống';
         try {
-            const parsed = JSON.parse(errorMsg);
-            errorMsg = parsed.message || parsed.title || parsed.detail || errorMsg;
-        } catch(e) { /* empty */ }
+          const parsed = JSON.parse(errorMsg);
+          errorMsg = parsed.message || parsed.title || parsed.detail || errorMsg;
+        } catch (e) { /* empty */ }
         setError(errorMsg);
       } finally {
         setIsLoading(false);
@@ -803,18 +803,18 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         const errText = await res.text();
         let parsedMsg = errText;
         try {
-           const errObj = JSON.parse(errText);
-           if (errObj.errors && typeof errObj.errors === 'object') {
-             const fieldMessages = Object.values(errObj.errors).flat().filter(Boolean) as string[];
-             if (fieldMessages.length > 0) {
-               parsedMsg = fieldMessages.join('\n');
-             } else {
-               parsedMsg = errObj.message || errObj.title || errObj.detail || errText;
-             }
-           } else {
-             parsedMsg = errObj.message || errObj.title || errObj.detail || errText;
-           }
-        } catch(e) { /* empty */ }
+          const errObj = JSON.parse(errText);
+          if (errObj.errors && typeof errObj.errors === 'object') {
+            const fieldMessages = Object.values(errObj.errors).flat().filter(Boolean) as string[];
+            if (fieldMessages.length > 0) {
+              parsedMsg = fieldMessages.join('\n');
+            } else {
+              parsedMsg = errObj.message || errObj.title || errObj.detail || errText;
+            }
+          } else {
+            parsedMsg = errObj.message || errObj.title || errObj.detail || errText;
+          }
+        } catch (e) { /* empty */ }
         setError(parsedMsg || 'Lỗi xử lý hệ thống');
         setIsLoading(false);
         return;
@@ -904,7 +904,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
             overflow: 'hidden'
           }}>
             <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: 'radial-gradient(circle, rgba(168,85,247,0.15) 0%, rgba(255,255,255,0) 70%)', borderRadius: '50%' }}></div>
-            
+
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', zIndex: 1 }}>
               <div style={{
                 width: '48px', height: '48px', borderRadius: '12px',
@@ -912,7 +912,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
                 boxShadow: '0 4px 10px rgba(168,85,247,0.3)'
               }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72" /><path d="m14 7 3 3" /><path d="M5 6v4" /><path d="M19 14v4" /><path d="M10 2v2" /><path d="M7 8H3" /><path d="M21 16h-4" /><path d="M11 3H9" /></svg>
               </div>
               <div>
                 <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 'bold', color: '#1e293b' }}>
@@ -923,9 +923,9 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 </p>
               </div>
             </div>
-            
-            <a 
-              href="http://localhost:5173/ai-image-editor" 
+
+            <a
+              href="http://localhost:5173/ai-image-editor"
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -947,7 +947,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
               onMouseOver={(e) => { e.currentTarget.style.borderColor = '#ec4899'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.15)'; }}
               onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.02)'; }}
             >
-              Trải nghiệm ngay <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              Trải nghiệm ngay <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
             </a>
           </div>
 
@@ -989,9 +989,9 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                   onChange={(v) => setSpaceId(Number(v))}
                   disabled={isLoading || !!initialData}
                   placeholder="-- Chọn mặt bằng --"
-                  options={mySpaces.map(s => ({ 
-                    value: s.id || s.Id, 
-                    label: s.isPart ? `↳ [Chia nhỏ] ${s.name} (thuộc ${s.parentName})` : s.name 
+                  options={mySpaces.map(s => ({
+                    value: s.id || s.Id,
+                    label: s.isPart ? `↳ [Chia nhỏ] ${s.name} (thuộc ${s.parentName})` : s.name
                   }))}
                 />
               </div>
@@ -1256,7 +1256,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
           </div>
 
           {!lockRenewFields && (
-          <div className="form-section">
+            <div className="form-section">
               <h3 className="form-section-title">Hình ảnh bài đăng (Tùy chọn)</h3>
               <div style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '16px' }}>
                 <div className="form-group" style={{ gap: '10px' }}>
@@ -1353,61 +1353,62 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
               {availabilities.map((slot, idx) => {
                 const validDays = getValidDaysOfWeek(slot.validFrom, slot.validTo);
                 return (
-                <div key={idx} style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '14px', marginBottom: '10px' }}>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                    {DAYS_OF_WEEK.map(day => {
-                      const isDayValid = validDays.includes(day);
-                      return (
-                      <button
-                        type="button" key={day}
-                        className={`filter-tab ${slot.daysOfWeek.includes(day) ? 'filter-tab--active' : ''}`}
-                        onClick={() => toggleDayInSlot(idx, day)}
-                        disabled={isLoading || lockRenewFields || !isDayValid}
-                        style={{ opacity: isDayValid ? 1 : 0.5 }}
-                      >
-                        {DAYS_LABEL_VI[day]}
+                  <div key={idx} style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '14px', marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                      {DAYS_OF_WEEK.map(day => {
+                        const isDayValid = validDays.includes(day);
+                        return (
+                          <button
+                            type="button" key={day}
+                            className={`filter-tab ${slot.daysOfWeek.includes(day) ? 'filter-tab--active' : ''}`}
+                            onClick={() => toggleDayInSlot(idx, day)}
+                            disabled={isLoading || lockRenewFields || !isDayValid}
+                            style={{ opacity: isDayValid ? 1 : 0.5 }}
+                          >
+                            {DAYS_LABEL_VI[day]}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="form-grid-2">
+                      <div className="form-group">
+                        <label className="form-label">Giờ bắt đầu</label>
+                        <input type="time" className="form-input" value={slot.startTime}
+                          onChange={e => updateSlotField(idx, 'startTime', e.target.value)} disabled={isLoading || lockRenewFields} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Giờ kết thúc</label>
+                        <input type="time" className="form-input" value={slot.endTime}
+                          onChange={e => updateSlotField(idx, 'endTime', e.target.value)} disabled={isLoading || lockRenewFields} />
+                      </div>
+                    </div>
+                    <div className="form-grid-2">
+                      <div className="form-group">
+                        <label className="form-label">Áp dụng từ</label>
+                        <DatePicker
+                          value={slot.validFrom}
+                          min={allowedStartTime}
+                          onChange={(v: any) => updateSlotField(idx, 'validFrom', v)}
+                          disabled={isLoading || lockRenewFields}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Áp dụng đến</label>
+                        <DatePicker
+                          value={slot.validTo}
+                          max={allowedEndTime}
+                          min={slot.validFrom || allowedStartTime}
+                          onChange={(v: any) => updateSlotField(idx, 'validTo', v)}
+                          disabled={isLoading || lockRenewFields}
+                        />
+                      </div>
+                    </div>
+                    {availabilities.length > 1 && (
+                      <button type="button" className="btn-ghost" style={{ color: 'var(--color-negative)' }} onClick={() => removeSlot(idx)}>
+                        <Trash2 size={13} /> Xóa khung giờ này
                       </button>
-                    )})}
+                    )}
                   </div>
-                  <div className="form-grid-2">
-                    <div className="form-group">
-                      <label className="form-label">Giờ bắt đầu</label>
-                      <input type="time" className="form-input" value={slot.startTime}
-                        onChange={e => updateSlotField(idx, 'startTime', e.target.value)} disabled={isLoading || lockRenewFields} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Giờ kết thúc</label>
-                      <input type="time" className="form-input" value={slot.endTime}
-                        onChange={e => updateSlotField(idx, 'endTime', e.target.value)} disabled={isLoading || lockRenewFields} />
-                    </div>
-                  </div>
-                  <div className="form-grid-2">
-                    <div className="form-group">
-                      <label className="form-label">Áp dụng từ</label>
-                      <DatePicker
-                        value={slot.validFrom}
-                        min={allowedStartTime}
-                        onChange={(v: any) => updateSlotField(idx, 'validFrom', v)}
-                        disabled={isLoading || lockRenewFields}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Áp dụng đến</label>
-                      <DatePicker
-                        value={slot.validTo}
-                        max={allowedEndTime}
-                        min={slot.validFrom || allowedStartTime}
-                        onChange={(v: any) => updateSlotField(idx, 'validTo', v)}
-                        disabled={isLoading || lockRenewFields}
-                      />
-                    </div>
-                  </div>
-                  {availabilities.length > 1 && (
-                    <button type="button" className="btn-ghost" style={{ color: 'var(--color-negative)' }} onClick={() => removeSlot(idx)}>
-                      <Trash2 size={13} /> Xóa khung giờ này
-                    </button>
-                  )}
-                </div>
                 );
               })}
               <button type="button" className="btn-ghost" onClick={addSlot} disabled={isLoading || lockRenewFields}>

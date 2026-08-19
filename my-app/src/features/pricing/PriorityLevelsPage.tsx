@@ -130,7 +130,7 @@ export const PriorityLevelsPage: React.FC = () => {
                       </div>
                       {pkg.durationInDays !== null && pkg.durationInDays !== undefined && (
                         <div className="pricing-card-duration">
-                          <ShieldCheck size={14} style={{ color: '#00d4a0' }} />
+                          <ShieldCheck size={14} className="pricing-card-duration-icon--listing" />
                           <span>Thời hạn hiển thị: <strong>{pkg.durationInDays} ngày</strong></span>
                         </div>
                       )}
@@ -151,8 +151,7 @@ export const PriorityLevelsPage: React.FC = () => {
               {filteredBannerLevels.map((pkg) => (
                 <div 
                   key={`banner-${pkg.id}`} 
-                  className="pricing-card"
-                  style={{ borderColor: 'rgba(245, 158, 11, 0.4)', background: 'linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, rgba(22, 27, 34, 0.95) 100%)' }}
+                  className="pricing-card pricing-card--banner"
                 >
                   <div>
                     <div className="pricing-card-header">
@@ -169,20 +168,20 @@ export const PriorityLevelsPage: React.FC = () => {
 
                     <div className="pricing-card-price-box">
                       <div>
-                        <span className="pricing-card-price" style={{ color: '#fbbf24' }}>
+                        <span className="pricing-card-price pricing-card-price--banner">
                           {pkg.price.toLocaleString('vi-VN')}
                         </span>
                         <span className="pricing-card-price-unit">VNĐ</span>
                       </div>
                       {pkg.durationInDays !== null && pkg.durationInDays !== undefined && (
                         <div className="pricing-card-duration">
-                          <ShieldCheck size={14} style={{ color: '#fbbf24' }} />
+                          <ShieldCheck size={14} className="pricing-card-duration-icon--banner" />
                           <span>Thời gian chạy banner: <strong>{pkg.durationInDays} ngày</strong></span>
                         </div>
                       )}
                       {pkg.durationForBanner !== null && pkg.durationForBanner !== undefined && (
                         <div className="pricing-card-duration" style={{ marginTop: 4 }}>
-                          <Megaphone size={14} style={{ color: '#fbbf24' }} />
+                          <Megaphone size={14} className="pricing-card-duration-icon--banner" />
                           <span>Giới hạn vị trí tối đa: <strong>{pkg.durationForBanner} vị trí</strong></span>
                         </div>
                       )}
@@ -190,8 +189,7 @@ export const PriorityLevelsPage: React.FC = () => {
                   </div>
 
                   <button 
-                    className="pricing-card-cta"
-                    style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#0d1117' }}
+                    className="pricing-card-cta pricing-card-cta--banner"
                     onClick={handleActionClick}
                   >
                     <span>Tạo Banner Ngay</span>
