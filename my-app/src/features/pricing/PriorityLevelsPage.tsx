@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Sparkles, CheckCircle2, Zap, Megaphone, ShieldCheck, 
-  ArrowRight, Layers, HelpCircle, Loader2, Star 
+import {
+  Sparkles, Zap, Megaphone, ShieldCheck,
+  ArrowRight, Layers, HelpCircle, Loader2
 } from 'lucide-react';
 import { Header } from '../../components/Header';
 import { Footer } from '../../components/Footer';
