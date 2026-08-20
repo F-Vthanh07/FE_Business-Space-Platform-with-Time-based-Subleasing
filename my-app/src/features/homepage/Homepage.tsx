@@ -433,9 +433,7 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
               <li><Brain size={18} /> Phân tích & Gợi ý bố cục nội thất thông minh</li>
               <li><Map size={18} /> Xóa vật thể thừa, tự động làm sáng không gian</li>
             </ul>
-            <button className="btn-primary feature-cta" style={{ background: '#00d4a0', borderColor: '#00d4a0', color: '#fff' }} onClick={() => {
-              window.open('http://localhost:5173/ai-image-editor', '_blank');
-            }}>
+            <button className="btn-primary feature-cta" style={{ background: '#00d4a0', borderColor: '#00d4a0', color: '#fff' }} onClick={() => navigate('/ai-image-editor')}>
               Trải Nghiệm AI Editor <ArrowRight size={16} />
             </button>
           </div>

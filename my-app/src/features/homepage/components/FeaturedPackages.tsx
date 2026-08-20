@@ -38,7 +38,7 @@ export const FeaturedPackages: React.FC = () => {
               Chọn gói phù hợp để bài đăng của bạn tiếp cận nhiều khách hàng hơn.
             </p>
           </div>
-          <button className="packages-viewall-btn" onClick={() => navigate('/user/pricing-plans')}>
+          <button className="packages-viewall-btn" onClick={() => navigate('/pricing')}>
             Xem tất cả các gói <ArrowRight size={14} />
           </button>
         </div>
