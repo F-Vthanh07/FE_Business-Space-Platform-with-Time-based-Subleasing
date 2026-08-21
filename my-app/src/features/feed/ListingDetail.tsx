@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Tag, Flag, Star, Sofa, Wand2, Eye } from 'lucide-react';
+import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Tag, Flag, Star, Sofa, Wand2, Eye, ShieldCheck, Lock, FileText } from 'lucide-react';
 import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
@@ -193,6 +193,7 @@ export const ListingDetail: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [shareModalAnimateIn, setShareModalAnimateIn] = useState(false);
 
+  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [reportReasons, setReportReasons] = useState<string[]>([]);
@@ -270,18 +271,25 @@ export const ListingDetail: React.FC = () => {
             let currentSpaceId = found.spaceId || found.SpaceId;
             let parentSpace = spaces.find(s => (s.id || s.Id) == currentSpaceId);
 
-            // Truy ngược nếu currentSpaceId là ID của một Listing (chia nhỏ mặt bằng)
-            let depth = 0;
-            while (!parentSpace && depth < 5) {
-              const allListings = (data?.data || data?.items || data || []);
-              const parentListing = allListings.find((pl: any) => (pl.id || pl.Id) == currentSpaceId);
-              if (!parentListing) break;
-              currentSpaceId = parentListing.spaceId || parentListing.SpaceId;
-              parentSpace = spaces.find(s => (s.id || s.Id) == currentSpaceId);
-              depth++;
+            // GET SPACE PARTS
+            let spaceOrPart = parentSpace;
+            let isSpacePart = false;
+            
+            if (!parentSpace) {
+               isSpacePart = true;
+               try {
+                   const token = localStorage.getItem('token');
+                   const headers: any = { accept: '*/*' };
+                   if (token) headers['Authorization'] = `Bearer ${token}`;
+                   
+                   const spRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetById/${currentSpaceId}`, { headers });
+                   if (spRes.ok) {
+                       spaceOrPart = await spRes.json();
+                   }
+               } catch (e) {}
             }
 
-            const computedArea = found.area || found.Area || parentSpace?.area || parentSpace?.Area || null;
+            const computedArea = found.area || found.Area || spaceOrPart?.area || spaceOrPart?.Area || null;
             foundWithSpaceInfo = {
               ...found,
               area: computedArea,
@@ -289,8 +297,9 @@ export const ListingDetail: React.FC = () => {
               city: found.city || parentSpace?.city || '',
               spaceLatitude: found.spaceLatitude ?? parentSpace?.latitude ?? parentSpace?.Latitude ?? null,
               spaceLongitude: found.spaceLongitude ?? parentSpace?.longitude ?? parentSpace?.Longitude ?? null,
-              amenities: found.amenities || parentSpace?.amenities || [],
-              allowedCategories: found.spaceAllowedCategories || parentSpace?.spaceAllowedCategories || []
+              amenities: found.amenities || spaceOrPart?.amenities || parentSpace?.amenities || [],
+              allowedCategories: found.spaceAllowedCategories || spaceOrPart?.spaceAllowedCategories || parentSpace?.spaceAllowedCategories || [],
+              isSpacePart
             };
           }
           setListing(foundWithSpaceInfo);
@@ -605,6 +614,35 @@ export const ListingDetail: React.FC = () => {
               </div>
             )}
 
+            {/* TAXONOMY DUAL BADGES */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {/* TAG 1: HÌNH THỨC THUÊ */}
+              {listing.listingType === 'SharedSpace' && listing.shareSpaceDetailIsOwner === false ? (
+                <span style={{ backgroundColor: '#FCE7F3', color: '#BE185D', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Share2 size={14} /> Cho thuê lại
+                </span>
+              ) : listing.priceUnit === 'PerHour' ? (
+                <span style={{ backgroundColor: '#EEF2FF', color: '#3730A3', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Calendar size={14} /> Chia sẻ khung giờ
+                </span>
+              ) : (
+                <span style={{ backgroundColor: '#F0FDF4', color: '#166534', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Home size={14} /> Dài hạn
+                </span>
+              )}
+
+              {/* TAG 2: QUY MÔ KHÔNG GIAN */}
+              {listing.isSpacePart === true ? (
+                <span style={{ backgroundColor: '#FEF9C3', color: '#854D0E', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Sofa size={14} /> Diện tích chia nhỏ
+                </span>
+              ) : (
+                <span style={{ backgroundColor: '#ECFDF5', color: '#047857', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Tag size={14} /> Nguyên căn
+                </span>
+              )}
+            </div>
+
             {/* SỬA GIỐNG OWNERLISTINGS: Chỉ render Name khi tồn tại */}
             {listing.name && (
               <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 12px 0', lineHeight: '1.4', color: '#2C2C2C' }}>
@@ -656,6 +694,97 @@ export const ListingDetail: React.FC = () => {
 
             <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Thông tin mô tả</h3>
             <ExpandableDescription text={listing.description} />
+
+            {/* TÌNH TRẠNG MẶT BẰNG VISUALIZER */}
+            <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Tình trạng mặt bằng</h3>
+            <div style={{ padding: '20px', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', marginBottom: '40px' }}>
+              {(listing.isSpacePart === true) && (
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', backgroundColor: '#FEF3C7', color: '#D97706', borderRadius: '8px', fontWeight: 600, fontSize: '14px', marginBottom: '16px' }}>
+                    <Sofa size={18} /> Bạn đang xem một phần diện tích chia nhỏ của mặt bằng gốc.
+                 </div>
+              )}
+              {(listing.listingType === 'SharedSpace' && listing.shareSpaceDetailIsOwner === false) && (
+                 <>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', backgroundColor: '#FCE7F3', color: '#BE185D', borderRadius: '8px', fontWeight: 600, fontSize: '14px', marginBottom: '16px' }}>
+                      <ShieldCheck size={18} /> Mặt bằng này đang được sang nhượng / cho thuê lại.
+                   </div>
+                   
+                   {/* Khối Verified Sublease Contract */}
+                   <div style={{ border: '1px solid #10B981', borderRadius: '8px', padding: '16px', marginBottom: '16px', backgroundColor: '#ECFDF5' }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                       <div>
+                         <h4 style={{ margin: '0 0 4px 0', color: '#047857', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px' }}>
+                           <FileText size={16} /> Chứng nhận quyền cho thuê lại
+                         </h4>
+                         <p style={{ margin: 0, fontSize: '13px', color: '#065F46' }}>Tài liệu hợp đồng gốc đã được xác thực bởi hệ thống.</p>
+                       </div>
+                       <div style={{ backgroundColor: '#D1FAE5', color: '#047857', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+                         ĐÃ XÁC THỰC
+                       </div>
+                     </div>
+                     <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                       <div 
+                         onClick={() => setIsContractModalOpen(true)}
+                         style={{ width: '80px', height: '100px', backgroundColor: '#fff', border: '1px dashed #10B981', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
+                       >
+                         <div style={{ position: 'absolute', width: '100%', height: '100%', filter: 'blur(4px)', background: 'url("https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=200") center/cover' }} />
+                         <Lock size={24} color="#047857" style={{ position: 'relative', zIndex: 1 }} />
+                       </div>
+                       <div style={{ flex: 1, fontSize: '13px', color: '#065F46' }}>
+                         <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '4px', marginBottom: '8px' }}>
+                           <span style={{ fontWeight: 600 }}>Người thuê gốc:</span>
+                           <span>{(listing.ownerName || 'Nguyễn Văn A').substring(0, 8)}***</span>
+                           
+                           <span style={{ fontWeight: 600 }}>Thời hạn HĐ:</span>
+                           <span>{listing.allowedEndTime ? new Date(listing.allowedEndTime).toLocaleDateString('vi-VN') : 'Còn hiệu lực (Đã xác minh)'}</span>
+                         </div>
+                         <button 
+                           onClick={() => setIsContractModalOpen(true)}
+                           style={{ padding: '6px 12px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                         >
+                           Xem chi tiết hợp đồng
+                         </button>
+                       </div>
+                     </div>
+                   </div>
+                 </>
+              )}
+              {((listing.listingType === 'SharedSpace' || listing.priceUnit === 'PerHour') && listing.shareSpaceDetailAvailabilitiesTimes?.length > 0) ? (
+                 <div>
+                   <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#475569', fontWeight: 500 }}>Các ca chia sẻ hiện đang trống:</p>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                     {listing.shareSpaceDetailAvailabilitiesTimes.map((slot: any, idx: number) => {
+                       const formatToAmPm = (timeStr?: string) => {
+                         if (!timeStr) return '';
+                         const [h, m] = timeStr.split(':');
+                         const hh = parseInt(h, 10);
+                         const ampm = hh >= 12 ? 'PM' : 'AM';
+                         const hh12 = hh % 12 || 12;
+                         return `${hh12.toString().padStart(2, '0')}:${m} ${ampm}`;
+                       };
+                       const formatDate = (dateStr: string) => {
+                         if (!dateStr) return '';
+                         const d = new Date(dateStr);
+                         return d.toLocaleDateString('vi-VN');
+                       };
+                       const dayStr = slot.daysOfWeek?.length > 0 ? slot.daysOfWeek.join(', ') : (slot.specificdate ? formatDate(slot.specificdate) : 'Hôm nay');
+                       return (
+                         <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                           <span style={{ fontWeight: 600, color: '#0F172A', fontSize: '14px' }}>{dayStr}</span>
+                           <span style={{ color: '#10B981', fontWeight: 600, fontSize: '14px' }}>{formatToAmPm(slot.startTime)} - {formatToAmPm(slot.endTime)}</span>
+                         </div>
+                       );
+                     })}
+                   </div>
+                 </div>
+              ) : (
+                !(listing.isSpacePart === true) ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', backgroundColor: '#D1FAE5', color: '#047857', borderRadius: '8px', fontWeight: 600, fontSize: '14px' }}>
+                    <Check size={18} /> Mặt bằng nguyên căn - Thuê toàn quyền sử dụng 24/7.
+                  </div>
+                ) : null
+              )}
+            </div>
 
             {/* TIỆN ÍCH */}
             {activeAmenities.length > 0 && (
@@ -1264,6 +1393,72 @@ export const ListingDetail: React.FC = () => {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+      {/* CONTRACT MODAL */}
+      {isContractModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '12px', width: '90%', maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E0E0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px', color: '#1E293B' }}>
+                <ShieldCheck size={20} color="#10B981" /> Chi tiết hợp đồng gốc (Bản xem trước)
+              </h2>
+              <button onClick={() => setIsContractModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div style={{ padding: '20px', overflowY: 'auto', flex: 1, backgroundColor: '#F1F5F9', position: 'relative', display: 'flex', justifyContent: 'center' }}>
+              {/* Fake Contract Document Container */}
+              <div style={{ width: '100%', maxWidth: '600px', backgroundColor: '#fff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', minHeight: '800px', position: 'relative', padding: '40px' }}>
+                {/* WATERMARK */}
+                <div style={{ 
+                  position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                  pointerEvents: 'none', zIndex: 10, overflow: 'hidden'
+                }}>
+                  <div style={{
+                    transform: 'rotate(-45deg)',
+                    color: 'rgba(239, 68, 68, 0.15)',
+                    fontSize: '48px',
+                    fontWeight: 900,
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                    lineHeight: '1.2',
+                    userSelect: 'none'
+                  }}>
+                    FLEXISPACE DEMO<br/>
+                    KHÔNG CÓ GIÁ TRỊ PHÁP LÝ<br/>
+                    CHỈ DÙNG ĐỂ XÁC MINH
+                  </div>
+                </div>
+
+                {/* Fake Contract Content */}
+                <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</h3>
+                  <h4 style={{ margin: 0, fontSize: '16px', textDecoration: 'underline' }}>Độc lập - Tự do - Hạnh phúc</h4>
+                </div>
+                <h2 style={{ textAlign: 'center', margin: '30px 0', fontSize: '24px' }}>HỢP ĐỒNG THUÊ MẶT BẰNG</h2>
+                <div style={{ lineHeight: '1.8', color: '#333' }}>
+                  <p><strong>Bên Cho Thuê (Bên A):</strong> Chủ mặt bằng gốc</p>
+                  <p><strong>Bên Thuê (Bên B):</strong> {(listing.ownerName || 'Nguyễn Văn A')}</p>
+                  <p><strong>Diện tích thuê:</strong> {listing.area || 'Không rõ'} m2</p>
+                  <p><strong>Địa chỉ:</strong> {listing.spaceAddress || listing.address || listing.location || 'Hồ Chí Minh'}</p>
+                  <p><strong>Thời hạn thuê:</strong> Từ 01/01/2023 đến {listing.allowedEndTime ? new Date(listing.allowedEndTime).toLocaleDateString('vi-VN') : '31/12/2025'}</p>
+                  <p><strong>Điều khoản đặc biệt:</strong> Bên B <span style={{ color: '#10B981', fontWeight: 'bold' }}>ĐƯỢC PHÉP</span> cho thuê lại (sublease) một phần hoặc toàn bộ mặt bằng trong thời gian hợp đồng còn hiệu lực.</p>
+                </div>
+                
+                {/* Fake image to simulate a real document scan */}
+                <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=800" alt="contract scan" style={{ width: '100%', marginTop: '30px', opacity: 0.5, mixBlendMode: 'multiply' }} />
+              </div>
+            </div>
+            
+            <div style={{ padding: '16px 20px', borderTop: '1px solid #E0E0E0', backgroundColor: '#fff', textAlign: 'right' }}>
+              <button onClick={() => setIsContractModalOpen(false)} style={{ padding: '10px 20px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}>
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

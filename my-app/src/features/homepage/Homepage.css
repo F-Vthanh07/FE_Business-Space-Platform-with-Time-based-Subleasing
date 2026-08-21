@@ -538,11 +538,11 @@ html, body, #root {
   overflow: hidden;
 }
 
-.rental-banner--longterm {
+.rental-banner--full {
   background: linear-gradient(135deg, #00a67e 0%, #00875a 100%);
 }
 
-.rental-banner--hourly {
+.rental-banner--timeslot {
   background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
 }
 
@@ -689,14 +689,19 @@ html, body, #root {
   white-space: nowrap;
 }
 
-.rental-card-tag--longterm {
+.rental-card-tag--full {
   background: #d1fae5;
   color: #047857;
 }
 
-.rental-card-tag--hourly {
+.rental-card-tag--timeslot {
   background: #dbeafe;
   color: #1d4ed8;
+}
+
+.rental-card-tag--partial {
+  background: #fef3c7;
+  color: #d97706;
 }
 
 .rental-card-price-row {
@@ -713,12 +718,16 @@ html, body, #root {
   font-size: 14px;
 }
 
-.rental-card-price--longterm {
+.rental-card-price--full {
   color: #e03c31;
 }
 
-.rental-card-price--hourly {
+.rental-card-price--timeslot {
   color: #1d4ed8;
+}
+
+.rental-card-price--partial {
+  color: #d97706;
 }
 
 /* .dot-sep đã được định nghĩa sẵn trong Homepage.css (color: #9CA3AF) — không khai báo lại ở đây để tránh đè màu */
@@ -788,20 +797,28 @@ html, body, #root {
   color: #fff;
 }
 
-.rental-card-btn--longterm {
+.rental-card-btn--full {
   background: #00a67e;
 }
 
-.rental-card-btn--longterm:hover {
+.rental-card-btn--full:hover {
   background: #00875a;
 }
 
-.rental-card-btn--hourly {
+.rental-card-btn--timeslot {
   background: #2563eb;
 }
 
-.rental-card-btn--hourly:hover {
+.rental-card-btn--timeslot:hover {
   background: #1d4ed8;
+}
+
+.rental-card-btn--partial {
+  background: #f59e0b;
+}
+
+.rental-card-btn--partial:hover {
+  background: #d97706;
 }
 
 .rental-card-heart {

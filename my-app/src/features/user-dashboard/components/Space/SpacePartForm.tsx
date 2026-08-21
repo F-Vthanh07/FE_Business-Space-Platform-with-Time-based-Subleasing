@@ -202,6 +202,8 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
         let errorMessage = errData.message || 'Có lỗi xảy ra, vui lòng thử lại.';
         if (errorMessage.includes('cannot exceed parent space area')) {
           errorMessage = 'Tổng diện tích các không gian chia nhỏ vượt quá diện tích không gian gốc.';
+        } else if (errorMessage.includes('already been signed') || errorMessage.includes('already has an active contract')) {
+          errorMessage = 'Mặt bằng này đã được ký hợp đồng hoặc đang có người thuê nên không thể chia nhỏ.';
         }
         throw new Error(errorMessage);
       }

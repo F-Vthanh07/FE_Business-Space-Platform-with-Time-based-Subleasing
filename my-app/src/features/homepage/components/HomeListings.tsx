@@ -37,27 +37,13 @@ const formatTimeAgo = (dateStr?: string) => {
   return d.toLocaleDateString('vi-VN');
 };
 
-type RentalCategory = 'longterm' | 'hourly';
+type RentalCategory = 'full' | 'timeslot' | 'partial';
 
-const getRentalCategory = (item: any): RentalCategory => {
-  const listingType = (item.listingType || item.ListingType || '').toString();
-  if (listingType === 'SharedSpace') return 'hourly';
-  if (listingType === 'EntireSpace') return 'longterm';
-  if (item.isHourly === true) return 'hourly';
-
-  const raw = (
-    item.rentalType ||
-    item.leaseType ||
-    item.pricingType ||
-    item.mode ||
-    item.type ||
-    ''
-  ).toString().toLowerCase();
-
-  const hourlyKeywords = ['hour', 'gio', 'giờ', 'sublease', 'share', 'flexible'];
-  if (hourlyKeywords.some((kw) => raw.includes(kw))) return 'hourly';
-
-  return 'longterm';
+const getRentalCategory = (listing: any): RentalCategory => {
+  const rawPriceUnit = listing.priceUnit || listing.PriceUnit;
+  const listingType = listing.listingType || listing.ListingType;
+  if (rawPriceUnit === 'PerHour' || listingType === 'SharedSpace') return 'timeslot';
+  return 'full';
 };
 
 export const HomeListings: React.FC<HomeListingsProps> = ({
@@ -129,36 +115,68 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
           const data = await response.json();
           const safeData = Array.isArray(data) ? data : (data?.data || data?.items || []);
 
-          // BƯỚC 4: GHÉP ĐỊA CHỈ TỪ MẶT BẰNG VÀO BÀI ĐĂNG
-          const listingsWithAddress = safeData
+          // BƯỚC 4: XÁC ĐỊNH SPACE PART VÀ FETCH DATA CẦN THIẾT
+          const spacePartPromises: number[] = [];
+          const listingsWithAddressBase = safeData
             .filter((l: any) => {
               const status = l.status ?? l.Status;
               return status !== 1 && status !== 'Occupied';
             })
             .map((l: any) => {
-            let currentSpaceId = l.spaceId || l.SpaceId;
-            let parentSpace = spaces.find((s) => (s.id || s.Id) == currentSpaceId);
+              let currentSpaceId = l.spaceId || l.SpaceId;
+              let parentSpace = spaces.find((s) => (s.id || s.Id) == currentSpaceId);
+              
+              let isSpacePart = false;
+              if (!parentSpace) {
+                  isSpacePart = true;
+                  if (currentSpaceId) spacePartPromises.push(currentSpaceId);
+              }
+              return { ...l, isSpacePart, _tempSpaceId: currentSpaceId, _parentSpace: parentSpace };
+            });
+
+          // FETCH UNIQUE SPACE PARTS
+          const uniqueSpacePartIds = Array.from(new Set(spacePartPromises));
+          const fetchedSpaceParts: Record<number, any> = {};
+          if (uniqueSpacePartIds.length > 0) {
+              await Promise.all(uniqueSpacePartIds.map(async (spId) => {
+                  try {
+                      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetById/${spId}`, { headers });
+                      if (res.ok) {
+                          fetchedSpaceParts[spId] = await res.json();
+                      }
+                  } catch (e) {}
+              }));
+          }
+
+          // GHÉP AREA & ADDRESS
+          const listingsWithAddress = listingsWithAddressBase.map((l: any) => {
+            let spaceOrPart = l._parentSpace || fetchedSpaceParts[l._tempSpaceId];
             
-            // Truy ngược nếu currentSpaceId là ID của một Listing (chia nhỏ mặt bằng)
-            let depth = 0;
-            while (!parentSpace && depth < 5) {
-              const parentListing = safeData.find((pl: any) => (pl.id || pl.Id) == currentSpaceId);
-              if (!parentListing) break;
-              currentSpaceId = parentListing.spaceId || parentListing.SpaceId;
-              parentSpace = spaces.find((s) => (s.id || s.Id) == currentSpaceId);
-              depth++;
+            let address = l.spaceAddress || l.location || l.address || '';
+            let city = l.city || '';
+            let computedArea = l.area || l.Area || spaceOrPart?.area || spaceOrPart?.Area || null;
+
+            if (l.isSpacePart && spaceOrPart?.parentSpaceId) {
+               const parent = spaces.find(s => (s.id || s.Id) == spaceOrPart.parentSpaceId);
+               if (parent && !address) {
+                 address = parent.address || parent.location || '';
+                 city = parent.city || '';
+               }
+            } else if (spaceOrPart && !address) {
+                 address = spaceOrPart.address || spaceOrPart.location || '';
+                 city = spaceOrPart.city || '';
             }
 
-            const computedArea = l.area || l.Area || parentSpace?.area || parentSpace?.Area || null;
             return {
               ...l,
-              address: l.spaceAddress || l.location || l.address || parentSpace?.address || parentSpace?.location || '',
+              address,
               area: computedArea,
-              city: l.city || parentSpace?.city || '',
+              city,
+              isSpacePart: l.isSpacePart
             };
           });
 
-          console.log("listingsWithAddress mapped:", listingsWithAddress.map((l: any) => ({id: l.id, area: l.area})));
+          console.log("listingsWithAddress mapped count:", listingsWithAddress.length);
           setListings(listingsWithAddress);
         }
       } catch (error) {
@@ -208,10 +226,10 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
     }
   };
 
-  const longTermListings = listings.filter((l) => getRentalCategory(l) === 'longterm');
-  const hourlyListings = listings.filter((l) => getRentalCategory(l) === 'hourly');
+  const fullListings = listings.filter((l) => getRentalCategory(l) === 'full');
+  const sharedListings = listings.filter((l) => getRentalCategory(l) === 'timeslot' || getRentalCategory(l) === 'partial');
 
-  const hasMoreOverall = longTermListings.length > MAX_VISIBLE || hourlyListings.length > MAX_VISIBLE;
+  const hasMoreOverall = fullListings.length > MAX_VISIBLE || sharedListings.length > MAX_VISIBLE;
 
   // ================= RENDER 1 CARD =================
   const renderCard = (item: any, category: RentalCategory) => {
@@ -222,12 +240,62 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
     const imageCount = realImages.length;
     const mainImage = imageCount > 0 ? realImages[0] : FALLBACK_IMAGE;
 
-    const isHourly = category === 'hourly';
-    const priceUnit = item.priceUnit ? getPriceUnitText(item.priceUnit) : (isHourly ? 'giờ' : 'tháng');
-    const typeLabel = isHourly ? 'Share theo giờ' : 'Mặt bằng kinh doanh';
+    const isHourly = category === 'timeslot';
+    const rawPriceUnit = item.priceUnit || item.PriceUnit;
+    const priceUnitText = rawPriceUnit ? getPriceUnitText(rawPriceUnit) : (isHourly ? 'giờ' : 'tháng');
+    
+    // 2. Type Label (Theo giờ, dài hạn, v.v.)
+    let typeLabel = '';
+    const listingType = item.listingType || item.ListingType;
+    if (rawPriceUnit === 'PerHour') {
+       typeLabel = 'Theo ca/giờ';
+    } else if (rawPriceUnit === 'PerDay') {
+       typeLabel = 'Theo ngày';
+    } else if (rawPriceUnit === 'PerWeek') {
+       typeLabel = 'Theo tuần';
+    } else {
+       typeLabel = 'Cố định 24/7';
+    }
+    if (listingType === 'SharedSpace' && rawPriceUnit !== 'PerHour') {
+       typeLabel = 'Chia sẻ không gian';
+    }
+
     const actionLabel = isHourly ? 'Đặt giờ' : 'Nhắn tin';
 
     const isSaved = favoriteIds.has(Number(itemId));
+
+    let timeSlotStr = '';
+    if (isHourly && item.shareSpaceDetailAvailabilitiesTimes?.length > 0) {
+      const firstSlot = item.shareSpaceDetailAvailabilitiesTimes[0];
+      const formatToAmPm = (timeStr?: string) => {
+        if (!timeStr) return '';
+        const [h, m] = timeStr.split(':');
+        const hh = parseInt(h, 10);
+        const ampm = hh >= 12 ? 'PM' : 'AM';
+        const hh12 = hh % 12 || 12;
+        return `${hh12.toString().padStart(2, '0')}:${m} ${ampm}`;
+      };
+      
+      const dayStr = firstSlot.daysOfWeek?.length > 0 ? firstSlot.daysOfWeek.join(', ') : 'Hôm nay';
+      timeSlotStr = `⏱ ${dayStr}: ${formatToAmPm(firstSlot.startTime)} - ${formatToAmPm(firstSlot.endTime)}`;
+      if (item.shareSpaceDetailAvailabilitiesTimes.length > 1) {
+         timeSlotStr += ` (và ${item.shareSpaceDetailAvailabilitiesTimes.length - 1} ca khác)`;
+      }
+    }
+
+    // TAG 1: HÌNH THỨC THUÊ
+    let typeTag = { label: 'Dài hạn', bg: '#F0FDF4', color: '#166534' };
+    if (listingType === 'SharedSpace' && item.shareSpaceDetailIsOwner === false) {
+      typeTag = { label: 'Cho thuê lại', bg: '#FCE7F3', color: '#9D174D' };
+    } else if (rawPriceUnit === 'PerHour') {
+      typeTag = { label: 'Theo ca', bg: '#EEF2FF', color: '#3730A3' };
+    }
+
+    // TAG 2: QUY MÔ KHÔNG GIAN
+    let scopeTag = { label: 'Nguyên căn', bg: '#ECFDF5', color: '#047857' };
+    if (item.isSpacePart) {
+      scopeTag = { label: 'Chia nhỏ', bg: '#FEF9C3', color: '#854D0E' };
+    }
 
     return (
       <div
@@ -252,14 +320,19 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
                 {item.name}
               </h4>
             )}
-            {item.tagLabel && (
-              <span className={`rental-card-tag rental-card-tag--${category}`}>{item.tagLabel}</span>
-            )}
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', flexShrink: 0 }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', backgroundColor: typeTag.bg, color: typeTag.color }}>
+                {typeTag.label}
+              </span>
+              <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', backgroundColor: scopeTag.bg, color: scopeTag.color }}>
+                {scopeTag.label}
+              </span>
+            </div>
           </div>
 
           <div className="rental-card-price-row">
             <span className={`rental-card-price rental-card-price--${category}`}>
-              {item.price ? `${item.price.toLocaleString('vi-VN')} đ/${priceUnit}` : 'Thỏa thuận'}
+              {item.price ? `${item.price.toLocaleString('vi-VN')} đ/${priceUnitText}` : 'Thỏa thuận'}
             </span>
             <span className="dot-sep">•</span>
             <span>{item.area ? `${item.area} m²` : 'N/A'}</span>
@@ -267,7 +340,13 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
             <span>{typeLabel}</span>
           </div>
 
-          <p className="rental-card-loc">📍 {item.location || item.address || 'Đang cập nhật địa chỉ'}</p>
+          {timeSlotStr && (
+             <p className="rental-card-time" style={{ fontSize: '13px', color: '#10B981', margin: '4px 0 0 0', fontWeight: 500 }}>
+                {timeSlotStr}
+             </p>
+          )}
+
+          <p className="rental-card-loc" style={{ marginTop: timeSlotStr ? '4px' : '8px' }}>📍 {item.location || item.address || 'Đang cập nhật địa chỉ'}</p>
 
           <div className="rental-card-footer">
             <div className="rental-card-agent">
@@ -395,23 +474,23 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
 
       <div className="dual-rental-grid">
         {renderColumn(
-          'longterm',
-          longTermListings,
+          'full',
+          fullListings,
           <ShieldCheck size={16} />,
-          'THUÊ DÀI HẠN',
-          'Mặt bằng thuê theo tháng',
-          'Hợp đồng ổn định từ 12 tháng, có cọc và bàn giao nguyên trạng.',
-          `${longTermListings.length} tin`
+          'THUÊ CỐ ĐỊNH / DÀI HẠN',
+          'Mặt bằng toàn quyền 24/7',
+          'Sở hữu không gian làm việc ổn định, bao gồm nguyên căn hoặc góc nhỏ.',
+          `${fullListings.length} tin`
         )}
 
         {renderColumn(
-          'hourly',
-          hourlyListings,
+          'timeslot', // 'timeslot' class will be used in CSS
+          sharedListings,
           <Clock3 size={16} />,
-          'SHARE THEO GIỜ',
-          'Chia sẻ mặt bằng linh hoạt',
-          'Đặt từng khung giờ cho pop-up, booth sự kiện hay bán hàng cuối tuần.',
-          `${hourlyListings.length} slot`
+          'CHIA SẺ / THEO CA',
+          'Tối ưu theo thời gian & diện tích',
+          'Phù hợp kinh doanh theo ca hoặc thuê lại không gian trống để tiết kiệm.',
+          `${sharedListings.length} tin`
         )}
       </div>
 
