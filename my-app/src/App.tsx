@@ -60,10 +60,20 @@ const App: React.FC = () => {
   };
 
   React.useEffect(() => {
-    const token = localStorage.getItem('portal_token');
-    if (token && isTokenExpired(token)) {
-      handleLogout();
-    }
+    const checkToken = () => {
+      const token = localStorage.getItem('portal_token');
+      if (token && isTokenExpired(token)) {
+        handleLogout();
+      }
+    };
+    
+    // Ki?m tra ngay khi mount ho?c chuy?n route
+    checkToken();
+
+    // Thi?t l?p interval ki?m tra m?i 10 giây
+    const intervalId = setInterval(checkToken, 10000);
+
+    return () => clearInterval(intervalId);
   }, [location.pathname]);
 
   return (
@@ -198,5 +208,6 @@ const App: React.FC = () => {
 };
 
 export default App;
+
 
 
