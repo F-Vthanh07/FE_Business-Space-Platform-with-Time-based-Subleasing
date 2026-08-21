@@ -219,7 +219,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
           let allSpacesAndParts: any[] = [];
 
           for (const space of spaces) {
-            allSpacesAndParts.push({ ...space, isPart: false });
+            allSpacesAndParts.push({ ...space, isPart: false, isFromUsageRight: false });
             try {
               const partRes = await fetch(`${API_BASE_URL}/api/SpacePart/GetByParent/${space.id || space.Id}`, {
                 headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
@@ -228,7 +228,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 const partData = await partRes.json();
                 const parts = Array.isArray(partData) ? partData : (partData?.items || []);
                 parts.forEach((p: any) => {
-                  allSpacesAndParts.push({ ...p, isPart: true, parentName: space.name });
+                  allSpacesAndParts.push({ ...p, isPart: true, parentName: space.name, isFromUsageRight: false });
                 });
               }
             } catch (err) {
@@ -251,7 +251,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
             const validUsageSpaces = resolvedSpaces.filter(Boolean);
             for (const space of validUsageSpaces) {
               if (!allSpacesAndParts.some(s => (s.id || s.Id) === (space.id || space.Id))) {
-                allSpacesAndParts.push({ ...space, isPart: false });
+                allSpacesAndParts.push({ ...space, isPart: false, isFromUsageRight: true });
               }
             }
           }
@@ -648,7 +648,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         listingPictures: initialData?.listingPictures || [],
         ...(mode === 'share' ? {
           shareSpaceDetailMaxSubRenter: Number(maxSubRenter),
-          shareSpaceDetailIsOwner: false,
+          shareSpaceDetailIsOwner: !(mySpaces.find(s => (s.id || s.Id) === Number(spaceId))?.isFromUsageRight),
           shareSpaceDetailIsLegalCommitted: isLegalCommitted,
           shareSpaceDetailShareSpaceAmenities: [],
           shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => ({
@@ -703,7 +703,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         price: Number(price),
         priceUnit,
         shareSpaceDetailMaxSubRenter: Number(maxSubRenter),
-        shareSpaceDetailIsOwner: false,
+        shareSpaceDetailIsOwner: !(mySpaces.find(s => (s.id || s.Id) === Number(spaceId))?.isFromUsageRight),
         shareSpaceDetailIsLegalCommitted: isLegalCommitted,
         shareSpaceDetailShareSpaceAmenities: [],
         shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => ({
@@ -1473,6 +1473,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     document.body
   );
 };
+
 
 
 

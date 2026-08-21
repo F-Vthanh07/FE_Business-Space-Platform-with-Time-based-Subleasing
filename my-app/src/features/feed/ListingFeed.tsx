@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Eye, MapPin, Bookmark, ShieldCheck, Home, X,
-  ChevronLeft, ChevronRight, Building2, Clock3, User, Camera, Heart
+  ChevronLeft, ChevronRight, Building2, Clock3, User, Camera, Heart, Share2, Layers, Tag
 } from 'lucide-react';
 import { Header } from '../../components/Header'; // Chỉnh lại đường dẫn cho đúng nha
 import { useNavigate } from 'react-router-dom';
@@ -47,14 +47,6 @@ const ExpandableDescription: React.FC<{ text: string }> = ({ text }) => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyItem = any;
 
-type RentalCategory = 'all' | 'longterm' | 'hourly';
-
-// listingType chuẩn từ BE: EntireSpace (dài hạn) | SharedSpace (chia sẻ theo giờ)
-const getRentalCategory = (item: AnyItem): 'longterm' | 'hourly' => {
-  const listingType = (item.listingType || item.ListingType || '').toString();
-  if (listingType === 'SharedSpace') return 'hourly';
-  return 'longterm';
-};
 
 // Hiển thị thời gian tương đối dựa trên createdAt trả về từ BE
 const formatTimeAgo = (dateStr?: string) => {
@@ -76,8 +68,8 @@ export const ListingFeed: React.FC = () => {
   const [listings, setListings] = useState<AnyItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- BỘ LỌC ---
-  const [categoryFilter, setCategoryFilter] = useState<RentalCategory>('all');
+  // --- BỘ LỌC MULTI-SELECT ---
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [onlyMine, setOnlyMine] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [myListingKeys, setMyListingKeys] = useState<Set<string>>(new Set());
@@ -186,31 +178,67 @@ export const ListingFeed: React.FC = () => {
           }
           const listItems = Array.isArray(data) ? data : (data?.data || data?.items || []);
           const rawItems = Array.isArray(listItems) ? listItems : [];
-          safeData = rawItems.map((item: AnyItem) => {
-            let currentSpaceId = item.spaceId || item.SpaceId;
-            let parentSpace = spaces.find((s: AnyItem) => (s.id || s.Id) == currentSpaceId);
+          const headers: any = { accept: '*/*' };
+          if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            // Truy ngược nếu currentSpaceId là ID của một Listing (chia nhỏ mặt bằng)
-            let depth = 0;
-            while (!parentSpace && depth < 5) {
-              const parentListing = rawItems.find((pl: any) => (pl.id || pl.Id) == currentSpaceId);
-              if (!parentListing) break;
-              currentSpaceId = parentListing.spaceId || parentListing.SpaceId;
-              parentSpace = spaces.find((s: AnyItem) => (s.id || s.Id) == currentSpaceId);
-              depth++;
+          const spacePartPromises: number[] = [];
+          const listingsWithAddressBase = rawItems
+            .filter((l: any) => {
+              const status = l.status ?? l.Status;
+              return status !== 1 && status !== 'Occupied';
+            })
+            .map((l: any) => {
+              let currentSpaceId = l.spaceId || l.SpaceId;
+              let parentSpace = spaces.find((s: AnyItem) => (s.id || s.Id) == currentSpaceId);
+              
+              let isSpacePart = false;
+              if (!parentSpace) {
+                  isSpacePart = true;
+                  if (currentSpaceId) spacePartPromises.push(currentSpaceId);
+              }
+              return { ...l, isSpacePart, _tempSpaceId: currentSpaceId, _parentSpace: parentSpace };
+            });
+
+          const uniqueSpacePartIds = Array.from(new Set(spacePartPromises));
+          const fetchedSpaceParts: Record<number, any> = {};
+          if (uniqueSpacePartIds.length > 0) {
+              await Promise.all(uniqueSpacePartIds.map(async (spId) => {
+                  try {
+                      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetById/${spId}`, { headers });
+                      if (res.ok) {
+                          fetchedSpaceParts[spId] = await res.json();
+                      }
+                  } catch (e) {}
+              }));
+          }
+
+          safeData = listingsWithAddressBase.map((item: AnyItem) => {
+            let spaceOrPart = item._parentSpace || fetchedSpaceParts[item._tempSpaceId];
+            
+            let address = item.spaceAddress || item.location || item.address || '';
+            let city = item.city || '';
+            let computedArea = item.area || item.Area || spaceOrPart?.area || spaceOrPart?.Area || null;
+
+            if (item.isSpacePart && spaceOrPart?.parentSpaceId) {
+               const parent = spaces.find((s: AnyItem) => (s.id || s.Id) == spaceOrPart.parentSpaceId);
+               if (parent && !address) {
+                 address = parent.address || parent.location || '';
+                 city = parent.city || '';
+               }
+            } else if (spaceOrPart && !address) {
+                 address = spaceOrPart.address || spaceOrPart.location || '';
+                 city = spaceOrPart.city || '';
             }
 
-            const sCity = item.spaceCity || item.SpaceCity || parentSpace?.city || parentSpace?.spaceCity || '';
-            const sAddr = item.spaceAddress || item.SpaceAddress || parentSpace?.address || parentSpace?.spaceAddress || '';
-            const combinedAddr = [sAddr, sCity].filter(Boolean).join(', ');
-            const computedArea = item.area || item.Area || parentSpace?.area || parentSpace?.Area || null;
+            const combinedAddr = [address, city].filter(Boolean).join(', ');
             return {
               ...item,
-              spaceCity: sCity,
-              spaceAddress: sAddr,
+              spaceCity: city,
+              spaceAddress: address,
               area: computedArea,
               address: combinedAddr || item.location || item.address || 'Đang cập nhật',
-              city: sCity || item.city || ''
+              city: city,
+              isSpacePart: item.isSpacePart
             };
           });
         }
@@ -303,10 +331,20 @@ export const ListingFeed: React.FC = () => {
   };
 
   const counts = useMemo(() => {
-    const longterm = listings.filter((l) => getRentalCategory(l) === 'longterm').length;
-    const hourly = listings.filter((l) => getRentalCategory(l) === 'hourly').length;
+    const getRentalType = (item: AnyItem) => {
+      if (item.listingType === 'SharedSpace' && item.shareSpaceDetailIsOwner === false) return 'sublet';
+      if (item.priceUnit === 'PerHour') return 'hourly';
+      return 'longterm';
+    };
+
+    const longterm = listings.filter((l) => getRentalType(l) === 'longterm').length;
+    const hourly = listings.filter((l) => getRentalType(l) === 'hourly').length;
+    const sublet = listings.filter((l) => getRentalType(l) === 'sublet').length;
+    const fullSpace = listings.filter((l) => !l.isSpacePart).length;
+    const spacePart = listings.filter((l) => l.isSpacePart).length;
     const mine = listings.filter((l) => myListingKeys.has((l.id || l.Id)?.toString())).length;
-    return { all: listings.length, longterm, hourly, mine };
+
+    return { all: listings.length, longterm, hourly, sublet, fullSpace, spacePart, mine };
   }, [listings, myListingKeys]);
 
   const filteredListings = useMemo(() => {
@@ -320,7 +358,28 @@ export const ListingFeed: React.FC = () => {
       const isOccupied = status === 1 || status === 'Occupied';
       if (isOccupied) return false;
 
-      const matchCategory = categoryFilter === 'all' || getRentalCategory(item) === categoryFilter;
+      // LỌC MULTI-SELECT TYPE & SCOPE
+      const getRentalType = (item: AnyItem) => {
+        if (item.listingType === 'SharedSpace' && item.shareSpaceDetailIsOwner === false) return 'sublet';
+        if (item.priceUnit === 'PerHour') return 'hourly';
+        return 'longterm';
+      };
+      const itemType = getRentalType(item);
+      const itemScope = item.isSpacePart ? 'space_part' : 'full_space';
+
+      let matchCategory = true;
+      if (selectedFilters.length > 0) {
+        const typeKeys = ['longterm', 'hourly', 'sublet'];
+        const scopeKeys = ['full_space', 'space_part'];
+
+        const selectedTypes = selectedFilters.filter((k) => typeKeys.includes(k));
+        const selectedScopes = selectedFilters.filter((k) => scopeKeys.includes(k));
+
+        const matchType = selectedTypes.length === 0 || selectedTypes.includes(itemType);
+        const matchScope = selectedScopes.length === 0 || selectedScopes.includes(itemScope);
+
+        matchCategory = matchType && matchScope;
+      }
       const matchMine = !onlyMine || myListingKeys.has((item.id || item.Id)?.toString());
       const matchFav = !showFavoritesOnly || favoriteIds.has(Number(item.id || item.Id));
 
@@ -389,7 +448,7 @@ export const ListingFeed: React.FC = () => {
         matchArea
       );
     });
-  }, [listings, categoryFilter, onlyMine, myListingKeys, showFavoritesOnly, favoriteIds, feedFilters]);
+  }, [listings, selectedFilters, onlyMine, myListingKeys, showFavoritesOnly, favoriteIds, feedFilters]);
 
   const renderImages = (rawImages: AnyItem[]) => {
     const images = getListingPictureUrls(rawImages);
@@ -429,10 +488,23 @@ export const ListingFeed: React.FC = () => {
     );
   };
 
-  const categoryTabs: { key: RentalCategory; label: string; icon: React.ReactNode; count: number }[] = [
-    { key: 'all', label: 'Tất cả', icon: <Home size={14} />, count: counts.all },
+  const toggleFilter = (key: string) => {
+    if (key === 'all') {
+      setSelectedFilters([]);
+      return;
+    }
+    setSelectedFilters((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  const filterOptions = [
+    { key: 'all', label: 'Tất cả', icon: <Home size={14} />, count: counts.all, isAll: true },
     { key: 'longterm', label: 'Dài hạn', icon: <Building2 size={14} />, count: counts.longterm },
-    { key: 'hourly', label: 'Chia sẻ theo giờ', icon: <Clock3 size={14} />, count: counts.hourly },
+    { key: 'hourly', label: 'Chia sẻ khung giờ', icon: <Clock3 size={14} />, count: counts.hourly },
+    { key: 'sublet', label: 'Cho thuê lại', icon: <Share2 size={14} />, count: counts.sublet },
+    { key: 'full_space', label: 'Nguyên căn', icon: <Tag size={14} />, count: counts.fullSpace },
+    { key: 'space_part', label: 'Diện tích chia nhỏ', icon: <Layers size={14} />, count: counts.spacePart },
   ];
 
   return (
@@ -496,36 +568,45 @@ export const ListingFeed: React.FC = () => {
             onResetFilters={handleResetFilters}
           />
 
-          {/* THANH BỘ LỌC */}
-          <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {categoryTabs.map((tab) => {
-              const active = categoryFilter === tab.key;
+          {/* THANH BỘ LỌC MULTI-SELECT */}
+          <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {filterOptions.map((opt) => {
+              const active = opt.isAll ? selectedFilters.length === 0 : selectedFilters.includes(opt.key);
               return (
                 <button
-                  key={tab.key}
-                  onClick={() => setCategoryFilter(tab.key)}
+                  key={opt.key}
+                  onClick={() => toggleFilter(opt.key)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
-                    borderRadius: '20px', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: 600,
+                    borderRadius: '20px', border: active ? '1px solid var(--color-primary)' : '1px solid transparent', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
                     backgroundColor: active ? 'var(--color-primary)' : '#F0F2F5',
                     color: active ? '#fff' : '#050505',
                     transition: 'all .15s'
                   }}
                 >
-                  {tab.icon} {tab.label}
+                  {opt.icon} {opt.label}
                   <span style={{
                     fontSize: '11px', padding: '1px 6px', borderRadius: '10px',
                     backgroundColor: active ? 'rgba(255,255,255,0.25)' : '#E4E6EB',
                     color: active ? '#fff' : '#65676B'
-                  }}>{tab.count}</span>
+                  }}>{opt.count}</span>
                 </button>
               );
             })}
 
+            {selectedFilters.length > 0 && (
+              <button
+                onClick={() => setSelectedFilters([])}
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#E02424', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <X size={12} /> Xóa bộ lọc ({selectedFilters.length})
+              </button>
+            )}
+
             {(onlyMine || showFavoritesOnly) && (
               <button
                 onClick={() => { setOnlyMine(false); setShowFavoritesOnly(false); }}
-                style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '20px', border: '1px solid var(--color-primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, backgroundColor: '#fff', color: 'var(--color-primary)' }}
+                style={{ marginLeft: selectedFilters.length > 0 ? '8px' : 'auto', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '20px', border: '1px solid var(--color-primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, backgroundColor: '#fff', color: 'var(--color-primary)' }}
               >
                 {onlyMine ? <User size={13} /> : <Bookmark size={13} />}
                 {onlyMine ? `Bài đăng của tôi (${counts.mine})` : 'Đang xem tin đã lưu'} <X size={13} />
@@ -541,11 +622,23 @@ export const ListingFeed: React.FC = () => {
             </div>
           ) : (
             filteredListings.map((item, index) => {
-              const category = getRentalCategory(item);
-              const isHourly = category === 'hourly';
               const isMine = myListingKeys.has((item.id || item.Id)?.toString());
               const currentListingId = Number(item.id || item.Id);
               const isSaved = favoriteIds.has(currentListingId);
+
+              // TAG 1: HÌNH THỨC THUÊ
+              let typeBadge = { label: 'Dài hạn', bg: '#F0FDF4', color: '#166534', icon: <Building2 size={11} /> };
+              if (item.listingType === 'SharedSpace' && item.shareSpaceDetailIsOwner === false) {
+                typeBadge = { label: 'Cho thuê lại', bg: '#FCE7F3', color: '#9D174D', icon: <Share2 size={11} /> };
+              } else if (item.priceUnit === 'PerHour') {
+                typeBadge = { label: 'Chia sẻ khung giờ', bg: '#EEF2FF', color: '#3730A3', icon: <Clock3 size={11} /> };
+              }
+
+              // TAG 2: QUY MÔ KHÔNG GIAN
+              let scopeBadge = { label: 'Nguyên căn', bg: '#ECFDF5', color: '#047857' };
+              if (item.isSpacePart) {
+                scopeBadge = { label: 'Diện tích chia nhỏ', bg: '#FEF9C3', color: '#854D0E' };
+              }
 
               return (
                 <div key={item.id || index} style={{ backgroundColor: '#FFFFFF', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
@@ -575,14 +668,22 @@ export const ListingFeed: React.FC = () => {
                         {formatTimeAgo(item.createdAt)} • <MapPin size={10} /> {item.address || 'Đang cập nhật'}
                       </div>
                     </div>
-                    <span style={{
-                      display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '12px', flexShrink: 0,
-                      backgroundColor: isHourly ? 'rgba(0,180,160,0.12)' : 'rgba(0,110,255,0.1)',
-                      color: isHourly ? '#00998A' : 'var(--color-primary)'
-                    }}>
-                      {isHourly ? <Clock3 size={11} /> : <Building2 size={11} />}
-                      {isHourly ? 'Theo giờ' : 'Dài hạn'}
-                    </span>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, padding: '4px 8px', borderRadius: '12px', flexShrink: 0,
+                        backgroundColor: typeBadge.bg,
+                        color: typeBadge.color
+                      }}>
+                        {typeBadge.icon} {typeBadge.label}
+                      </span>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, padding: '4px 8px', borderRadius: '12px', flexShrink: 0,
+                        backgroundColor: scopeBadge.bg,
+                        color: scopeBadge.color
+                      }}>
+                        {scopeBadge.label}
+                      </span>
+                    </div>
                   </div>
 
                   <div style={{ padding: '4px 16px 12px 16px', fontSize: '15px', lineHeight: '1.5', color: '#050505' }}>
