@@ -28,6 +28,21 @@ import { ROUTES, type PortalRole } from './routes/routes';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { clearLocalStorageForLogout } from './utils/preserveLocalStorage';
 
+const isTokenExpired = (token: string | null) => {
+  if (!token) return true;
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    const payload = JSON.parse(jsonPayload);
+    return (payload.exp * 1000) < Date.now();
+  } catch (e) {
+    return true;
+  }
+};
+
 const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,6 +58,13 @@ const App: React.FC = () => {
     setRole(null);
     navigate(ROUTES.LOGIN);
   };
+
+  React.useEffect(() => {
+    const token = localStorage.getItem('portal_token');
+    if (token && isTokenExpired(token)) {
+      handleLogout();
+    }
+  }, [location.pathname]);
 
   return (
     <>
@@ -176,4 +198,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+
 
