@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { MeshBackground } from './components/MeshBackground';
@@ -20,13 +20,28 @@ import { PriorityLevelsPage } from './features/pricing/PriorityLevelsPage';
 import ClickSpark from './components/ClickSpark';
 import './App.css';
 
-import { NotFoundPage } from './components/NotFoundPage'; // Chỉnh đường dẫn nếu cần
+import { NotFoundPage } from './components/NotFoundPage'; // Chá»‰nh Ä‘Æ°á»ng dáº«n náº¿u cáº§n
 
 import { FloatingChat } from './components/FloatingChat';
 
 import { ROUTES, type PortalRole } from './routes/routes';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { clearLocalStorageForLogout } from './utils/preserveLocalStorage';
+
+const isTokenExpired = (token: string | null) => {
+  if (!token) return true;
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    const payload = JSON.parse(jsonPayload);
+    return (payload.exp * 1000) < Date.now();
+  } catch (e) {
+    return true;
+  }
+};
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -44,14 +59,31 @@ const App: React.FC = () => {
     navigate(ROUTES.LOGIN);
   };
 
+  React.useEffect(() => {
+    const checkToken = () => {
+      const token = localStorage.getItem('portal_token');
+      if (token && isTokenExpired(token)) {
+        handleLogout();
+      }
+    };
+    
+    // Ki?m tra ngay khi mount ho?c chuy?n route
+    checkToken();
+
+    // Thi?t l?p interval ki?m tra m?i 10 giây
+    const intervalId = setInterval(checkToken, 10000);
+
+    return () => clearInterval(intervalId);
+  }, [location.pathname]);
+
   return (
     <>
       <Toaster position="top-right" />
 
-      {/* Hiệu ứng click toàn màn hình */}
+      {/* Hiá»‡u á»©ng click toÃ n mÃ n hÃ¬nh */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 99999, pointerEvents: 'none' }}>
         <ClickSpark
-          sparkColor="#00D4A0" /* Xanh neon đồng bộ với hệ thống */
+          sparkColor="#00D4A0" /* Xanh neon Ä‘á»“ng bá»™ vá»›i há»‡ thá»‘ng */
           sparkSize={10}
           sparkRadius={15}
           sparkCount={8}
@@ -176,4 +208,6 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+
 

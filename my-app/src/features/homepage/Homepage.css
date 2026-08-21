@@ -449,24 +449,24 @@ html, body, #root {
 .reveal-on-scroll--revealed .stagger-item:nth-child(4) { transition-delay: 0.4s; }
 
 /* --------------------------------------------------------------------------
-   8. ZEBRA LAYOUT THEME OVERRIDES (Dark Theme For All)
+   8. ZEBRA LAYOUT THEME OVERRIDES (Dark/Light Xen Kẽ)
    -------------------------------------------------------------------------- */
-#features { background-color: #0f1115; color: #ffffff; }
-#pricing { background-color: #0f1115; color: #ffffff; }
+#features { background-color: #0D1117; color: #ffffff; }
+#pricing { background-color: #0D1117; color: #ffffff; }
 
-#how-it-works { background-color: #0f1115; color: #ffffff; }
-#how-it-works .section-title { color: #ffffff; font-weight: 700; }
-#how-it-works .section-subtitle { color: #8b949e; }
-#how-it-works .role-tabs { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
-#how-it-works .role-tab-btn { color: #8b949e; }
-#how-it-works .role-tab-btn--active { background: #161b22; border-color: #00D4A0; color: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-#how-it-works .timeline-connector { border-top: 2px dashed rgba(255,255,255,0.1); }
-#how-it-works .step-node { background: #161b22; border: 2px solid rgba(255,255,255,0.1); color: #8b949e; }
-#how-it-works .step-info-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); }
-#how-it-works .step-title { color: #ffffff; }
-#how-it-works .step-desc { color: #8b949e; }
+#how-it-works { background-color: #ffffff; color: #111827; }
+#how-it-works .section-title { color: #111827; }
+#how-it-works .section-subtitle { color: #6B7280; }
+#how-it-works .role-tabs { background: #F3F4F6; border: 1px solid #E5E7EB; }
+#how-it-works .role-tab-btn { color: #6B7280; }
+#how-it-works .role-tab-btn--active { background: #ffffff; border-color: #00D4A0; color: #111827; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+#how-it-works .timeline-connector { border-top: 2px dashed #E5E7EB; }
+#how-it-works .step-node { background: #ffffff; border: 2px solid #E5E7EB; color: #6B7280; }
+#how-it-works .step-info-card { background: #F9FAFB; border: 1px solid #E5E7EB; }
+#how-it-works .step-title { color: #111827; }
+#how-it-works .step-desc { color: #4B5563; }
 #how-it-works .timeline-step:hover .step-node { border-color: #00D4A0; color: #00D4A0; }
-#how-it-works .timeline-step:hover .step-info-card { border-color: rgba(0,212,160,0.5); background: rgba(0,212,160,0.05); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
+#how-it-works .timeline-step:hover .step-info-card { border-color: #00D4A0; background: #ffffff; box-shadow: 0 6px 16px rgba(0,0,0,0.05); }
 
 /* --- GIAO DIỆN LỌC CHUYÊN NGHIỆP (Batdongsan Style) --- */
 .home-search-wrapper { background: #fff; padding: 16px 20px; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); width: 100%; box-sizing: border-box; }
@@ -543,7 +543,7 @@ html, body, #root {
 }
 
 .rental-banner--timeslot {
-  background: linear-gradient(135deg, #00875a 0%, #005a3c 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
 }
 
 .rental-banner-top {
@@ -695,8 +695,8 @@ html, body, #root {
 }
 
 .rental-card-tag--timeslot {
-  background: rgba(0, 212, 160, 0.15);
-  color: #00d4a0;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .rental-card-tag--partial {
@@ -723,7 +723,7 @@ html, body, #root {
 }
 
 .rental-card-price--timeslot {
-  color: #00d4a0;
+  color: #1d4ed8;
 }
 
 .rental-card-price--partial {
@@ -872,7 +872,22 @@ html, body, #root {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.light-theme .feature-showcase-section {
+  background-color: #f8fafc; /* Light gray to stand out slightly from white blocks */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
 
+.light-theme .feature-showcase-section .section-title {
+  color: #0f172a;
+}
+
+.light-theme .feature-desc {
+  color: #64748b;
+}
+
+.light-theme .feature-list li {
+  color: #0f172a;
+}
 
 .feature-showcase-container {
   max-width: 1200px;
@@ -951,7 +966,11 @@ html, body, #root {
   box-shadow: 0 30px 60px rgba(0,0,0,0.4);
 }
 
-
+.light-theme .mockup-glass {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+}
 
 .mockup-map-bg {
   width: 100%;
@@ -1032,7 +1051,11 @@ html, body, #root {
   transition: all 0.3s ease;
 }
 
-
+.light-theme .tech-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
 
 .tech-card:hover {
   background: rgba(255, 255, 255, 0.06);
@@ -1058,7 +1081,9 @@ html, body, #root {
   color: #fff;
 }
 
-
+.light-theme .tech-card h4 {
+  color: #0f172a;
+}
 
 .tech-card p {
   margin: 0;
@@ -1067,7 +1092,9 @@ html, body, #root {
   line-height: 1.5;
 }
 
-
+.light-theme .tech-card p {
+  color: #64748b;
+}
 
 /* AI Sphere */
 .ai-sphere-visual {

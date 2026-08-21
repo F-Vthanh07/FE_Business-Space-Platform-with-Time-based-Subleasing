@@ -1,19 +1,19 @@
 /* Featured Packages homepage section — always light mode */
 
 .packages-section {
-  --fp-bg: #0f1115;
-  --fp-surface: rgba(22, 27, 34, 0.8);
-  --fp-surface-sunken: #0d1117;
-  --fp-border: rgba(255, 255, 255, 0.1);
-  --fp-border-hover: rgba(0, 212, 160, 0.5);
-  --fp-text-primary: #ffffff;
-  --fp-text-secondary: #8b949e;
-  --fp-accent: #00d4a0;
-  --fp-accent-light: rgba(0, 212, 160, 0.15);
+  --fp-bg: #F8FAFC;
+  --fp-surface: #FFFFFF;
+  --fp-surface-sunken: #F1F5F9;
+  --fp-border: #E2E8F0;
+  --fp-border-hover: #CBD5E1;
+  --fp-text-primary: #0F172A;
+  --fp-text-secondary: #64748B;
+  --fp-accent: #2563EB;
+  --fp-accent-light: #EFF6FF;
   --fp-cta: #00d4a0;
 
   background-color: var(--fp-bg);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   padding: 72px 24px;
 }
 
@@ -78,16 +78,15 @@
   gap: 10px;
   padding: 24px;
   background: var(--fp-surface);
-  backdrop-filter: blur(12px);
   border: 1px solid var(--fp-border);
   border-radius: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .package-card:hover {
   border-color: var(--fp-border-hover);
-  box-shadow: 0 10px 15px -3px rgba(0, 212, 160, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
   transform: translateY(-3px);
 }
 

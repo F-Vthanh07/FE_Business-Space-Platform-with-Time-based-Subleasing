@@ -4,8 +4,8 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #0f1115;
-  color: #ffffff;
+  background-color: #f8fafc;
+  color: #0f172a;
   font-family: inherit;
   position: relative;
 }
@@ -28,7 +28,7 @@
   border-radius: 9999px;
   background: rgba(0, 212, 160, 0.12);
   border: 1px solid rgba(0, 212, 160, 0.35);
-  color: #00d4a0;
+  color: #047857;
   font-size: 13px;
   font-weight: 700;
   margin-bottom: 20px;
@@ -39,14 +39,14 @@
   font-weight: 800;
   line-height: 1.2;
   margin-bottom: 16px;
-  color: #ffffff;
+  color: #0f172a;
   letter-spacing: -0.5px;
 }
 
 .pricing-hero-subtitle {
   font-size: 16px;
   line-height: 1.6;
-  color: #8b949e;
+  color: #475569;
   margin-bottom: 32px;
 }
 
@@ -65,25 +65,25 @@
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #8b949e;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .pricing-tab-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.2);
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
 }
 
 .pricing-tab-btn--active {
-  background: linear-gradient(135deg, #00d4a0 0%, #00a67e 100%);
-  border-color: #00a67e;
-  color: #0f172a;
-  box-shadow: 0 4px 14px rgba(0, 212, 160, 0.3);
+  background: linear-gradient(135deg, #00d4a0 0%, #059669 100%);
+  border-color: #059669;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
 }
 
 .pricing-grid-container {
@@ -103,34 +103,33 @@
 /* CARDS - SUPER HIGH CONTRAST & LEGIBILITY */
 .pricing-card {
   position: relative;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
   padding: 32px 28px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .pricing-card:hover {
   transform: translateY(-6px);
   border-color: #00d4a0;
-  box-shadow: 0 20px 35px -10px rgba(0, 212, 160, 0.2), 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 35px -10px rgba(0, 212, 160, 0.2), 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
 
 .pricing-card--banner {
-  border: 1px solid rgba(253, 230, 138, 0.2);
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border: 1px solid #fde68a;
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
 }
 
 .pricing-card--banner:hover {
   border-color: #f59e0b;
-  box-shadow: 0 20px 35px -10px rgba(245, 158, 11, 0.2), 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 35px -10px rgba(245, 158, 11, 0.2), 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
 
 .pricing-card-header {
@@ -149,28 +148,28 @@
 }
 
 .pricing-card-type-tag--listing {
-  background: rgba(0, 212, 160, 0.1);
-  color: #00d4a0;
-  border: 1px solid rgba(0, 212, 160, 0.2);
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
 }
 
 .pricing-card-type-tag--banner {
-  background: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 .pricing-card-name {
   font-size: 24px;
   font-weight: 800;
-  color: #ffffff;
+  color: #0f172a;
   margin-bottom: 8px;
   letter-spacing: -0.3px;
 }
 
 .pricing-card-desc {
   font-size: 14px;
-  color: #8b949e;
+  color: #475569;
   line-height: 1.55;
   min-height: 44px;
 }
@@ -178,31 +177,31 @@
 .pricing-card-price-box {
   margin: 20px 0 24px;
   padding: 18px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .pricing-card-price {
   font-size: 36px;
   font-weight: 800;
-  color: #00d4a0;
+  color: #059669;
   letter-spacing: -0.5px;
 }
 
 .pricing-card-price--banner {
-  color: #f59e0b;
+  color: #d97706;
 }
 
 .pricing-card-price-unit {
   font-size: 14px;
-  color: #8b949e;
+  color: #64748b;
   margin-left: 6px;
   font-weight: 600;
 }
 
 .pricing-card-duration {
   font-size: 14px;
-  color: #8b949e;
+  color: #334155;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -211,17 +210,17 @@
 }
 
 .pricing-card-duration strong {
-  color: #ffffff;
+  color: #0f172a;
   font-weight: 700;
 }
 
 .pricing-card-duration-icon--listing {
-  color: #00d4a0;
+  color: #059669;
   flex-shrink: 0;
 }
 
 .pricing-card-duration-icon--banner {
-  color: #f59e0b;
+  color: #d97706;
   flex-shrink: 0;
 }
 
@@ -241,14 +240,14 @@
 }
 
 .pricing-card-cta--primary {
-  background: linear-gradient(135deg, #00d4a0 0%, #00a67e 100%);
-  color: #0f172a;
-  box-shadow: 0 4px 14px rgba(0, 212, 160, 0.25);
+  background: linear-gradient(135deg, #00d4a0 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25);
 }
 
 .pricing-card-cta--primary:hover {
   filter: brightness(1.08);
-  box-shadow: 0 6px 20px rgba(0, 212, 160, 0.4);
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
 }
 
 .pricing-card-cta--banner {
@@ -282,7 +281,7 @@
   font-size: 28px;
   font-weight: 800;
   margin-bottom: 36px;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .pricing-faq-grid {
@@ -292,18 +291,17 @@
 }
 
 .pricing-faq-item {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 14px;
   padding: 20px 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .pricing-faq-question {
   font-size: 16px;
   font-weight: 700;
-  color: #00d4a0;
+  color: #059669;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -312,7 +310,7 @@
 
 .pricing-faq-answer {
   font-size: 14px;
-  color: #8b949e;
+  color: #475569;
   line-height: 1.6;
 }
 
