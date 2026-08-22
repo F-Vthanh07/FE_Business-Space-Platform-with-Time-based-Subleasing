@@ -56,7 +56,7 @@ const formatSnapshotDurationUnit = (unit?: number) => {
 };
 
 // Đổi DurationUnit số của Snapshot (0-3) về dạng chuỗi 'Days'/'Weeks'/'Months'/'Years'
-// giống bản sống, để dùng chung 1 hàm computeEndDate bên dưới cho cả 2 trường hợp.
+// giống bản sống, để dùng chung 1 hàm computeEndDateObj bên dưới cho cả 2 trường hợp.
 const snapshotUnitToString = (unit?: number): string | undefined => {
   switch (unit) {
     case 0: return 'Days';
@@ -79,11 +79,6 @@ const computeEndDateObj = (startDate?: string, duration?: number, unit?: string)
   else if (unit === 'Years') d.setFullYear(d.getFullYear() + duration);
   else return null;
   return d;
-};
-
-const computeEndDate = (startDate?: string, duration?: number, unit?: string): string => {
-  const d = computeEndDateObj(startDate, duration, unit);
-  return d ? d.toLocaleDateString('vi-VN') : '';
 };
 
 // Số ngày còn lại (dương) hoặc đã quá hạn (âm) tính từ hôm nay đến ngày kết thúc dự kiến.
@@ -351,7 +346,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
   const displayStartDate = snapshot?.StartDate || contract.startDate;
 
   // Ngày kết thúc (dự kiến) = ngày bắt đầu + thời hạn - đổi đơn vị Snapshot (số)
-  // về dạng chuỗi trước khi tính, để dùng chung 1 hàm computeEndDate.
+  // về dạng chuỗi trước khi tính, để dùng chung 1 hàm computeEndDateObj.
   const effectiveDurationUnitString = snapshot
     ? snapshotUnitToString(snapshot.DurationUnit)
     : contract.durationUnit;
