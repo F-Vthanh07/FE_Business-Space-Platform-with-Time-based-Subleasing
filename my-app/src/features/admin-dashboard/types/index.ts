@@ -169,6 +169,7 @@ export interface AdminUserProfile {
 
 export interface AdminDashboardStats {
   totalWalletBalance: number;
+  totalDeposited?: number;
   totalSpent: number;
   totalListingSpent: number;
   totalAiImageSpent: number;

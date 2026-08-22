@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, ArrowUpDown, Wallet, Edit3, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ArrowUpDown, Wallet, Edit3, X, ChevronLeft, ChevronRight, History, Loader2, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import type { AdminWalletAccount } from '../types';
 import { RefreshButton } from './RefreshButton';
+import { fetchUserTransactionHistory } from '../api/admin.api';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -23,6 +24,12 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language,
   const [selectedWallet, setSelectedWallet] = useState<AdminWalletAccount | null>(null);
   const [amount, setAmount] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+
+  // States lịch sử giao dịch
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [selectedWalletHistory, setSelectedWalletHistory] = useState<AdminWalletAccount | null>(null);
+  const [historyList, setHistoryList] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const formatMoney = (n: number) => `${n.toLocaleString('vi-VN')}₫`;
 
@@ -65,6 +72,23 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language,
     setSelectedWallet(wallet);
     setAmount('');
     setIsEditModalOpen(true);
+  };
+
+  const handleOpenHistory = async (wallet: AdminWalletAccount) => {
+    if (!wallet.user?.userId) return;
+    setSelectedWalletHistory(wallet);
+    setIsHistoryModalOpen(true);
+    setIsLoadingHistory(true);
+    const token = localStorage.getItem('portal_token') || '';
+    try {
+      const data = await fetchUserTransactionHistory(wallet.user.userId, token);
+      setHistoryList(data);
+    } catch (err) {
+      console.error("Lỗi khi tải lịch sử giao dịch:", err);
+      setHistoryList([]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
   };
 
   const onEditSubmit = async (e: React.FormEvent) => {
@@ -185,6 +209,14 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language,
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button
+                          className="btn-action-icon"
+                          onClick={() => handleOpenHistory(w)}
+                          title={language === 'en' ? 'Transaction History' : 'Xem lịch sử giao dịch'}
+                          disabled={!w.user?.userId}
+                        >
+                          <History size={14} />
+                        </button>
+                        <button
                           className="btn-action-icon unblock"
                           onClick={() => handleOpenEdit(w)}
                           title={language === 'en' ? 'Add funds' : 'Cộng tiền'}
@@ -287,6 +319,97 @@ export const WalletsModule: React.FC<WalletsModuleProps> = ({ wallets, language,
           </div>
         </div>
       )}
+
+      {/* User Transaction History Modal */}
+      {isHistoryModalOpen && selectedWalletHistory && (
+        <div className="listing-detail-backdrop">
+          <div className="listing-form-modal glass-card" style={{ maxWidth: '750px', width: '100%', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div className="listing-form-header" style={{ marginBottom: '16px' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <History size={18} className="text-neon-green" />
+                  {language === 'en' ? 'User Transaction History' : 'Lịch sử giao dịch người dùng'}
+                </h2>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                  {selectedWalletHistory.user?.profileFullName || selectedWalletHistory.user?.userName || selectedWalletHistory.user?.email}
+                  {' — '}
+                  {language === 'en' ? 'Current Balance: ' : 'Số dư hiện tại: '}
+                  <strong className="text-neon-green">{formatMoney(selectedWalletHistory.balance)}</strong>
+                </p>
+              </div>
+              <button className="btn-icon" onClick={() => setIsHistoryModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {isLoadingHistory ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-secondary)' }}>
+                <Loader2 size={24} className="animate-spin" style={{ marginBottom: '8px' }} />
+                <p>{language === 'en' ? 'Loading transaction history...' : 'Đang tải lịch sử giao dịch...'}</p>
+              </div>
+            ) : historyList.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-secondary)' }}>
+                <p>{language === 'en' ? 'No transactions found for this user.' : 'Chưa có lịch sử giao dịch nào.'}</p>
+              </div>
+            ) : (
+              <div className="admin-table-container glass-card--inset" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <table className="admin-table" style={{ fontSize: '13px' }}>
+                  <thead>
+                    <tr>
+                      <th>{language === 'en' ? 'Date' : 'Thời gian'}</th>
+                      <th>{language === 'en' ? 'Description' : 'Nội dung'}</th>
+                      <th style={{ textAlign: 'right' }}>{language === 'en' ? 'Amount' : 'Số tiền'}</th>
+                      <th style={{ textAlign: 'right' }}>{language === 'en' ? 'Wallet After' : 'Số dư sau GD'}</th>
+                      <th style={{ textAlign: 'center' }}>{language === 'en' ? 'Status' : 'Trạng thái'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyList.map((item: any, idx: number) => {
+                      const amountVal = Number(item.transactionAmount ?? item.amount ?? 0);
+                      const isPositive = amountVal > 0;
+                      return (
+                        <tr key={item.id || idx}>
+                          <td className="font-mono">{formatDate(item.createdAt || item.createdDate)}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {isPositive ? (
+                                <ArrowDownLeft size={14} style={{ color: '#10b981', flexShrink: 0 }} />
+                              ) : (
+                                <ArrowUpRight size={14} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                              )}
+                              <span>{item.description || item.Description || (language === 'en' ? 'Transaction' : 'Giao dịch')}</span>
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                            <span style={{ color: isPositive ? '#10b981' : '#f59e0b' }}>
+                              {isPositive ? '+' : ''}{formatMoney(amountVal)}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right' }} className="font-mono">
+                            {item.walletAmount !== undefined ? formatMoney(Number(item.walletAmount)) : '—'}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span className="badge-status accepted" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                              {item.status || 'Completed'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+              <button type="button" className="btn-ghost" onClick={() => setIsHistoryModalOpen(false)}>
+                {language === 'en' ? 'Close' : 'Đóng'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

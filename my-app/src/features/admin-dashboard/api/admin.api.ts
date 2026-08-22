@@ -497,3 +497,17 @@ export const fetchDashboardStats = async (token: string): Promise<AdminDashboard
   return response.json();
 };
 
+export const fetchUserTransactionHistory = async (userId: string, token: string): Promise<any[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/TransactionHistory/GetTransactionHistoryByUserId/${userId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'accept': '*/*'
+    }
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch user transaction history');
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data?.data || data?.items || []);
+};
+
