@@ -9,6 +9,7 @@ import {
 import './OwnerListings.css';
 import "../../../shared/ModalShell.css";
 import { createPortal } from 'react-dom';
+import { useConfirm } from '../../../../components/ConfirmModal';
 import {
   Area,
   AreaChart,
@@ -278,6 +279,7 @@ const SummaryMiniChart: React.FC<{ points: SummaryChartPoint[]; type: SummaryCha
 };
 
 export const OwnerListings: React.FC = () => {
+  const { confirm, confirmModal } = useConfirm();
   const [listings, setListings] = useState<any[]>([]); // Data lấy từ API
   const [listingOverview, setListingOverview] = useState<ListingOverview>(null);
   const [search, setSearch] = useState('');
@@ -434,7 +436,13 @@ export const OwnerListings: React.FC = () => {
   };
 
   const handleDelete = async (listingItem: any) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa bài đăng này?')) {
+    const ok = await confirm({
+      title: 'Xoá bài đăng',
+      message: 'Bạn có chắc chắn muốn xóa bài đăng này?',
+      confirmLabel: 'Xoá',
+      danger: true,
+    });
+    if (ok) {
       try {
         const targetId = listingItem.id || listingItem.Id;
 
@@ -560,6 +568,7 @@ export const OwnerListings: React.FC = () => {
 
   return (
     <div className="owner-listings animate-in" ref={containerRef}>
+      {confirmModal}
       {/* Page Header */}
       <div className="page-header">
         <div>

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Users, Building, FileText, Wallet, AlertTriangle, Zap, Tag, TrendingUp, ChevronRight, BarChart3 } from 'lucide-react';
+import { Users, Building, FileText, Wallet, AlertTriangle, Zap, Tag, TrendingUp, ChevronRight, BarChart3, Eye } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -102,6 +102,11 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
 
     return buckets;
   }, [listings, language]);
+
+  const topViewedListings = useMemo(
+    () => [...listings].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0)).slice(0, 5),
+    [listings]
+  );
 
   const formatMoney = (n: number) => `${n.toLocaleString('vi-VN')}đ`;
 
@@ -297,6 +302,46 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
             </ResponsiveContainer>
           )}
         </div>
+      </div>
+
+      {/* Top 5 tin đăng nhiều lượt xem nhất */}
+      <div className="admin-table-container glass-card" style={{ marginTop: '24px' }}>
+        <div className="section-title-row" style={{ padding: '20px 20px 0', marginBottom: '16px' }}>
+          <Eye size={18} className="text-neon-green" />
+          <h3>{language === 'en' ? 'Top 5 Most Viewed Listings' : 'Top 5 Tin đăng nhiều lượt xem nhất'}</h3>
+        </div>
+        {topViewedListings.length === 0 ? (
+          <p className="text-secondary" style={{ padding: '0 20px 24px', textAlign: 'center' }}>
+            {language === 'en' ? 'No listings data available yet.' : 'Chưa có dữ liệu tin đăng.'}
+          </p>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>{language === 'en' ? 'Listing' : 'Tin đăng'}</th>
+                <th>{language === 'en' ? 'Address' : 'Địa chỉ'}</th>
+                <th>{language === 'en' ? 'Lessor' : 'Chủ nhà'}</th>
+                <th style={{ textAlign: 'right' }}>{language === 'en' ? 'Views' : 'Lượt xem'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topViewedListings.map((lt, idx) => (
+                <tr key={lt.id} style={{ cursor: 'pointer' }} onClick={onNavigateToListings}>
+                  <td>{idx + 1}</td>
+                  <td>{lt.name || (language === 'en' ? 'Rental Listing' : 'Bài đăng cho thuê')}</td>
+                  <td>{lt.spaceAddress || (language === 'en' ? 'Not updated' : 'Chưa cập nhật')}</td>
+                  <td>{lt.lessorName || '—'}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Eye size={13} className="text-secondary" /> {lt.viewCount ?? 0}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Priority packages & categories summary */}

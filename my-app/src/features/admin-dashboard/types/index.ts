@@ -28,8 +28,11 @@ export interface AdminListingItem {
   status: string; // "Pending" | "Approved" | "Rejected" | "Expired"
   lessorName: string;
   spaceAddress: string;
+  spaceCity?: string;
   spaceLatitude?: number;
   spaceLongitude?: number;
+  priceUnit?: string;
+  viewCount?: number;
   createdAt: string;
   updatedAt: string;
   isDeleted: boolean;

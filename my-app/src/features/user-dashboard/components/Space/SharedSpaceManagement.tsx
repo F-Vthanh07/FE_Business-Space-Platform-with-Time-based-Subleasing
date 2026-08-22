@@ -6,9 +6,11 @@ import { Plus, Search, Users, MapPin, Edit3, Trash2 } from 'lucide-react';
 import { ShareListingForm } from '../Listing/ShareListingForm';
 import { deleteShareListing, fetchMyShareListings } from '../Listing/shareListing.api';
 import { fetchActiveRentedContracts, spaceNameOf } from '../contract/contract.api';
+import { useConfirm } from '../../../../components/ConfirmModal';
 import "../Listing/OwnerListings.css";
 
 export const SharedSpaceManagement: React.FC = () => {
+  const { confirm, confirmModal } = useConfirm();
   const [shareListings, setShareListings] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -72,7 +74,13 @@ export const SharedSpaceManagement: React.FC = () => {
   };
 
   const handleDelete = async (listing: any) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa mặt bằng chia sẻ này?')) return;
+    const confirmed = await confirm({
+      title: 'Xoá mặt bằng chia sẻ',
+      message: 'Bạn có chắc chắn muốn xóa mặt bằng chia sẻ này?',
+      confirmLabel: 'Xoá',
+      danger: true,
+    });
+    if (!confirmed) return;
     const targetId = listing.id || listing.Id;
     const ok = await deleteShareListing(targetId);
     if (ok) {
@@ -89,6 +97,7 @@ export const SharedSpaceManagement: React.FC = () => {
 
   return (
     <div className="owner-listings animate-in" ref={containerRef}>
+      {confirmModal}
       <div className="page-header">
         <div>
           <h1 className="page-title">Mặt bằng chia sẻ</h1>

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { SubSlot } from '../../types';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { useConfirm } from '../../../../components/ConfirmModal';
 import './RenterSubTenants.css';
 
 interface RenterSubTenantsProps {
@@ -36,6 +37,7 @@ const MOCK_CONTACTS: Record<string, { phone: string; email: string }> = {
 
 export const RenterSubTenants: React.FC<RenterSubTenantsProps> = ({ slots, onUpdateSlot }) => {
   const { t, language } = useThemeLanguage();
+  const { confirm, confirmModal } = useConfirm();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending'>('all');
 
@@ -84,8 +86,14 @@ export const RenterSubTenants: React.FC<RenterSubTenantsProps> = ({ slots, onUpd
     onUpdateSlot(updated);
   };
 
-  const handleCancel = (tenant: any) => {
-    if (window.confirm(t('subtenants.confirmCancelLease', { name: tenant.tenantName }))) {
+  const handleCancel = async (tenant: any) => {
+    const ok = await confirm({
+      title: language === 'en' ? 'Cancel lease' : 'Huỷ hợp đồng thuê',
+      message: t('subtenants.confirmCancelLease', { name: tenant.tenantName }),
+      confirmLabel: language === 'en' ? 'Confirm' : 'Xác nhận',
+      danger: true,
+    });
+    if (ok) {
       const updated = {
         ...tenant,
         tenantName: '',
@@ -109,6 +117,7 @@ export const RenterSubTenants: React.FC<RenterSubTenantsProps> = ({ slots, onUpd
 
   return (
     <div className="renter-sub-tenants animate-in">
+      {confirmModal}
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('renter.subTenantsTitle')}</h1>

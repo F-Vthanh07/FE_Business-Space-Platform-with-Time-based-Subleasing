@@ -14,12 +14,15 @@ export interface FeedFilterState {
   areaRange: string;
   minArea: string;
   maxArea: string;
+  categoryId: string;
+  categoryLabel: string;
 }
 
 interface HomeSearchBarProps {
   filters?: FeedFilterState;
   onFilterChange?: (updatedFilters: Partial<FeedFilterState>) => void;
   onResetFilters?: () => void;
+  categories?: { value: string; label: string }[];
 }
 
 const DEFAULT_FILTERS: FeedFilterState = {
@@ -34,12 +37,15 @@ const DEFAULT_FILTERS: FeedFilterState = {
   areaRange: 'all',
   minArea: '',
   maxArea: '',
+  categoryId: '',
+  categoryLabel: '',
 };
 
 export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
   filters = DEFAULT_FILTERS,
   onFilterChange,
   onResetFilters,
+  categories = [],
 }) => {
   const currentFilters = filters || DEFAULT_FILTERS;
   const [provinces, setProvinces] = useState<{ value: string; label: string }[]>([]);
@@ -122,6 +128,15 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
     });
   };
 
+  const handleCategorySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    const label = categories.find((c) => c.value === value)?.label || '';
+    onFilterChange?.({
+      categoryId: value,
+      categoryLabel: label,
+    });
+  };
+
   const activeFiltersCount = [
     currentFilters.searchQuery,
     currentFilters.provinceCode,
@@ -132,6 +147,7 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
     currentFilters.areaRange !== 'all' ? currentFilters.areaRange : '',
     currentFilters.minArea,
     currentFilters.maxArea,
+    currentFilters.categoryId,
   ].filter(Boolean).length;
 
   return (
@@ -303,6 +319,32 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
           <option value="30-70">30 - 70 m²</option>
           <option value="70-150">70 - 150 m²</option>
           <option value="over150">Trên 150 m²</option>
+        </select>
+
+        {/* NGÀNH NGHỀ ĐƯỢC PHÉP KINH DOANH */}
+        <select
+          className="hs-select-box"
+          value={currentFilters.categoryId || ''}
+          onChange={handleCategorySelect}
+          disabled={categories.length === 0}
+          style={{
+            padding: '8px 12px',
+            borderRadius: '6px',
+            border: currentFilters.categoryId ? '1px solid var(--color-primary, #3b82f6)' : '1px solid #E5E7EB',
+            backgroundColor: currentFilters.categoryId ? 'rgba(59,130,246,0.06)' : '#fff',
+            fontWeight: currentFilters.categoryId ? 600 : 400,
+            fontSize: '14px',
+            color: categories.length === 0 ? '#9CA3AF' : '#050505',
+            cursor: categories.length === 0 ? 'not-allowed' : 'pointer',
+            outline: 'none',
+          }}
+        >
+          <option value="">🏷️ Ngành nghề</option>
+          {categories.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
         </select>
 
         {/* NÚT XÓA BỘ LỌC */}

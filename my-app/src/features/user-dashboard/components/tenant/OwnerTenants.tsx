@@ -21,6 +21,7 @@ import {
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import { ContractViewModal } from '../../../../components/Contract/ContractViewModal';
 import { ContractCreateModal } from '../../../../components/Contract/ContractCreateModal';
+import { useConfirm } from '../../../../components/ConfirmModal';
 import '../../../shared/ModalShell.css';
 import './OwnerTenants.css';
 
@@ -75,6 +76,7 @@ const monthsElapsed = (start?: string) => {
 };
 
 export const OwnerTenants: React.FC = () => {
+  const { confirm, confirmModal } = useConfirm();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | ContractStatus>('all');
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -233,7 +235,13 @@ export const OwnerTenants: React.FC = () => {
   }, [token, currentUserId, language]);
 
   const handleDeleteContract = async (contractId: number) => {
-    if (!window.confirm(language === 'en' ? 'Are you sure you want to revoke and cancel this contract?' : 'Bạn có chắc chắn muốn thu hồi và huỷ bỏ hợp đồng này?')) return;
+    const ok = await confirm({
+      title: language === 'en' ? 'Revoke contract' : 'Thu hồi hợp đồng',
+      message: language === 'en' ? 'Are you sure you want to revoke and cancel this contract?' : 'Bạn có chắc chắn muốn thu hồi và huỷ bỏ hợp đồng này?',
+      confirmLabel: language === 'en' ? 'Revoke' : 'Thu hồi',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`${API_BASE}/api/Contract/Delete/${contractId}`, {
         method: 'DELETE',
@@ -287,6 +295,7 @@ export const OwnerTenants: React.FC = () => {
 
   return (
     <div className="owner-tenants animate-in">
+      {confirmModal}
       {/* Header */}
       <div className="page-header">
         <div>

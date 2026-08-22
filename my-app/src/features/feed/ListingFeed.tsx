@@ -87,7 +87,11 @@ export const ListingFeed: React.FC = () => {
     areaRange: 'all',
     minArea: '',
     maxArea: '',
+    categoryId: '',
+    categoryLabel: '',
   });
+
+  const [businessCategories, setBusinessCategories] = useState<{ value: string; label: string }[]>([]);
 
   const handleFilterChange = (updated: Partial<FeedFilterState>) => {
     setFeedFilters((prev) => ({ ...prev, ...updated }));
@@ -106,6 +110,8 @@ export const ListingFeed: React.FC = () => {
       areaRange: 'all',
       minArea: '',
       maxArea: '',
+      categoryId: '',
+      categoryLabel: '',
     });
   };
 
@@ -146,16 +152,30 @@ export const ListingFeed: React.FC = () => {
             .catch(err => console.error('Lỗi lấy danh sách yêu thích:', err));
         }
 
-        // 2. Lấy toàn bộ bài đăng (fetch kèm Space để có area)
-        const [spaceRes, response] = await Promise.all([
+        // 2. Lấy toàn bộ bài đăng (fetch kèm Space để có area) + danh mục ngành nghề
+        const [spaceRes, response, categoryRes] = await Promise.all([
           fetch('https://flexi-space-capstone-project.onrender.com/api/Space/GetAll', { headers: { accept: '*/*' } }),
-          fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', { headers: { accept: '*/*' } })
+          fetch('https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll', { headers: { accept: '*/*' } }),
+          fetch('https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/GetAll', { headers: { accept: '*/*' } })
         ]);
 
         let spaces: AnyItem[] = [];
         if (spaceRes.ok) {
           const spaceData = await spaceRes.json();
           spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
+        }
+
+        if (categoryRes.ok) {
+          try {
+            const categoryData = await categoryRes.json();
+            const rawCategories = Array.isArray(categoryData) ? categoryData : (categoryData?.data || categoryData?.items || []);
+            const options = rawCategories
+              .map((c: AnyItem) => ({ value: String(c.id ?? c.Id ?? ''), label: c.name ?? c.Name ?? '' }))
+              .filter((c: { value: string; label: string }) => c.value && c.label);
+            setBusinessCategories(options);
+          } catch (catErr) {
+            console.error('Lỗi lấy danh sách ngành nghề:', catErr);
+          }
         }
 
         let safeData: AnyItem[] = [];
@@ -231,6 +251,7 @@ export const ListingFeed: React.FC = () => {
             }
 
             const combinedAddr = [address, city].filter(Boolean).join(', ');
+            const allowedCategories = item.spaceAllowedCategories || spaceOrPart?.spaceAllowedCategories || [];
             return {
               ...item,
               spaceCity: city,
@@ -238,7 +259,8 @@ export const ListingFeed: React.FC = () => {
               area: computedArea,
               address: combinedAddr || item.location || item.address || 'Đang cập nhật',
               city: city,
-              isSpacePart: item.isSpacePart
+              isSpacePart: item.isSpacePart,
+              allowedCategories
             };
           });
         }
@@ -437,6 +459,16 @@ export const ListingFeed: React.FC = () => {
         matchArea = area > 150;
       }
 
+      // 6. Lọc theo Ngành nghề được phép kinh doanh
+      let matchBusinessCategory = true;
+      if (feedFilters.categoryId) {
+        const allowed: AnyItem[] = item.allowedCategories || [];
+        matchBusinessCategory = allowed.some((cat: AnyItem) => {
+          const catId = cat?.bussinessCategoryId ?? cat?.businessCategoryId ?? cat?.categoryId;
+          return catId != null && String(catId) === feedFilters.categoryId;
+        });
+      }
+
       return (
         matchCategory &&
         matchMine &&
@@ -445,7 +477,8 @@ export const ListingFeed: React.FC = () => {
         matchProvince &&
         matchDistrict &&
         matchPrice &&
-        matchArea
+        matchArea &&
+        matchBusinessCategory
       );
     });
   }, [listings, selectedFilters, onlyMine, myListingKeys, showFavoritesOnly, favoriteIds, feedFilters]);
@@ -566,6 +599,7 @@ export const ListingFeed: React.FC = () => {
             filters={feedFilters}
             onFilterChange={handleFilterChange}
             onResetFilters={handleResetFilters}
+            categories={businessCategories}
           />
 
           {/* THANH BỘ LỌC MULTI-SELECT */}

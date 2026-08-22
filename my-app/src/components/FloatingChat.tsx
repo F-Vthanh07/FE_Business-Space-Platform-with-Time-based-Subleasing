@@ -1,13 +1,17 @@
   /* eslint-disable react-hooks/immutability */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Minus, Send, ArrowLeft, FileSignature, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MessageCircle, X, Minus, Send, ArrowLeft, FileSignature, FileText, MapPin, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import { HubConnectionBuilder, LogLevel, HubConnection } from '@microsoft/signalr';
 import { ContractViewModal } from './Contract/ContractViewModal';
 import { ContractCreateModal } from './Contract/ContractCreateModal';
 import { ExternalContractCreateModal } from './Contract/ExternalContractCreateModal';
+import { useConfirm } from './ConfirmModal';
 
 export const FloatingChat: React.FC = () => {
+  const navigate = useNavigate();
+  const { confirm, confirmModal } = useConfirm();
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'LIST' | 'CHAT' | 'CONTRACT_DETAIL'>('LIST');
 
@@ -51,6 +55,12 @@ export const FloatingChat: React.FC = () => {
   // Thêm state lưu thông tin yêu cầu thuê liên quan
   const [relatedRequests, setRelatedRequests] = useState<any[]>([]);
   const [showRequestPopup, setShowRequestPopup] = useState(false);
+
+  // Xem nhanh chi tiết mặt bằng ngay trong popup "Yêu cầu thuê liên quan" -
+  // giống panel "Xem chi tiết mặt bằng" ở ContractCreateModal, tránh phải rời khỏi khung chat.
+  const [expandedSpaceReqId, setExpandedSpaceReqId] = useState<number | string | null>(null);
+  const [spaceDetailsById, setSpaceDetailsById] = useState<Record<string, any>>({});
+  const [loadingSpaceId, setLoadingSpaceId] = useState<number | string | null>(null);
 
   // Lấy ID người đang chat cùng mình (dùng cho link tới Profile)
   const getOtherPersonId = (room: any) => {
@@ -355,6 +365,44 @@ export const FloatingChat: React.FC = () => {
     }
   }, [activeChat, view, currentUserId, token]);
 
+  // Mở/đóng panel "Xem chi tiết mặt bằng" cho 1 yêu cầu thuê trong popup - tự fetch
+  // Space/GetById khi mở lần đầu, các lần sau dùng lại cache trong spaceDetailsById.
+  const toggleSpaceDetail = async (req: any) => {
+    const reqId = req.id || req.Id;
+    if (expandedSpaceReqId === reqId) {
+      setExpandedSpaceReqId(null);
+      return;
+    }
+    setExpandedSpaceReqId(reqId);
+
+    const spaceId = req.spaceId || req.SpaceId;
+    if (!spaceId || spaceDetailsById[String(spaceId)]) return;
+
+    setLoadingSpaceId(reqId);
+    try {
+      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetById${spaceId}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSpaceDetailsById((prev) => ({ ...prev, [String(spaceId)]: data }));
+      }
+    } catch (e) {
+      // im lặng - panel sẽ hiện "Không tải được thông tin mặt bằng"
+    } finally {
+      setLoadingSpaceId(null);
+    }
+  };
+
+  // Điều hướng sang trang chi tiết tin đăng tương ứng, đóng khung chat lại cho gọn.
+  const handleViewListing = (req: any) => {
+    const listingId = req.listingId || req.ListingId;
+    if (!listingId) return;
+    setIsOpen(false);
+    setShowRequestPopup(false);
+    navigate(`/listing/${listingId}`);
+  };
+
   const openChatRoom = async (roomData: any) => {
     setActiveChat(roomData);
     setView('CHAT');
@@ -452,7 +500,13 @@ export const FloatingChat: React.FC = () => {
 
   // --- HÀM XỬ LÝ KHI BẤM NÚT "THU HỒI" ---
   const handleDeleteContract = async (contractId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn thu hồi và hủy bỏ hợp đồng này?')) return;
+    const ok = await confirm({
+      title: 'Thu hồi hợp đồng',
+      message: 'Bạn có chắc chắn muốn thu hồi và hủy bỏ hợp đồng này?',
+      confirmLabel: 'Thu hồi',
+      danger: true,
+    });
+    if (!ok) return;
     
     try {
       const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Contract/Delete/${contractId}`, {
@@ -535,6 +589,7 @@ export const FloatingChat: React.FC = () => {
 
   return (
     <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontFamily: 'system-ui, sans-serif' }}>
+      {confirmModal}
 
       {/* KHAI BÁO CSS NỘI BỘ CHO PHẦN GIAO DIỆN PREMIUM */}
       <style>
@@ -658,17 +713,99 @@ export const FloatingChat: React.FC = () => {
                     <div style={{ color: '#64748B', fontSize: '13px', textAlign: 'center', padding: '10px 0' }}>Không tìm thấy yêu cầu thuê liên quan.</div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {relatedRequests.map(req => (
-                        <div key={req.id || req.Id} style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '13px' }}>
-                          <div style={{ fontWeight: 'bold', color: '#0F172A', marginBottom: '6px' }}>Mã yêu cầu: #{req.id || req.Id}</div>
-                          <div style={{ marginBottom: '4px', color: '#334155' }}><strong>Tin đăng:</strong> {req.listingName}</div>
-                          <div style={{ marginBottom: '4px', color: '#334155' }}><strong>Mặt bằng:</strong> {req.spaceName}</div>
-                          <div style={{ marginBottom: '4px', color: '#334155' }}>
-                            <strong>Thời gian:</strong> {req.expectedStartDate ? new Date(req.expectedStartDate).toLocaleDateString('vi-VN') : '?'} - {req.expectedEndDate ? new Date(req.expectedEndDate).toLocaleDateString('vi-VN') : '?'}
+                      {relatedRequests.map(req => {
+                        const reqId = req.id || req.Id;
+                        const spaceId = req.spaceId || req.SpaceId;
+                        const spaceDetail = spaceId ? spaceDetailsById[String(spaceId)] : null;
+                        const isExpanded = expandedSpaceReqId === reqId;
+                        const isLoadingThis = loadingSpaceId === reqId;
+                        const amenities: any[] = spaceDetail?.amenities || spaceDetail?.Amenities || [];
+                        const operatingHours: any[] = spaceDetail?.operatingHours || spaceDetail?.OperatingHours || [];
+
+                        return (
+                          <div key={reqId} style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '13px' }}>
+                            <div style={{ fontWeight: 'bold', color: '#0F172A', marginBottom: '6px' }}>Mã yêu cầu: #{reqId}</div>
+                            <div
+                              style={{ marginBottom: '4px', color: '#2563EB', cursor: req.listingId || req.ListingId ? 'pointer' : 'default', textDecoration: (req.listingId || req.ListingId) ? 'underline' : 'none' }}
+                              onClick={() => handleViewListing(req)}
+                              title="Xem chi tiết tin đăng"
+                            >
+                              <strong style={{ color: '#334155' }}>Tin đăng:</strong> {req.listingName}
+                            </div>
+                            <div style={{ marginBottom: '4px', color: '#334155' }}><strong>Mặt bằng:</strong> {req.spaceName}</div>
+                            <div style={{ marginBottom: '4px', color: '#334155' }}>
+                              <strong>Thời gian:</strong> {req.expectedStartDate ? new Date(req.expectedStartDate).toLocaleDateString('vi-VN') : '?'} - {req.expectedEndDate ? new Date(req.expectedEndDate).toLocaleDateString('vi-VN') : '?'}
+                            </div>
+                            <div style={{ marginBottom: '8px', color: '#334155' }}><strong>Giá đề xuất:</strong> {req.offeredPrice ? req.offeredPrice.toLocaleString('vi-VN') + ' VNĐ/tháng' : 'Thỏa thuận'}</div>
+
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleViewListing(req)}
+                                disabled={!(req.listingId || req.ListingId)}
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px 10px', background: '#2563EB', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: (req.listingId || req.ListingId) ? 'pointer' : 'not-allowed', opacity: (req.listingId || req.ListingId) ? 1 : 0.5 }}
+                              >
+                                Xem tin đăng
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => toggleSpaceDetail(req)}
+                                disabled={!spaceId}
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px 10px', background: '#fff', border: '1px solid #E2E8F0', borderRadius: '6px', color: '#334155', fontSize: '12px', fontWeight: 600, cursor: spaceId ? 'pointer' : 'not-allowed', opacity: spaceId ? 1 : 0.5 }}
+                              >
+                                <MapPin size={12} /> Chi tiết mặt bằng {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                              </button>
+                            </div>
+
+                            {isExpanded && (
+                              <div style={{ marginTop: '8px', padding: '10px', background: '#fff', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12px', color: '#334155' }}>
+                                {isLoadingThis ? (
+                                  <div style={{ color: '#94A3B8', textAlign: 'center', padding: '6px 0' }}>Đang tải thông tin mặt bằng...</div>
+                                ) : !spaceDetail ? (
+                                  <div style={{ color: '#94A3B8', textAlign: 'center', padding: '6px 0' }}>Không tải được thông tin mặt bằng.</div>
+                                ) : (
+                                  <>
+                                    <div style={{ marginBottom: '6px' }}>
+                                      <strong>Tên mặt bằng:</strong> {spaceDetail.name || spaceDetail.Name || '—'}
+                                    </div>
+                                    <div style={{ marginBottom: '6px' }}>
+                                      <strong>Địa chỉ:</strong>{' '}
+                                      {[spaceDetail.address || spaceDetail.Address, spaceDetail.city || spaceDetail.City].filter(Boolean).join(', ') || '—'}
+                                    </div>
+                                    <div style={{ marginBottom: '6px' }}>
+                                      <strong>Diện tích:</strong> {(spaceDetail.area || spaceDetail.Area) ? `${spaceDetail.area || spaceDetail.Area} m²` : '—'}
+                                    </div>
+                                    <div style={{ marginBottom: operatingHours.length ? '6px' : 0 }}>
+                                      <strong>Tiện ích:</strong>{' '}
+                                      {amenities.length > 0
+                                        ? amenities.map((a) => a.name || a.Name).filter(Boolean).join(', ')
+                                        : 'Không có'}
+                                    </div>
+                                    {operatingHours.length > 0 && (
+                                      <div>
+                                        <strong style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                                          <Clock size={12} /> Giờ hoạt động:
+                                        </strong>
+                                        <ul style={{ margin: 0, paddingLeft: '18px' }}>
+                                          {operatingHours.map((oh: any, idx: number) => {
+                                            const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+                                            const dow = oh.dayOfWeek ?? oh.DayOfWeek;
+                                            return (
+                                              <li key={idx}>
+                                                {dayNames[dow] ?? dow}: {oh.openTime || oh.OpenTime} - {oh.closeTime || oh.CloseTime}
+                                              </li>
+                                            );
+                                          })}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            )}
                           </div>
-                          <div style={{ color: '#334155' }}><strong>Giá đề xuất:</strong> {req.offeredPrice ? req.offeredPrice.toLocaleString('vi-VN') + ' VNĐ/tháng' : 'Thỏa thuận'}</div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

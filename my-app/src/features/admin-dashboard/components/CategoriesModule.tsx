@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, Edit3, Check, X, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { BusinessCategory } from '../types';
 import { RefreshButton } from './RefreshButton';
+import { useConfirm } from '../../../components/ConfirmModal';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -26,6 +27,7 @@ export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
   onRefresh,
   isRefreshing,
 }) => {
+  const { confirm, confirmModal } = useConfirm();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<BusinessCategory | null>(null);
@@ -91,7 +93,13 @@ export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
   };
 
   const onDeleteClick = async (id: number) => {
-    if (window.confirm(language === 'en' ? 'Are you sure you want to delete this category?' : 'Bạn có chắc chắn muốn xóa ngành nghề này?')) {
+    const ok = await confirm({
+      title: language === 'en' ? 'Delete category' : 'Xoá ngành nghề',
+      message: language === 'en' ? 'Are you sure you want to delete this category?' : 'Bạn có chắc chắn muốn xóa ngành nghề này?',
+      confirmLabel: language === 'en' ? 'Delete' : 'Xoá',
+      danger: true,
+    });
+    if (ok) {
       try {
         await handleDeleteCategory(id);
       } catch (err) {
@@ -102,6 +110,7 @@ export const CategoriesModule: React.FC<CategoriesModuleProps> = ({
 
   return (
     <div className="admin-module animate-fade-in">
+      {confirmModal}
       <header className="module-header">
         <div>
           <h1>{language === 'en' ? 'Business Categories' : 'Quản lý Ngành nghề'}</h1>

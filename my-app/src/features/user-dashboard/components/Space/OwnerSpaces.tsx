@@ -7,6 +7,7 @@ import { SpaceForm } from './SpaceForm';
 import { SpacePartForm } from './SpacePartForm';
 import { SpacePartListModal } from './SpacePartListModal';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
+import { useConfirm } from '../../../../components/ConfirmModal';
 import '../../../shared/ModalShell.css';
 import './OwnerSpaces.css';
 
@@ -31,6 +32,7 @@ interface Space {
 }
 
 export const OwnerSpaces: React.FC = () => {
+  const { confirm, confirmModal } = useConfirm();
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
   const [apiCategories, setApiCategories] = useState<any[]>([]); 
@@ -213,7 +215,13 @@ export const OwnerSpaces: React.FC = () => {
       return;
     }
 
-    if (window.confirm(t('spaces.confirmDeleteSpace') || 'Bạn có chắc chắn muốn xóa mặt bằng này?')) {
+    const ok = await confirm({
+      title: 'Xoá mặt bằng',
+      message: t('spaces.confirmDeleteSpace') || 'Bạn có chắc chắn muốn xóa mặt bằng này?',
+      confirmLabel: 'Xoá',
+      danger: true,
+    });
+    if (ok) {
       try {
         const token = localStorage.getItem('portal_token');
         const response = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/Delete${targetId}`, {
@@ -252,6 +260,7 @@ export const OwnerSpaces: React.FC = () => {
 
   return (
     <div className="owner-spaces animate-in" ref={containerRef}>
+      {confirmModal}
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('spaces.mySpaces') || 'Quản lý Mặt bằng'}</h1>
@@ -385,17 +394,19 @@ export const OwnerSpaces: React.FC = () => {
         </div>
       )}
 
-      {isFormOpen && (
-        <SpaceForm onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} initialData={editingSpace} />
+      {isFormOpen && createPortal(
+        <SpaceForm onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} initialData={editingSpace} />,
+        document.body
       )}
 
-      {isSpacePartFormOpen && parentSpaceForPart && (
+      {isSpacePartFormOpen && parentSpaceForPart && createPortal(
         <SpacePartForm
           onClose={() => { setIsSpacePartFormOpen(false); setParentSpaceForPart(null); setEditingSpacePart(null); }}
           onSubmit={() => { setParentSpaceForPart(null); setEditingSpacePart(null); handleSpacePartSubmit(); }}
           parentSpace={parentSpaceForPart}
           initialData={editingSpacePart}
-        />
+        />,
+        document.body
       )}
 
       {isSpacePartListOpen && parentSpaceForPart && (

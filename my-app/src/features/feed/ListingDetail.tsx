@@ -453,11 +453,11 @@ export const ListingDetail: React.FC = () => {
       });
 
       if (response.ok) {
-        alert("🎉 Gửi yêu cầu thuê thành công! Vui lòng chờ chủ nhà duyệt trong mục Quản lý.");
+        toast.success("🎉 Gửi yêu cầu thuê thành công! Vui lòng chờ chủ nhà duyệt trong mục Quản lý.");
         setIsBookingModalOpen(false);
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(err.message || "Có lỗi xảy ra khi gửi yêu cầu.");
+        toast.error(err.message || "Có lỗi xảy ra khi gửi yêu cầu.");
       }
     } catch (error) {
       console.error("Lỗi API Booking:", error);
@@ -512,7 +512,7 @@ export const ListingDetail: React.FC = () => {
   const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (reportReasons.length === 0) {
-      alert("Vui lòng chọn ít nhất một lý do báo cáo.");
+      toast.error("Vui lòng chọn ít nhất một lý do báo cáo.");
       return;
     }
     setIsSubmittingReport(true);
@@ -533,11 +533,11 @@ export const ListingDetail: React.FC = () => {
         setReportSuccess(true);
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(err.message || "Có lỗi xảy ra khi gửi báo cáo.");
+        toast.error(err.message || "Có lỗi xảy ra khi gửi báo cáo.");
       }
     } catch (error) {
       console.error("Lỗi API Report:", error);
-      alert("Có lỗi xảy ra khi gửi báo cáo.");
+      toast.error("Có lỗi xảy ra khi gửi báo cáo.");
     } finally {
       setIsSubmittingReport(false);
     }

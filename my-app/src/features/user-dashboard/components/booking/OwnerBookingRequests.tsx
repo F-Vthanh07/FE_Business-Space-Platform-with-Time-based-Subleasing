@@ -2,14 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { CheckCircle2, XCircle, FileText, Calendar, User, Eye, X, MapPin, Building2 } from 'lucide-react';
 import { formatDate } from '../../../../utils/dateUtils';
 import { getListingPictureUrl } from '../../../shared/listingPictures';
 import { fetchSpacesById, getListingAddress } from '../../../shared/listingAddress';
+import { useConfirm } from '../../../../components/ConfirmModal';
 import '../../../shared/ModalShell.css';
 
 export const OwnerBookingRequests: React.FC = () => {
   const navigate = useNavigate();
+  const { confirm, confirmModal } = useConfirm();
   const [requests, setRequests] = useState<any[]>([]);
   const [listingsById, setListingsById] = useState<Record<number, any>>({});
   const [spacesById, setSpacesById] = useState<Record<number, any>>({});
@@ -91,7 +94,14 @@ export const OwnerBookingRequests: React.FC = () => {
 
   // 2. XỬ LÝ DUYỆT / TỪ CHỐI VÀ TẠO CHAT
   const handleUpdateStatus = async (requestId: number, newStatus: 'Approved' | 'Rejected', lesseeId: string) => {
-    if (!window.confirm(`Bạn có chắc muốn ${newStatus === 'Approved' ? 'DUYỆT' : 'TỪ CHỐI'} yêu cầu này?`)) return;
+    const isApprove = newStatus === 'Approved';
+    const ok = await confirm({
+      title: isApprove ? 'Duyệt yêu cầu thuê' : 'Từ chối yêu cầu thuê',
+      message: `Bạn có chắc muốn ${isApprove ? 'DUYỆT' : 'TỪ CHỐI'} yêu cầu này?`,
+      confirmLabel: isApprove ? 'Duyệt' : 'Từ chối',
+      danger: !isApprove,
+    });
+    if (!ok) return;
 
     try {
       // SỬA FIX LỖI JSON BỊ 400 BAD REQUEST CHỖ NÀY RỒI NHA
@@ -105,7 +115,7 @@ export const OwnerBookingRequests: React.FC = () => {
       });
 
       if (!res.ok) {
-        alert("Lỗi khi cập nhật trạng thái đơn!");
+        toast.error("Lỗi khi cập nhật trạng thái đơn!");
         return;
       }
 
@@ -135,25 +145,26 @@ export const OwnerBookingRequests: React.FC = () => {
             }));
           }
 
-          alert("🎉 Đã duyệt đơn và tạo phòng chat thành công! Khách thuê giờ đã có thể nhắn tin cho bạn.");
+          toast.success("🎉 Đã duyệt đơn và tạo phòng chat thành công! Khách thuê giờ đã có thể nhắn tin cho bạn.");
         } catch (chatErr) {
           console.error("Lỗi tạo phòng chat:", chatErr);
-          alert("Đã duyệt đơn nhưng không thể tạo phòng chat tự động.");
+          toast.error("Đã duyệt đơn nhưng không thể tạo phòng chat tự động.");
         }
       } else {
-        alert("Đã từ chối yêu cầu thuê!");
+        toast.success("Đã từ chối yêu cầu thuê!");
       }
 
       fetchRequests();
 
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
-      alert("Lỗi kết nối máy chủ!");
+      toast.error("Lỗi kết nối máy chủ!");
     }
   };
 
   return (
     <div className="animate-in">
+      {confirmModal}
       <div className="page-header" style={{ marginBottom: '24px' }}>
         <div>
           {/* Lược bỏ màu cứng, xài class mặc định của dự án */}
