@@ -252,6 +252,12 @@ export const ListingFeed: React.FC = () => {
 
             const combinedAddr = [address, city].filter(Boolean).join(', ');
             const allowedCategories = item.spaceAllowedCategories || spaceOrPart?.spaceAllowedCategories || [];
+
+            let parentForOwner = item.isSpacePart && spaceOrPart?.parentSpaceId 
+              ? spaces.find((s: AnyItem) => (s.id || s.Id) == spaceOrPart.parentSpaceId) 
+              : null;
+            const spaceOwnerId = spaceOrPart?.ownerId || spaceOrPart?.createdBy || spaceOrPart?.OwnerId || spaceOrPart?.CreatedBy || parentForOwner?.ownerId || parentForOwner?.createdBy || parentForOwner?.OwnerId || parentForOwner?.CreatedBy || null;
+
             return {
               ...item,
               spaceCity: city,
@@ -260,7 +266,8 @@ export const ListingFeed: React.FC = () => {
               address: combinedAddr || item.location || item.address || 'Đang cập nhật',
               city: city,
               isSpacePart: item.isSpacePart,
-              allowedCategories
+              allowedCategories,
+              spaceOwnerId
             };
           });
         }
@@ -354,8 +361,9 @@ export const ListingFeed: React.FC = () => {
 
   const counts = useMemo(() => {
     const getRentalType = (item: AnyItem) => {
-      if (item.listingType === 'SharedSpace' && item.shareSpaceDetailIsOwner === false) return 'sublet';
-      if (item.priceUnit === 'PerHour') return 'hourly';
+      const cId = item.creatorId || item.CreatorId;
+      if (item.listingType === 'SharedSpace' && cId && item.spaceOwnerId && String(cId) !== String(item.spaceOwnerId)) return 'sublet';
+      if (item.listingType === 'SharedSpace' || item.priceUnit === 'PerHour') return 'hourly';
       return 'longterm';
     };
 
@@ -382,8 +390,9 @@ export const ListingFeed: React.FC = () => {
 
       // LỌC MULTI-SELECT TYPE & SCOPE
       const getRentalType = (item: AnyItem) => {
-        if (item.listingType === 'SharedSpace' && item.shareSpaceDetailIsOwner === false) return 'sublet';
-        if (item.priceUnit === 'PerHour') return 'hourly';
+        const cId = item.creatorId || item.CreatorId;
+        if (item.listingType === 'SharedSpace' && cId && item.spaceOwnerId && String(cId) !== String(item.spaceOwnerId)) return 'sublet';
+        if (item.listingType === 'SharedSpace' || item.priceUnit === 'PerHour') return 'hourly';
         return 'longterm';
       };
       const itemType = getRentalType(item);
@@ -534,7 +543,7 @@ export const ListingFeed: React.FC = () => {
   const filterOptions = [
     { key: 'all', label: 'Tất cả', icon: <Home size={14} />, count: counts.all, isAll: true },
     { key: 'longterm', label: 'Dài hạn', icon: <Building2 size={14} />, count: counts.longterm },
-    { key: 'hourly', label: 'Chia sẻ khung giờ', icon: <Clock3 size={14} />, count: counts.hourly },
+    { key: 'hourly', label: 'Chia sẻ / Theo ca', icon: <Clock3 size={14} />, count: counts.hourly },
     { key: 'sublet', label: 'Cho thuê lại', icon: <Share2 size={14} />, count: counts.sublet },
     { key: 'full_space', label: 'Nguyên căn', icon: <Tag size={14} />, count: counts.fullSpace },
     { key: 'space_part', label: 'Diện tích chia nhỏ', icon: <Layers size={14} />, count: counts.spacePart },
@@ -662,16 +671,39 @@ export const ListingFeed: React.FC = () => {
 
               // TAG 1: HÌNH THỨC THUÊ
               let typeBadge = { label: 'Dài hạn', bg: '#F0FDF4', color: '#166534', icon: <Building2 size={11} /> };
-              if (item.listingType === 'SharedSpace' && item.shareSpaceDetailIsOwner === false) {
+              const cIdBadge = item.creatorId || item.CreatorId;
+              if (item.listingType === 'SharedSpace' && cIdBadge && item.spaceOwnerId && String(cIdBadge) !== String(item.spaceOwnerId)) {
                 typeBadge = { label: 'Cho thuê lại', bg: '#FCE7F3', color: '#9D174D', icon: <Share2 size={11} /> };
               } else if (item.priceUnit === 'PerHour') {
-                typeBadge = { label: 'Chia sẻ khung giờ', bg: '#EEF2FF', color: '#3730A3', icon: <Clock3 size={11} /> };
+                typeBadge = { label: 'Theo ca', bg: '#EEF2FF', color: '#3730A3', icon: <Clock3 size={11} /> };
+              } else if (item.listingType === 'SharedSpace') {
+                typeBadge = { label: 'Chia sẻ', bg: '#EEF2FF', color: '#3730A3', icon: <Share2 size={11} /> };
               }
 
               // TAG 2: QUY MÔ KHÔNG GIAN
               let scopeBadge = { label: 'Nguyên căn', bg: '#ECFDF5', color: '#047857' };
               if (item.isSpacePart) {
                 scopeBadge = { label: 'Diện tích chia nhỏ', bg: '#FEF9C3', color: '#854D0E' };
+              }
+
+              // LOGIC THỜI GIAN THEO CA
+              let timeSlotStr = '';
+              if (item.shareSpaceDetailAvailabilitiesTimes && item.shareSpaceDetailAvailabilitiesTimes.length > 0) {
+                const firstSlot = item.shareSpaceDetailAvailabilitiesTimes[0];
+                const formatToAmPm = (timeStr: string) => {
+                  if (!timeStr) return '';
+                  const [h, m] = timeStr.split(':');
+                  const hh = parseInt(h, 10);
+                  const ampm = hh >= 12 ? 'PM' : 'AM';
+                  const hh12 = hh % 12 || 12;
+                  return `${hh12.toString().padStart(2, '0')}:${m} ${ampm}`;
+                };
+                
+                const dayStr = firstSlot.daysOfWeek?.length > 0 ? firstSlot.daysOfWeek.join(', ') : 'Hôm nay';
+                timeSlotStr = `⏱ ${dayStr}: ${formatToAmPm(firstSlot.startTime)} - ${formatToAmPm(firstSlot.endTime)}`;
+                if (item.shareSpaceDetailAvailabilitiesTimes.length > 1) {
+                   timeSlotStr += ` (và ${item.shareSpaceDetailAvailabilitiesTimes.length - 1} ca khác)`;
+                }
               }
 
               return (
@@ -729,6 +761,11 @@ export const ListingFeed: React.FC = () => {
                     <div style={{ fontWeight: 'bold', color: 'var(--color-positive, #2E7D32)', fontSize: '16px', marginBottom: '6px' }}>
                       💰 {item.price ? `${item.price.toLocaleString('vi-VN')} ₫/${item.priceUnit ? getPriceUnitText(item.priceUnit) : 'giờ'}` : 'Thỏa thuận'} • {item.area ? `${item.area}m²` : 'N/A'}
                     </div>
+                    {timeSlotStr && (
+                      <div style={{ fontSize: '14px', color: '#10B981', marginBottom: '8px', fontWeight: 600 }}>
+                        {timeSlotStr}
+                      </div>
+                    )}
                     <ExpandableDescription text={item.description} />
                   </div>
 

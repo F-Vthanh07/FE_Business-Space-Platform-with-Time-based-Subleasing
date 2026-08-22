@@ -167,12 +167,18 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
                  city = spaceOrPart.city || '';
             }
 
+            let parentForOwner = l.isSpacePart && spaceOrPart?.parentSpaceId 
+              ? spaces.find(s => (s.id || s.Id) == spaceOrPart.parentSpaceId) 
+              : null;
+            const spaceOwnerId = spaceOrPart?.ownerId || spaceOrPart?.createdBy || spaceOrPart?.OwnerId || spaceOrPart?.CreatedBy || parentForOwner?.ownerId || parentForOwner?.createdBy || parentForOwner?.OwnerId || parentForOwner?.CreatedBy || null;
+
             return {
               ...l,
               address,
               area: computedArea,
               city,
-              isSpacePart: l.isSpacePart
+              isSpacePart: l.isSpacePart,
+              spaceOwnerId
             };
           });
 
@@ -285,10 +291,13 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
 
     // TAG 1: HÌNH THỨC THUÊ
     let typeTag = { label: 'Dài hạn', bg: '#F0FDF4', color: '#166534' };
-    if (listingType === 'SharedSpace' && item.shareSpaceDetailIsOwner === false) {
+    const cId = item.creatorId || item.CreatorId;
+    if (listingType === 'SharedSpace' && cId && item.spaceOwnerId && String(cId) !== String(item.spaceOwnerId)) {
       typeTag = { label: 'Cho thuê lại', bg: '#FCE7F3', color: '#9D174D' };
     } else if (rawPriceUnit === 'PerHour') {
       typeTag = { label: 'Theo ca', bg: '#EEF2FF', color: '#3730A3' };
+    } else if (listingType === 'SharedSpace') {
+      typeTag = { label: 'Chia sẻ', bg: '#EEF2FF', color: '#3730A3' };
     }
 
     // TAG 2: QUY MÔ KHÔNG GIAN
