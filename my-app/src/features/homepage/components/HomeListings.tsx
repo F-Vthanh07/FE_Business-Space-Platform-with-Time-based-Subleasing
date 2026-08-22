@@ -167,6 +167,13 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
                  city = spaceOrPart.city || '';
             }
 
+            let combinedAddr = address;
+            if (city && address && !address.toLowerCase().includes(city.toLowerCase())) {
+               combinedAddr = `${address}, ${city}`;
+            } else if (city && !address) {
+               combinedAddr = city;
+            }
+
             let parentForOwner = l.isSpacePart && spaceOrPart?.parentSpaceId 
               ? spaces.find(s => (s.id || s.Id) == spaceOrPart.parentSpaceId) 
               : null;
@@ -174,7 +181,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
 
             return {
               ...l,
-              address,
+              address: combinedAddr || l.location || l.address || 'Đang cập nhật',
               area: computedArea,
               city,
               isSpacePart: l.isSpacePart,
@@ -355,7 +362,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
              </p>
           )}
 
-          <p className="rental-card-loc" style={{ marginTop: timeSlotStr ? '4px' : '8px' }}>📍 {item.location || item.address || 'Đang cập nhật địa chỉ'}</p>
+          <p className="rental-card-loc" style={{ marginTop: timeSlotStr ? '4px' : '8px' }}>📍 {item.address || item.location || 'Đang cập nhật địa chỉ'}</p>
 
           <div className="rental-card-footer">
             <div className="rental-card-agent">

@@ -250,8 +250,13 @@ export const ListingFeed: React.FC = () => {
                  city = spaceOrPart.city || '';
             }
 
-            const combinedAddr = [address, city].filter(Boolean).join(', ');
-            const allowedCategories = item.spaceAllowedCategories || spaceOrPart?.spaceAllowedCategories || [];
+            let combinedAddr = address;
+            if (city && address && !address.toLowerCase().includes(city.toLowerCase())) {
+               combinedAddr = `${address}, ${city}`;
+            } else if (city && !address) {
+               combinedAddr = city;
+            }
+            const allowedCategories = (item.spaceAllowedCategories?.length > 0 ? item.spaceAllowedCategories : null) || (spaceOrPart?.spaceAllowedCategories?.length > 0 ? spaceOrPart.spaceAllowedCategories : null) || [];
 
             let parentForOwner = item.isSpacePart && spaceOrPart?.parentSpaceId 
               ? spaces.find((s: AnyItem) => (s.id || s.Id) == spaceOrPart.parentSpaceId) 
