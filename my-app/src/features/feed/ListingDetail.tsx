@@ -278,7 +278,7 @@ export const ListingDetail: React.FC = () => {
             if (!parentSpace) {
                isSpacePart = true;
                try {
-                   const token = localStorage.getItem('token');
+                   const token = localStorage.getItem('portal_token');
                    const headers: any = { accept: '*/*' };
                    if (token) headers['Authorization'] = `Bearer ${token}`;
                    
@@ -295,15 +295,25 @@ export const ListingDetail: React.FC = () => {
               : null;
             const spaceOwnerId = spaceOrPart?.ownerId || spaceOrPart?.createdBy || spaceOrPart?.OwnerId || spaceOrPart?.CreatedBy || parentForOwner?.ownerId || parentForOwner?.createdBy || parentForOwner?.OwnerId || parentForOwner?.CreatedBy || null;
 
+            let rawAddress = found.spaceAddress || found.location || found.address || parentSpace?.address || parentSpace?.location || spaceOrPart?.address || spaceOrPart?.location || '';
+            let rawCity = found.city || parentSpace?.city || spaceOrPart?.city || '';
+            
+            let combinedAddr = rawAddress;
+            if (rawCity && rawAddress && !rawAddress.toLowerCase().includes(rawCity.toLowerCase())) {
+               combinedAddr = `${rawAddress}, ${rawCity}`;
+            } else if (rawCity && !rawAddress) {
+               combinedAddr = rawCity;
+            }
+
             foundWithSpaceInfo = {
               ...found,
               area: computedArea,
-              address: found.spaceAddress || found.location || found.address || parentSpace?.address || parentSpace?.location || '',
-              city: found.city || parentSpace?.city || '',
-              spaceLatitude: found.spaceLatitude ?? parentSpace?.latitude ?? parentSpace?.Latitude ?? null,
-              spaceLongitude: found.spaceLongitude ?? parentSpace?.longitude ?? parentSpace?.Longitude ?? null,
+              address: combinedAddr,
+              city: rawCity,
+              spaceLatitude: found.spaceLatitude ?? parentSpace?.latitude ?? parentSpace?.Latitude ?? spaceOrPart?.latitude ?? null,
+              spaceLongitude: found.spaceLongitude ?? parentSpace?.longitude ?? parentSpace?.Longitude ?? spaceOrPart?.longitude ?? null,
               amenities: found.amenities || spaceOrPart?.amenities || parentSpace?.amenities || [],
-              allowedCategories: found.spaceAllowedCategories || spaceOrPart?.spaceAllowedCategories || parentSpace?.spaceAllowedCategories || [],
+              allowedCategories: (found.spaceAllowedCategories?.length > 0 ? found.spaceAllowedCategories : null) || (spaceOrPart?.spaceAllowedCategories?.length > 0 ? spaceOrPart.spaceAllowedCategories : null) || parentSpace?.spaceAllowedCategories || [],
               isSpacePart,
               spaceOwnerId
             };
@@ -329,17 +339,35 @@ export const ListingDetail: React.FC = () => {
           }
 
           // BƯỚC 4: TÌM BÀI ĐĂNG TƯƠNG TỰ
-          const others = safeData
+          const othersBase = safeData
             .filter((item: any) => (item.id?.toString() !== id && item.Id?.toString() !== id))
-            .map((item: any) => {
-              const parentSpace = spaces.find(s => (s.id || s.Id) === (item.spaceId || item.SpaceId));
+            .slice(0, 3);
+            
+          const others = await Promise.all(othersBase.map(async (item: any) => {
+              let parentSpace = spaces.find(s => (s.id || s.Id) === (item.spaceId || item.SpaceId));
+              let spaceOrPart = parentSpace;
+              if (!parentSpace) {
+                 try {
+                     const token = localStorage.getItem('portal_token');
+                     const headers: any = { accept: '*/*' };
+                     if (token) headers['Authorization'] = `Bearer ${token}`;
+                     const spRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetById/${item.spaceId || item.SpaceId}`, { headers });
+                     if (spRes.ok) spaceOrPart = await spRes.json();
+                 } catch (e) {}
+              }
+
+              let sAddr = item.location || item.address || parentSpace?.address || parentSpace?.location || spaceOrPart?.address || spaceOrPart?.location || '';
+              let sCity = item.city || parentSpace?.city || spaceOrPart?.city || '';
+              let sComb = sAddr;
+              if (sCity && sAddr && !sAddr.toLowerCase().includes(sCity.toLowerCase())) { sComb = `${sAddr}, ${sCity}`; }
+              else if (sCity && !sAddr) { sComb = sCity; }
               return {
                 ...item,
-                area: item.area || parentSpace?.area || null,
-                address: item.location || item.address || parentSpace?.address || parentSpace?.location || ''
+                area: item.area || parentSpace?.area || spaceOrPart?.area || null,
+                address: sComb
               };
-            });
-          setSimilarListings(others.slice(0, 3));
+          }));
+          setSimilarListings(others);
         }
 
         // BƯỚC 5: KIỂM TRA TRẠNG THÁI YÊU THÍCH
@@ -662,7 +690,7 @@ export const ListingDetail: React.FC = () => {
 
             <p style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#505050', margin: '0 0 20px 0' }}>
               <MapPin size={16} />
-              {[listing.location || listing.address || listing.spaceAddress, listing.city].filter(Boolean).join(', ') || 'Đang cập nhật địa chỉ'}
+              {listing.address || listing.location || listing.spaceAddress || 'Đang cập nhật địa chỉ'}
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E0E0E0', borderBottom: '1px solid #E0E0E0', padding: '16px 0', marginBottom: '30px' }}>
@@ -973,10 +1001,7 @@ export const ListingDetail: React.FC = () => {
               const lng = listing.spaceLongitude ?? listing.longitude ?? listing.Longitude;
               const hasValidCoords = typeof lat === 'number' && typeof lng === 'number' && lat !== 0 && lng !== 0;
 
-              const textAddress = [
-                listing.spaceAddress || listing.address || listing.location,
-                listing.city
-              ].filter(Boolean).join(', ');
+              const textAddress = listing.address || listing.spaceAddress || listing.location || '';
 
               const mapQuery = hasValidCoords
                 ? `${lat},${lng}`

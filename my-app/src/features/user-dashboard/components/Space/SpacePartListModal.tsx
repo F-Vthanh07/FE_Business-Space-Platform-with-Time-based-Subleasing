@@ -28,6 +28,25 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
   const [partDetails, setPartDetails] = useState<any>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
+  const [businessCategories, setBusinessCategories] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const res = await fetch('https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/GetAll');
+        if (res.ok) {
+          const data = await res.json();
+          const map: Record<number, string> = {};
+          (Array.isArray(data) ? data : (data.items || [])).forEach((c: any) => {
+             map[c.id || c.Id] = c.name || c.Name;
+          });
+          setBusinessCategories(map);
+        }
+      } catch (e) {}
+    };
+    fetchCats();
+  }, []);
+
   useEffect(() => {
     const fetchSpaceParts = async () => {
       setIsLoading(true);
@@ -199,16 +218,23 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
                       <div className="text-secondary" style={{ textAlign: 'center' }}><Clock size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }}/> Đang tải chi tiết...</div>
                     ) : partDetails ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div><strong>Trạng thái:</strong> {partDetails.isActive ?? partDetails.IsActive ? 'Đang hoạt động' : 'Đang tạm dừng'}</div>
+                        <div><strong>Diện tích:</strong> {partDetails.area || partDetails.Area || part.area} m²</div>
 
-                        {(partDetails.amenities || partDetails.Amenities) && (partDetails.amenities || partDetails.Amenities).length > 0 && (
+                        {((partDetails.amenities || partDetails.Amenities)?.length > 0 || (partDetails.customAmenities || partDetails.CustomAmenities)) && (
                           <div>
-                            <strong>Tiện ích:</strong> {(partDetails.amenities || partDetails.Amenities).map((a: any) => a.name || a.Name).join(', ')}
+                            <strong>Tiện ích:</strong> {[
+                              ...(partDetails.amenities || partDetails.Amenities || []).map((a: any) => a.name || a.Name),
+                              partDetails.customAmenities || partDetails.CustomAmenities
+                            ].filter(Boolean).join(', ')}
                           </div>
                         )}
+                        
                         {(partDetails.spaceAllowedCategories || partDetails.SpaceAllowedCategories) && (partDetails.spaceAllowedCategories || partDetails.SpaceAllowedCategories).length > 0 && (
                           <div>
-                            <strong>Ngành nghề cho phép:</strong> Có giới hạn
+                            <strong>Ngành nghề cho phép:</strong> {(partDetails.spaceAllowedCategories || partDetails.SpaceAllowedCategories).map((cat: any) => {
+                               const catId = cat?.bussinessCategoryId ?? cat?.businessCategoryId ?? cat?.categoryId;
+                               return typeof cat === 'string' ? cat : (cat.name || cat.categoryName || cat.title || businessCategories[catId] || `Ngành nghề ${catId}`);
+                            }).filter(Boolean).join(', ')}
                           </div>
                         )}
                       </div>
