@@ -169,6 +169,19 @@ export const OverviewModule: React.FC<OverviewModuleProps> = ({
             <h2 className="stat-value">{formatMoney(totalWalletBalance)}</h2>
           </div>
         </button>
+
+        <button
+          type="button"
+          className="admin-stat-card glass-card"
+          onClick={onNavigateToWallets}
+          style={{ cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
+        >
+          <div className="stat-icon-wrapper green"><TrendingUp size={20} /></div>
+          <div className="stat-data">
+            <span className="stat-label">{language === 'en' ? 'TOTAL DEPOSITED MONEY' : 'TỔNG TIỀN ĐÃ NẠP HỆ THỐNG'}</span>
+            <h2 className="stat-value">{formatMoney(stats?.totalDeposited ?? 0)}</h2>
+          </div>
+        </button>
       </div>
 
       {/* Alerts requiring action */}
