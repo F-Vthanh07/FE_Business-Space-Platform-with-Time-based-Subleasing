@@ -290,6 +290,11 @@ export const ListingDetail: React.FC = () => {
             }
 
             const computedArea = found.area || found.Area || spaceOrPart?.area || spaceOrPart?.Area || null;
+            let parentForOwner = isSpacePart && spaceOrPart?.parentSpaceId 
+              ? spaces.find((s: any) => (s.id || s.Id) == spaceOrPart.parentSpaceId) 
+              : null;
+            const spaceOwnerId = spaceOrPart?.ownerId || spaceOrPart?.createdBy || spaceOrPart?.OwnerId || spaceOrPart?.CreatedBy || parentForOwner?.ownerId || parentForOwner?.createdBy || parentForOwner?.OwnerId || parentForOwner?.CreatedBy || null;
+
             foundWithSpaceInfo = {
               ...found,
               area: computedArea,
@@ -299,7 +304,8 @@ export const ListingDetail: React.FC = () => {
               spaceLongitude: found.spaceLongitude ?? parentSpace?.longitude ?? parentSpace?.Longitude ?? null,
               amenities: found.amenities || spaceOrPart?.amenities || parentSpace?.amenities || [],
               allowedCategories: found.spaceAllowedCategories || spaceOrPart?.spaceAllowedCategories || parentSpace?.spaceAllowedCategories || [],
-              isSpacePart
+              isSpacePart,
+              spaceOwnerId
             };
           }
           setListing(foundWithSpaceInfo);
@@ -617,13 +623,17 @@ export const ListingDetail: React.FC = () => {
             {/* TAXONOMY DUAL BADGES */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
               {/* TAG 1: HÌNH THỨC THUÊ */}
-              {listing.listingType === 'SharedSpace' && listing.shareSpaceDetailIsOwner === false ? (
+              {listing.listingType === 'SharedSpace' && (listing.creatorId || listing.CreatorId) && listing.spaceOwnerId && String(listing.creatorId || listing.CreatorId) !== String(listing.spaceOwnerId) ? (
                 <span style={{ backgroundColor: '#FCE7F3', color: '#BE185D', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <Share2 size={14} /> Cho thuê lại
                 </span>
               ) : listing.priceUnit === 'PerHour' ? (
                 <span style={{ backgroundColor: '#EEF2FF', color: '#3730A3', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Calendar size={14} /> Chia sẻ khung giờ
+                  <Calendar size={14} /> Theo ca
+                </span>
+              ) : listing.listingType === 'SharedSpace' ? (
+                <span style={{ backgroundColor: '#EEF2FF', color: '#3730A3', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Share2 size={14} /> Chia sẻ
                 </span>
               ) : (
                 <span style={{ backgroundColor: '#F0FDF4', color: '#166534', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
@@ -703,7 +713,7 @@ export const ListingDetail: React.FC = () => {
                     <Sofa size={18} /> Bạn đang xem một phần diện tích chia nhỏ của mặt bằng gốc.
                  </div>
               )}
-              {(listing.listingType === 'SharedSpace' && listing.shareSpaceDetailIsOwner === false) && (
+              {(listing.listingType === 'SharedSpace' && (listing.creatorId || listing.CreatorId) && listing.spaceOwnerId && String(listing.creatorId || listing.CreatorId) !== String(listing.spaceOwnerId)) && (
                  <>
                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', backgroundColor: '#FCE7F3', color: '#BE185D', borderRadius: '8px', fontWeight: 600, fontSize: '14px', marginBottom: '16px' }}>
                       <ShieldCheck size={18} /> Mặt bằng này đang được sang nhượng / cho thuê lại.

@@ -516,15 +516,19 @@ html, body, #root {
    ========================================================= */
 
 .dual-rental-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 24px;
-  align-items: start;
+  align-items: flex-start;
+}
+
+.rental-column {
+  flex: 1;
+  min-width: 0;
 }
 
 @media (max-width: 900px) {
   .dual-rental-grid {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 }
 
