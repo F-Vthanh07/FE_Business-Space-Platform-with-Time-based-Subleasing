@@ -348,7 +348,7 @@ export const SpaceForm: React.FC<SpaceFormProps> = ({ onClose, onSubmit, initial
 
   return (
     <div className="modal-backdrop">
-      <div className="glass-card modal-shell animate-in">
+      <div className="modal-shell">
 
         <div className="modal-header">
           <div className="modal-title-area">

@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import { X, Printer, Briefcase, Wallet, CalendarDays, Edit3, FileText, Building2 } from 'lucide-react';
+import { X, Printer, Briefcase, Wallet, CalendarDays, Edit3, FileText, Building2, MapPin, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import {
   CONTRACT_TEMPLATES,
   getTemplateById,
@@ -12,6 +12,8 @@ import {
   type ContractSchedule,
   splitContractHeaderBody,
 } from '../contractTemplates';
+import { Toast, useToast } from '../Toast';
+import { useConfirm } from '../ConfirmModal';
 
 interface ContractCreateModalProps {
   isOpen: boolean;
@@ -56,6 +58,9 @@ const DURATION_UNITS: { value: string; label: string }[] = [
   { value: 'Years', label: 'Năm' },
 ];
 
+// Nhãn thứ trong tuần cho OperatingHour.dayOfWeek (0=Chủ Nhật ... 6=Thứ 7, theo .NET DayOfWeek)
+const OPERATING_DAY_LABELS = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+
 export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   isOpen,
   onClose,
@@ -65,6 +70,8 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   existingContract,
 }) => {
   void onCreated;
+  const { toast, showToast } = useToast();
+  const { confirm, confirmModal } = useConfirm();
   const [mySpaces, setMySpaces] = useState<any[]>([]);
   const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
   const [matchedBookingRequests, setMatchedBookingRequests] = useState<any[]>([]);
@@ -111,6 +118,11 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
     contractSchedules: [],
   });
 
+  const [isSpaceDetailOpen, setIsSpaceDetailOpen] = useState(false);
+  const [isBookingReqDropdownOpen, setIsBookingReqDropdownOpen] = useState(false);
+  const [hoveredBookingReqId, setHoveredBookingReqId] = useState<number | null>(null);
+  const bookingReqDropdownRef = React.useRef<HTMLDivElement>(null);
+  const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
   const [canShareSpace, setCanShareSpace] = useState(false);
   const [canShowShareCheckbox, setCanShowShareCheckbox] = useState(false);
   // Text hiển thị riêng cho ô Diện tích để người dùng gõ được dấu phẩy thập phân (VD: 123,00)
@@ -232,6 +244,50 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
     fetchMySpaces();
   }, [isOpen, token]);
 
+  // Nhớ những categoryId đã từng gọi API (kể cả lỗi) để không gọi lặp lại vô hạn
+  const attemptedCategoryIdsRef = React.useRef<Set<string>>(new Set());
+
+  // Lấy tên ngành nghề được phép kinh doanh của mặt bằng đang chọn (khi mở panel chi tiết)
+  useEffect(() => {
+    if (!isSpaceDetailOpen || !token || !contractData.spaceId) return;
+    const selectedSpace = mySpaces.find((s) => String(s.id || s.Id) === String(contractData.spaceId));
+    const allowedCategories: any[] = selectedSpace?.spaceAllowedCategories || selectedSpace?.SpaceAllowedCategories || [];
+    const idsToFetch = Array.from(
+      new Set(
+        allowedCategories
+          .map((c: any) => c.bussinessCategoryId ?? c.BussinessCategoryId)
+          .filter((id) => id != null && !attemptedCategoryIdsRef.current.has(String(id)))
+      )
+    );
+    if (idsToFetch.length === 0) return;
+    idsToFetch.forEach((id) => attemptedCategoryIdsRef.current.add(String(id)));
+
+    const fetchCategoryNames = async () => {
+      const results = await Promise.all(
+        idsToFetch.map(async (id) => {
+          try {
+            const res = await fetch(`${API_BASE}/api/BussinessCategory/GetById${id}`, {
+              headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            return { id, name: data.name };
+          } catch {
+            return null;
+          }
+        })
+      );
+      setCategoryNames((prev) => {
+        const next = { ...prev };
+        results.forEach((r) => {
+          if (r) next[String(r.id)] = r.name;
+        });
+        return next;
+      });
+    };
+    fetchCategoryNames();
+  }, [isSpaceDetailOpen, contractData.spaceId, token, mySpaces]);
+
   useEffect(() => {
     const checkSpaceRight = async () => {
       if (!contractData.spaceId || !token || !isOpen) {
@@ -249,6 +305,30 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
     };
     checkSpaceRight();
   }, [contractData.spaceId, token, mySpaces, isOpen, existingContract]);
+
+  // Đóng dropdown "Yêu cầu đặt thuê" khi click ra ngoài
+  useEffect(() => {
+    if (!isBookingReqDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (bookingReqDropdownRef.current && !bookingReqDropdownRef.current.contains(e.target as Node)) {
+        setIsBookingReqDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isBookingReqDropdownOpen]);
+
+  // Khi chọn mặt bằng (tạo mới), điền sẵn diện tích thực tế bằng diện tích của
+  // mặt bằng đó — người dùng vẫn có thể sửa lại tay sau đó.
+  useEffect(() => {
+    if (!isOpen || existingContract || !contractData.spaceId) return;
+    const selectedSpace = mySpaces.find((s) => String(s.id || s.Id) === String(contractData.spaceId));
+    const spaceArea = selectedSpace ? Number(selectedSpace.area) : NaN;
+    if (isNaN(spaceArea)) return;
+    setAcreageText(String(spaceArea).replace('.', ','));
+    setContractData((prev) => ({ ...prev, acreage: spaceArea }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractData.spaceId, mySpaces, isOpen, existingContract]);
 
   useEffect(() => {
   if (!isOpen || !token) return;
@@ -569,8 +649,13 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contractData.primaryBookingRequestId) return alert('Vui lòng chọn yêu cầu đặt thuê!');
-    if (!contractData.businessPurpose.trim()) return alert('Vui lòng nhập mục đích kinh doanh!');
+    if (!contractData.primaryBookingRequestId) return showToast('Vui lòng chọn yêu cầu đặt thuê!', 'error');
+    if (!contractData.businessPurpose.trim()) return showToast('Vui lòng nhập mục đích kinh doanh!', 'error');
+    const selectedSpaceForSubmit = mySpaces.find((s) => String(s.id || s.Id) === String(contractData.spaceId));
+    const maxAreaForSubmit = selectedSpaceForSubmit ? Number(selectedSpaceForSubmit.area) : null;
+    if (maxAreaForSubmit && !isNaN(maxAreaForSubmit) && contractData.acreage > maxAreaForSubmit) {
+      return showToast(`Diện tích không được vượt quá diện tích mặt bằng (${maxAreaForSubmit} m²)!`, 'error');
+    }
     setIsCreatingContract(true);
     const roomId = activeChat?.conversationId || activeChat?.id || activeChat?.Id;
 
@@ -608,8 +693,8 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
 
         // Đã bỏ dòng FE tự gửi tin nhắn, vì BE sẽ tự động bắn ID hợp đồng về.
         // await onCreated(`✏️ Tôi vừa cập nhật Hợp đồng (Mã: #${existingContract.id}). Vui lòng kiểm tra lại nhé!`);
-        alert('Cập nhật hợp đồng thành công!');
-        onClose();
+        showToast('Cập nhật hợp đồng thành công!');
+        setTimeout(onClose, 1200);
       } else {
         // ---- CHẾ ĐỘ TẠO MỚI: POST /api/Contract/Create + share ----
         const createPayload = { ...payload, lessorId, lesseeId };
@@ -635,12 +720,12 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
 
           // Đã bỏ dòng FE tự gửi tin nhắn, để cho FloatingChat tự parse ID từ BE.
           // await onCreated(`📄 Tôi vừa tạo và gửi một Hợp đồng (Mã: #${newContractId}). Vui lòng kiểm tra và xác nhận nhé!`);
-          alert('Tạo hợp đồng thành công!');
-          onClose();
+          showToast('Tạo hợp đồng thành công!');
+          setTimeout(onClose, 1200);
         }
       }
     } catch (error: any) {
-      alert(error.message);
+      showToast(error.message, 'error');
     } finally {
       setIsCreatingContract(false);
     }
@@ -664,6 +749,8 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         fontFamily: 'system-ui, sans-serif',
       }}
     >
+      <Toast toast={toast} />
+      {confirmModal}
       <style>
         {`
           .cc-input {
@@ -763,27 +850,137 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label className="cc-label">Yêu cầu đặt thuê</label>
-                <select
-                  className="cc-input"
-                  required
-                  value={contractData.primaryBookingRequestId}
-                  onChange={(e) =>
-                    setContractData((prev) => ({ ...prev, primaryBookingRequestId: Number(e.target.value) }))
-                  }
-                  disabled={isLoadingBookingRequests}
-                >
-                  <option value={0} disabled>
-                    {isLoadingBookingRequests ? '-- Đang tải... --' : '-- Chọn yêu cầu --'}
-                  </option>
-                  {matchedBookingRequests.map((req) => {
-                    const space = mySpaces.find((s) => String(s.id || s.Id) === String(req.spaceId));
-                    return (
-                      <option key={req.id} value={req.id}>
-                        Yêu cầu #{req.id} - {space?.name || 'Mặt bằng trống'} - {Number(req.offeredPrice || 0).toLocaleString('vi-VN')}₫
-                      </option>
-                    );
-                  })}
-                </select>
+                <div ref={bookingReqDropdownRef} style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    className="cc-input"
+                    disabled={isLoadingBookingRequests}
+                    onClick={() => setIsBookingReqDropdownOpen((v) => !v)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      textAlign: 'left',
+                      cursor: isLoadingBookingRequests ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    <span>
+                      {(() => {
+                        if (isLoadingBookingRequests) return '-- Đang tải... --';
+                        const selected = matchedBookingRequests.find(
+                          (r) => String(r.id) === String(contractData.primaryBookingRequestId)
+                        );
+                        if (!selected) return '-- Chọn yêu cầu --';
+                        const space = mySpaces.find((s) => String(s.id || s.Id) === String(selected.spaceId));
+                        return `${space?.name || 'Mặt bằng trống'} - ${Number(selected.offeredPrice || 0).toLocaleString('vi-VN')}₫`;
+                      })()}
+                    </span>
+                    <ChevronDown size={14} />
+                  </button>
+
+                  {isBookingReqDropdownOpen && !isLoadingBookingRequests && (
+                    <div
+                      className="cc-scrollbar"
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        left: 0,
+                        right: 0,
+                        background: '#fff',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                        zIndex: 20,
+                        maxHeight: '260px',
+                        overflowY: 'auto',
+                      }}
+                    >
+                      {matchedBookingRequests.map((req) => {
+                        const space = mySpaces.find((s) => String(s.id || s.Id) === String(req.spaceId));
+                        const isActive = String(contractData.primaryBookingRequestId) === String(req.id);
+                        const isHovered = hoveredBookingReqId === req.id;
+                        return (
+                          <div
+                            key={req.id}
+                            onMouseEnter={() => setHoveredBookingReqId(req.id)}
+                            onMouseLeave={() => setHoveredBookingReqId((v) => (v === req.id ? null : v))}
+                            style={{ position: 'relative' }}
+                          >
+                            <div
+                              onClick={() => {
+                                setContractData((prev) => ({
+                                  ...prev,
+                                  primaryBookingRequestId: req.id,
+                                  spaceId: req.spaceId ? String(req.spaceId) : prev.spaceId,
+                                  price: req.offeredPrice ?? prev.price,
+                                  duration: req.duration ?? prev.duration,
+                                }));
+                                setIsBookingReqDropdownOpen(false);
+                              }}
+                              style={{
+                                padding: '9px 12px',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                color: isActive ? '#fff' : '#1E293B',
+                                background: isActive ? '#3B82F6' : isHovered ? '#F1F5F9' : 'transparent',
+                              }}
+                            >
+                              {space?.name || 'Mặt bằng trống'} - {Number(req.offeredPrice || 0).toLocaleString('vi-VN')}₫
+                            </div>
+
+                            {isHovered && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  left: 'calc(100% + 8px)',
+                                  top: 0,
+                                  width: '240px',
+                                  background: '#1E293B',
+                                  color: '#F1F5F9',
+                                  borderRadius: '8px',
+                                  padding: '10px 12px',
+                                  fontSize: '12px',
+                                  lineHeight: 1.6,
+                                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                                  zIndex: 30,
+                                  pointerEvents: 'none',
+                                }}
+                              >
+                                <div style={{ fontWeight: 700, marginBottom: '4px' }}>
+                                  Yêu cầu #{req.id}
+                                </div>
+                                <div>
+                                  <strong>Giá đề xuất:</strong>{' '}
+                                  {Number(req.offeredPrice || 0).toLocaleString('vi-VN')}₫
+                                </div>
+                                <div>
+                                  <strong>Thời hạn:</strong>{' '}
+                                  {formatDurationLabel(req.duration, req.durationUnit) || '—'}
+                                </div>
+                                <div>
+                                  <strong>Ngày dự kiến bắt đầu:</strong>{' '}
+                                  {req.expectedStartDate
+                                    ? new Date(req.expectedStartDate).toLocaleDateString('vi-VN')
+                                    : '—'}
+                                </div>
+                                {req.purpose && (
+                                  <div>
+                                    <strong>Mục đích:</strong> {req.purpose}
+                                  </div>
+                                )}
+                                {req.note && (
+                                  <div>
+                                    <strong>Ghi chú:</strong> {req.note}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
                 {!isLoadingBookingRequests && matchedBookingRequests.length === 0 && (
                   <span style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px', display: 'block' }}>
                     Không tìm thấy yêu cầu khớp giữa 2 bên.
@@ -797,6 +994,8 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                   required
                   value={contractData.spaceId}
                   onChange={(e) => setContractData({ ...contractData, spaceId: e.target.value })}
+                  disabled={!!contractData.primaryBookingRequestId}
+                  style={contractData.primaryBookingRequestId ? { backgroundColor: '#F1F5F9', cursor: 'not-allowed', color: '#64748B' } : undefined}
                 >
                   <option value="" disabled>
                     -- Chọn mặt bằng --
@@ -810,6 +1009,107 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                 );
               })}
                 </select>
+                {!!contractData.primaryBookingRequestId && (
+                  <span style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px', display: 'block' }}>
+                    Mặt bằng được tự động chọn theo yêu cầu đặt thuê đã chọn ở trên.
+                  </span>
+                )}
+                {contractData.spaceId && (() => {
+                  const selectedSpace = mySpaces.find((s) => String(s.id || s.Id) === String(contractData.spaceId));
+                  if (!selectedSpace) return null;
+                  const ownerName = ownerNames[selectedSpace.ownerId || selectedSpace.OwnerId];
+                  const amenities: any[] = selectedSpace.amenities || selectedSpace.Amenities || [];
+                  const operatingHours: any[] = selectedSpace.operatingHours || selectedSpace.OperatingHours || [];
+                  const allowedCategories: any[] = selectedSpace.spaceAllowedCategories || selectedSpace.SpaceAllowedCategories || [];
+                  return (
+                    <div style={{ marginTop: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsSpaceDetailOpen((v) => !v)}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          background: '#F8FAFC',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          color: '#334155',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <MapPin size={13} color="#64748B" /> Xem chi tiết mặt bằng
+                        </span>
+                        {isSpaceDetailOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+
+                      {isSpaceDetailOpen && (
+                        <div
+                          style={{
+                            marginTop: '8px',
+                            padding: '12px',
+                            background: '#F8FAFC',
+                            border: '1px solid #E2E8F0',
+                            borderRadius: '8px',
+                            fontSize: '12.5px',
+                            color: '#334155',
+                          }}
+                        >
+                          <div style={{ marginBottom: '6px' }}>
+                            <strong>Tên mặt bằng:</strong> {selectedSpace.name || '—'}
+                          </div>
+                          <div style={{ marginBottom: '6px' }}>
+                            <strong>Chủ sở hữu:</strong> {ownerName || '—'}
+                          </div>
+                          <div style={{ marginBottom: '6px' }}>
+                            <strong>Địa chỉ:</strong>{' '}
+                            {[selectedSpace.address, selectedSpace.city].filter(Boolean).join(', ') || '—'}
+                          </div>
+                          <div style={{ marginBottom: '6px' }}>
+                            <strong>Diện tích:</strong> {selectedSpace.area ? `${selectedSpace.area} m²` : '—'}
+                          </div>
+                          <div style={{ marginBottom: '6px' }}>
+                            <strong>Tiện ích:</strong>{' '}
+                            {amenities.length > 0
+                              ? amenities.map((a) => a.name || a.Name).filter(Boolean).join(', ')
+                              : 'Không có'}
+                          </div>
+                          <div style={{ marginBottom: operatingHours.length ? '6px' : 0 }}>
+                            <strong>Ngành nghề được phép kinh doanh:</strong>{' '}
+                            {allowedCategories.length > 0
+                              ? allowedCategories
+                                  .map((c) => {
+                                    const catId = c.bussinessCategoryId ?? c.BussinessCategoryId;
+                                    return categoryNames[String(catId)] || `#${catId}`;
+                                  })
+                                  .join(', ')
+                              : 'Không giới hạn'}
+                          </div>
+                          {operatingHours.length > 0 && (
+                            <div>
+                              <strong style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                                <Clock size={12} /> Giờ hoạt động:
+                              </strong>
+                              <ul style={{ margin: 0, paddingLeft: '18px' }}>
+                                {operatingHours.map((oh, idx) => (
+                                  <li key={idx}>
+                                    {OPERATING_DAY_LABELS[oh.dayOfWeek ?? oh.DayOfWeek] || '—'}:{' '}
+                                    {(oh.openTime || oh.OpenTime || '').slice(0, 5)} -{' '}
+                                    {(oh.closeTime || oh.CloseTime || '').slice(0, 5)}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -952,6 +1252,26 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                   setContractData({ ...contractData, acreage: isNaN(numericValue) ? 0 : numericValue });
                 }}
               />
+              {(() => {
+                const selectedSpace = mySpaces.find((s) => String(s.id || s.Id) === String(contractData.spaceId));
+                const maxArea = selectedSpace ? Number(selectedSpace.area) : null;
+                if (!maxArea || isNaN(maxArea)) return null;
+                const exceeded = contractData.acreage > maxArea;
+                return (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      marginTop: '4px',
+                      display: 'block',
+                      color: exceeded ? '#EF4444' : '#94A3B8',
+                    }}
+                  >
+                    {exceeded
+                      ? `Diện tích không được vượt quá diện tích mặt bằng (${maxArea} m²).`
+                      : `Diện tích mặt bằng tối đa: ${maxArea} m².`}
+                  </span>
+                );
+              })()}
             </div>
 
             {/* MỤC ĐÍCH KINH DOANH - field mới backend yêu cầu */}
@@ -1044,14 +1364,15 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     if (!selectedTemplateId) return;
-                    if (
-                      !window.confirm(
-                        'Thao tác này sẽ tạo lại toàn bộ nội dung từ mẫu gốc và GHI ĐÈ mọi chỗ bạn đã tự sửa tay. Tiếp tục?'
-                      )
-                    )
-                      return;
+                    const ok = await confirm({
+                      title: 'Tạo lại nội dung hợp đồng',
+                      message: 'Thao tác này sẽ tạo lại toàn bộ nội dung từ mẫu gốc và GHI ĐÈ mọi chỗ bạn đã tự sửa tay. Tiếp tục?',
+                      confirmLabel: 'Tiếp tục',
+                      danger: true,
+                    });
+                    if (!ok) return;
                     regenerateDescriptionFromScratch(selectedTemplateId);
                   }}
                   disabled={!selectedTemplateId}

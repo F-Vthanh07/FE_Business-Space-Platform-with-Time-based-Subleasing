@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Layers, Clock, ShieldAlert, Edit3, Trash2, Eye } from 'lucide-react';
+import { useConfirm } from '../../../../components/ConfirmModal';
 import '../../../shared/ModalShell.css';
 
 interface SpacePart {
@@ -18,6 +19,7 @@ interface SpacePartListModalProps {
 }
 
 export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSpace, onClose, onEditPart }) => {
+  const { confirm, confirmModal } = useConfirm();
   const [spaceParts, setSpaceParts] = useState<SpacePart[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -65,7 +67,13 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
   }, [parentSpace]);
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xoá không gian chia nhỏ này?')) return;
+    const ok = await confirm({
+      title: 'Xoá không gian chia nhỏ',
+      message: 'Bạn có chắc chắn muốn xoá không gian chia nhỏ này?',
+      confirmLabel: 'Xoá',
+      danger: true,
+    });
+    if (!ok) return;
     setIsLoading(true);
     try {
       const token = localStorage.getItem('portal_token');
@@ -119,6 +127,7 @@ export const SpacePartListModal: React.FC<SpacePartListModalProps> = ({ parentSp
 
   return (
     <div className="modal-backdrop">
+      {confirmModal}
       <div className="glass-card modal-shell animate-in" style={{ maxWidth: '600px' }}>
         <div className="modal-header">
           <div className="modal-title-area">

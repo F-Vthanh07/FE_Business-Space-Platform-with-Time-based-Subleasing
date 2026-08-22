@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { ContractCreateModal } from '../../../../components/Contract/ContractCreateModal';
 import { ContractViewModal } from '../../../../components/Contract/ContractViewModal';
+import { useConfirm } from '../../../../components/ConfirmModal';
 
 const API_BASE = 'https://flexi-space-capstone-project.onrender.com';
 
@@ -72,6 +73,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 };
 
 export const MyContractsPage: React.FC = () => {
+  const { confirm, confirmModal } = useConfirm();
   const [contracts, setContracts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>('ALL');
@@ -224,7 +226,13 @@ export const MyContractsPage: React.FC = () => {
   };
 
   const handleDeleteContract = async (contractId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn thu hồi và huỷ bỏ hợp đồng này?')) return;
+    const ok = await confirm({
+      title: 'Thu hồi hợp đồng',
+      message: 'Bạn có chắc chắn muốn thu hồi và huỷ bỏ hợp đồng này?',
+      confirmLabel: 'Thu hồi',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`${API_BASE}/api/Contract/Delete/${contractId}`, {
         method: 'DELETE',
@@ -317,6 +325,8 @@ export const MyContractsPage: React.FC = () => {
           .mc-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         `}
       </style>
+
+      {confirmModal}
 
       {/* HEADER */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>

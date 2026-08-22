@@ -4,6 +4,7 @@ import { X, Printer, FileText, Wallet, CalendarDays, Building2, Briefcase, Check
 import { splitContractHeaderBody, formatSchedule, type ContractSchedule } from '../contractTemplates';
 import { createPortal } from 'react-dom';
 import { formatDate, formatDateTime } from '../../utils/dateUtils';
+import { Toast, useToast } from '../Toast';
 
 interface ContractViewModalProps {
   contract: any;
@@ -66,18 +67,33 @@ const snapshotUnitToString = (unit?: number): string | undefined => {
   }
 };
 
-// Ngày kết thúc (dự kiến) = ngày bắt đầu + thời hạn. Dùng chung cho cả dữ liệu
-// sống lẫn Snapshot (sau khi đã đổi đơn vị Snapshot về dạng chuỗi ở trên).
-const computeEndDate = (startDate?: string, duration?: number, unit?: string): string => {
-  if (!startDate || !duration || !unit) return '';
+// Ngày kết thúc (dự kiến) dạng Date object = ngày bắt đầu + thời hạn. Dùng chung
+// cho cả dữ liệu sống lẫn Snapshot (sau khi đã đổi đơn vị Snapshot về dạng chuỗi).
+const computeEndDateObj = (startDate?: string, duration?: number, unit?: string): Date | null => {
+  if (!startDate || !duration || !unit) return null;
   const d = new Date(startDate);
-  if (Number.isNaN(d.getTime())) return '';
+  if (Number.isNaN(d.getTime())) return null;
   if (unit === 'Days') d.setDate(d.getDate() + duration);
   else if (unit === 'Weeks') d.setDate(d.getDate() + duration * 7);
   else if (unit === 'Months') d.setMonth(d.getMonth() + duration);
   else if (unit === 'Years') d.setFullYear(d.getFullYear() + duration);
-  else return '';
-  return d.toLocaleDateString('vi-VN');
+  else return null;
+  return d;
+};
+
+const computeEndDate = (startDate?: string, duration?: number, unit?: string): string => {
+  const d = computeEndDateObj(startDate, duration, unit);
+  return d ? d.toLocaleDateString('vi-VN') : '';
+};
+
+// Số ngày còn lại (dương) hoặc đã quá hạn (âm) tính từ hôm nay đến ngày kết thúc dự kiến.
+const computeDaysRemaining = (endDate: Date | null): number | null => {
+  if (!endDate) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+  return Math.round((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 };
 
 // Coi 1 giá trị là "đã ký" / "đã bắt đầu" nếu nó là true, hoặc 1 chuỗi/ngày không
@@ -144,6 +160,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
   lessorName,
   lesseeName,
 }) => {
+  const { toast, showToast } = useToast();
   // State quản lý luồng ký Hợp đồng
   const [signStep, setSignStep] = useState<'idle' | 'otp_sent' | 'success'>('idle');
   const [otpCode, setOtpCode] = useState('');
@@ -338,7 +355,9 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
   const effectiveDurationUnitString = snapshot
     ? snapshotUnitToString(snapshot.DurationUnit)
     : contract.durationUnit;
-  const displayEndDate = computeEndDate(displayStartDate, displayDuration, effectiveDurationUnitString);
+  const displayEndDateObj = computeEndDateObj(displayStartDate, displayDuration, effectiveDurationUnitString);
+  const displayEndDate = displayEndDateObj ? displayEndDateObj.toLocaleDateString('vi-VN') : '';
+  const daysRemaining = computeDaysRemaining(displayEndDateObj);
 
   // Tên các bên: ưu tiên Snapshot -> hồ sơ (Profile) tự fetch (họ tên thật) ->
   // tên truyền từ ngoài vào (props) -> các khả năng đặt tên field khác nhau ngay
@@ -428,7 +447,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
       setSigningSessionStarted(true);
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      showToast(error.message, 'error');
     } finally {
       setIsStartingSession(false);
     }
@@ -467,10 +486,10 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
       }
 
       setSignStep('otp_sent');
-      alert('Mã OTP đã được gửi đến Email của bạn. Vui lòng kiểm tra!');
+      showToast('Mã OTP đã được gửi đến Email của bạn. Vui lòng kiểm tra!');
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      showToast(error.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -479,7 +498,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
   // --- HÀM XÁC THỰC OTP ---
   const handleValidateOtp = async () => {
     if (!otpCode.trim()) {
-      alert('Vui lòng nhập mã OTP!');
+      showToast('Vui lòng nhập mã OTP!', 'error');
       return;
     }
 
@@ -508,11 +527,11 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
       }
 
       setSignStep('success');
-      alert('Ký hợp đồng thành công!');
+      showToast('Ký hợp đồng thành công!');
       // TODO: Có thể trigger thêm một hàm callback ra ngoài để báo Parent component refresh lại danh sách
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      showToast(error.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -535,6 +554,7 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
         fontFamily: 'system-ui, sans-serif',
       }}
     >
+      <Toast toast={toast} />
       <style>
         {`
           .cv-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -738,8 +758,17 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
             </div>
             <div className="cv-row">
               <p><strong>Thời hạn:</strong> {displayDuration} {displayDurationUnitLabel}</p>
+              <p><strong>Ngày tạo hợp đồng:</strong> {formatDate(contract.createdAt || contract.CreatedAt)}</p>
               <p><strong>Ngày bắt đầu:</strong> {formatDate(displayStartDate)}</p>
               <p><strong>Ngày kết thúc (dự kiến):</strong> {displayEndDate || '...'}</p>
+              {daysRemaining !== null && (
+                <p>
+                  <strong>{daysRemaining >= 0 ? 'Số ngày còn lại:' : 'Đã quá hạn:'}</strong>{' '}
+                  <span style={{ color: daysRemaining < 0 ? '#DC2626' : daysRemaining <= 7 ? '#D97706' : '#0F172A', fontWeight: 700 }}>
+                    {Math.abs(daysRemaining)} ngày
+                  </span>
+                </p>
+              )}
             </div>
           </div>
 

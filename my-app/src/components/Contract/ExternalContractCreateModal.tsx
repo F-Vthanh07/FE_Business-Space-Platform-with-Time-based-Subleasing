@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { X, Building2, UploadCloud, FileImage } from 'lucide-react';
+import { Toast, useToast } from '../Toast';
 
 interface ExternalContractCreateModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export const ExternalContractCreateModal: React.FC<ExternalContractCreateModalPr
   token,
   onCreated,
 }) => {
+  const { toast, showToast } = useToast();
   const [mySpaces, setMySpaces] = useState<any[]>([]);
   const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
   const [matchedBookingRequests, setMatchedBookingRequests] = useState<any[]>([]);
@@ -159,8 +161,8 @@ export const ExternalContractCreateModal: React.FC<ExternalContractCreateModalPr
   };
 
   const handleSubmit = async () => {
-    if (!contractData.spaceId) return alert('Vui lòng chọn mặt bằng!');
-    if (selectedFiles.length === 0) return alert('Vui lòng tải lên ít nhất 1 ảnh hợp đồng!');
+    if (!contractData.spaceId) return showToast('Vui lòng chọn mặt bằng!', 'error');
+    if (selectedFiles.length === 0) return showToast('Vui lòng tải lên ít nhất 1 ảnh hợp đồng!', 'error');
 
     setIsCreating(true);
     try {
@@ -220,7 +222,7 @@ export const ExternalContractCreateModal: React.FC<ExternalContractCreateModalPr
       onClose();
     } catch (error: any) {
       console.error(error);
-      alert('Đã xảy ra lỗi: ' + error.message);
+      showToast('Đã xảy ra lỗi: ' + error.message, 'error');
     } finally {
       setIsCreating(false);
     }
@@ -230,6 +232,7 @@ export const ExternalContractCreateModal: React.FC<ExternalContractCreateModalPr
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+      <Toast toast={toast} />
       <div style={{ backgroundColor: '#fff', width: '100%', maxWidth: '600px', borderRadius: '16px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
         
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

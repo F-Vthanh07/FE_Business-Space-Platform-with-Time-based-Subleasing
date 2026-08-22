@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   Edit3,
   Trash2,
@@ -22,6 +23,7 @@ import '../../../shared/ModalShell.css';
 import { formatDate } from '../../../../utils/dateUtils';
 import { getListingPictureUrl } from '../../../shared/listingPictures';
 import { fetchSpacesById, getListingAddress } from '../../../shared/listingAddress';
+import { useConfirm } from '../../../../components/ConfirmModal';
 
 interface BookingRequestEditData {
   listingId: number;
@@ -50,6 +52,7 @@ const statusLabel = (status: string) => {
 
 export const RenterBookingRequests: React.FC = () => {
   const navigate = useNavigate();
+  const { confirm, confirmModal } = useConfirm();
   const [requests, setRequests] = useState<any[]>([]);
   const [listingsById, setListingsById] = useState<Record<number, any>>({});
   const [spacesById, setSpacesById] = useState<Record<number, any>>({});
@@ -246,25 +249,33 @@ export const RenterBookingRequests: React.FC = () => {
   };
 
   const handleDelete = async (requestId: number) => {
-    if (!window.confirm('Bạn có chắc muốn xoá yêu cầu thuê này không?')) return;
+    const ok = await confirm({
+      title: 'Xoá yêu cầu thuê',
+      message: 'Bạn có chắc muốn xoá yêu cầu thuê này không?',
+      confirmLabel: 'Xoá',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(
         `https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/Delete/${requestId}`,
         { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' } }
       );
       if (!res.ok) {
-        alert('Lỗi khi xoá yêu cầu thuê!');
+        toast.error('Lỗi khi xoá yêu cầu thuê!');
         return;
       }
+      toast.success('Đã xoá yêu cầu thuê!');
       fetchRequests();
     } catch (error) {
       console.error('Lỗi xoá đơn:', error);
-      alert('Lỗi kết nối máy chủ!');
+      toast.error('Lỗi kết nối máy chủ!');
     }
   };
 
   return (
     <div className="animate-in">
+      {confirmModal}
       <div className="page-header" style={{ marginBottom: '24px' }}>
         <div>
           <h1 className="page-title" style={{ fontSize: '24px', fontWeight: 'bold' }}>Yêu cầu thuê đã gửi</h1>

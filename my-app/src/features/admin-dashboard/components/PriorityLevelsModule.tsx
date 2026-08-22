@@ -4,6 +4,7 @@ import type { PriorityLevel } from '../types';
 import type { AdminBannerItem, CreateAdminBannerPayload, PriorityLevelPayload, PriorityLevelType } from '../api/admin.api';
 import { RefreshButton } from './RefreshButton';
 import { getPictureUrl } from '../utils/listingPicture';
+import { useConfirm } from '../../../components/ConfirmModal';
 
 const ITEMS_PER_PAGE = 10;
 const BANNER_CROP_WIDTH = 2100;
@@ -70,6 +71,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   onRefresh,
   isRefreshing,
 }) => {
+  const { confirm, confirmModal } = useConfirm();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -159,11 +161,12 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
   };
 
   const handleDelete = async (level: PriorityLevel) => {
-    const confirmed = window.confirm(
-      language === 'en'
-        ? `Delete "${level.name}"?`
-        : `Xóa gói "${level.name}"?`
-    );
+    const confirmed = await confirm({
+      title: language === 'en' ? 'Delete priority level' : 'Xoá gói ưu tiên',
+      message: language === 'en' ? `Delete "${level.name}"?` : `Xóa gói "${level.name}"?`,
+      confirmLabel: language === 'en' ? 'Delete' : 'Xoá',
+      danger: true,
+    });
     if (!confirmed) return;
     await handleDeletePriorityLevel(level.id);
   };
@@ -487,8 +490,13 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
                   <button
                     type="button"
                     className="btn-danger"
-                    onClick={() => {
-                      const ok = window.confirm(language === 'en' ? 'Delete this banner?' : 'Xóa banner này?');
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: language === 'en' ? 'Delete banner' : 'Xoá banner',
+                        message: language === 'en' ? 'Delete this banner?' : 'Xóa banner này?',
+                        confirmLabel: language === 'en' ? 'Delete' : 'Xoá',
+                        danger: true,
+                      });
                       if (ok) handleDeleteAdminBanner(banner.id);
                     }}
                     disabled={isLoading}
@@ -634,6 +642,7 @@ export const PriorityLevelsModule: React.FC<PriorityLevelsModuleProps> = ({
 
   return (
     <div className="admin-module animate-fade-in">
+      {confirmModal}
       <header className="module-header">
         <div>
           <h1>{language === 'en' ? 'Paid Service Management' : 'Quản lý Dịch vụ Trả phí'}</h1>

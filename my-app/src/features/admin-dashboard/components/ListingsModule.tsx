@@ -102,6 +102,12 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Bộ lọc cho tab "Tất cả tin đăng" - lọc cục bộ trên danh sách listings đã fetch sẵn từ parent
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'accepted' | 'canceled'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'EntireSpace' | 'SharedSpace'>('all');
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterSortBy, setFilterSortBy] = useState<'newest' | 'oldest' | 'mostViewed'>('newest');
   const [reportsPage, setReportsPage] = useState(1);
   const [deletedPage, setDeletedPage] = useState(1);
   const [deletingReportId, setDeletingReportId] = useState<number | null>(null);
@@ -150,12 +156,36 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(listings.length / ITEMS_PER_PAGE));
-  const pagedListings = listings.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const filteredListings = React.useMemo(() => {
+    const q = filterSearch.trim().toLowerCase();
+    let result = listings.filter(l => {
+      const cleanStatus = (l.status || 'Pending').toLowerCase();
+      const matchStatus = filterStatus === 'all' || cleanStatus === filterStatus;
+      const matchType = filterType === 'all' || l.listingType === filterType;
+      const matchSearch = !q ||
+        (l.name || '').toLowerCase().includes(q) ||
+        (l.description || '').toLowerCase().includes(q) ||
+        (l.spaceAddress || '').toLowerCase().includes(q) ||
+        (l.lessorName || '').toLowerCase().includes(q);
+      return matchStatus && matchType && matchSearch;
+    });
+
+    result = [...result].sort((a, b) => {
+      if (filterSortBy === 'mostViewed') return (b.viewCount || 0) - (a.viewCount || 0);
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return filterSortBy === 'oldest' ? aTime - bTime : bTime - aTime;
+    });
+
+    return result;
+  }, [listings, filterStatus, filterType, filterSearch, filterSortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredListings.length / ITEMS_PER_PAGE));
+  const pagedListings = filteredListings.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [listings.length]);
+  }, [filteredListings.length]);
 
   const goToPage = (page: number) => {
     setCurrentPage(Math.min(Math.max(page, 1), totalPages));
@@ -493,14 +523,58 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
         </>
       )}
 
+      {/* Bộ lọc tin đăng */}
+      {activeListingsTab === 'all' && (
+        <div className="admin-table-container glass-card" style={{ padding: '14px 16px', marginBottom: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            type="text"
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+            placeholder={language === 'en' ? 'Search by name, address, lessor...' : 'Tìm theo tên, địa chỉ, chủ nhà...'}
+            style={{ flex: '1 1 220px', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card-deep)', color: 'var(--color-text-primary, #fff)', fontSize: '13px' }}
+          />
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card-deep)', color: 'var(--color-text-primary, #fff)', fontSize: '13px' }}
+          >
+            <option value="all">{language === 'en' ? 'All statuses' : 'Tất cả trạng thái'}</option>
+            <option value="pending">{language === 'en' ? 'Pending' : 'Chờ duyệt'}</option>
+            <option value="accepted">{language === 'en' ? 'Accepted' : 'Đã duyệt'}</option>
+            <option value="canceled">{language === 'en' ? 'Canceled' : 'Từ chối'}</option>
+          </select>
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as typeof filterType)}
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card-deep)', color: 'var(--color-text-primary, #fff)', fontSize: '13px' }}
+          >
+            <option value="all">{language === 'en' ? 'All types' : 'Tất cả loại tin'}</option>
+            <option value="EntireSpace">{language === 'en' ? 'Long-term' : 'Dài hạn'}</option>
+            <option value="SharedSpace">{language === 'en' ? 'Shared' : 'Chia sẻ'}</option>
+          </select>
+          <select
+            value={filterSortBy}
+            onChange={(e) => setFilterSortBy(e.target.value as typeof filterSortBy)}
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card-deep)', color: 'var(--color-text-primary, #fff)', fontSize: '13px' }}
+          >
+            <option value="newest">{language === 'en' ? 'Newest first' : 'Mới nhất'}</option>
+            <option value="oldest">{language === 'en' ? 'Oldest first' : 'Cũ nhất'}</option>
+            <option value="mostViewed">{language === 'en' ? 'Most viewed' : 'Xem nhiều nhất'}</option>
+          </select>
+          <span className="text-secondary" style={{ fontSize: '12px', marginLeft: 'auto' }}>
+            {language === 'en' ? `${filteredListings.length} results` : `${filteredListings.length} kết quả`}
+          </span>
+        </div>
+      )}
+
       {/* Listings Grid */}
       {activeListingsTab === 'all' && (
       <div className="listings-grid">
-        {listings.length === 0 ? (
+        {filteredListings.length === 0 ? (
           <div className="empty-approval glass-card">
             <Check size={36} className="text-neon-green" />
             <h3>{language === 'en' ? 'No listings found' : 'Không tìm thấy bài đăng nào'}</h3>
-            <p>{language === 'en' ? 'New listings will appear here' : 'Bài đăng mới sẽ xuất hiện tại đây'}</p>
+            <p>{language === 'en' ? 'Try adjusting your filters' : 'Thử điều chỉnh lại bộ lọc'}</p>
           </div>
         ) : (
           pagedListings.map(lt => {
@@ -555,6 +629,10 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
                     <div className="listing-meta-item">
                       <Clock size={12} className="text-secondary" />
                       <span>{formatDate(lt.createdAt)}</span>
+                    </div>
+                    <div className="listing-meta-item">
+                      <Eye size={12} className="text-secondary" />
+                      <span>{lt.viewCount ?? 0} {language === 'en' ? 'views' : 'lượt xem'}</span>
                     </div>
                     {lt.shareSpaceDetailMaxSubRenter !== undefined && (
                       <div className="listing-meta-item">
@@ -622,7 +700,7 @@ export const ListingsModule: React.FC<ListingsModuleProps> = ({
       )}
 
       {/* Pagination */}
-      {activeListingsTab === 'all' && listings.length > 0 && totalPages > 1 && (
+      {activeListingsTab === 'all' && filteredListings.length > 0 && totalPages > 1 && (
         <div className="admin-pagination">
           <button
             className="btn-icon"
