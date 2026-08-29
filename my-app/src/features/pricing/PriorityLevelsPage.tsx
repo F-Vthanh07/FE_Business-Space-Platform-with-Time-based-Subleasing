@@ -63,7 +63,7 @@ export const PriorityLevelsPage: React.FC = () => {
             Bảng Giá Gói Bài Đăng & Dịch Vụ
           </h1>
           <p className="pricing-hero-subtitle">
-            Tối ưu hóa khả năng tiếp cận khách hàng tiềm năng cho mặt bằng của bạn với các gói hiển thị ưu tiên và banner quảng cáo nổi bật trên EtherSpace.
+            Tối ưu hóa khả năng tiếp cận khách hàng tiềm năng cho mặt bằng của bạn với các gói hiển thị ưu tiên và banner quảng cáo nổi bật trên FlexiSpace.
           </p>
 
           {/* TAB FILTERS */}
@@ -210,7 +210,7 @@ export const PriorityLevelsPage: React.FC = () => {
                 <HelpCircle size={18} /> Tôi thanh toán gói dịch vụ bằng cách nào?
               </div>
               <div className="pricing-faq-answer">
-                Hệ thống khấu trừ trực tiếp số tiền từ Ví EtherSpace của bạn khi bấm đăng tin hoặc tạo banner. Bạn có thể nạp tiền vào ví thông qua cổng thanh toán trực tuyến PayOS (Mã QR ngân hàng, ATM).
+                Hệ thống khấu trừ trực tiếp số tiền từ Ví FlexiSpace của bạn khi bấm đăng tin hoặc tạo banner. Bạn có thể nạp tiền vào ví thông qua cổng thanh toán trực tuyến PayOS (Mã QR ngân hàng, ATM).
               </div>
             </div>
 

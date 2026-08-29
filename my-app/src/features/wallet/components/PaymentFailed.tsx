@@ -24,7 +24,7 @@ export const PaymentFailed: React.FC = () => {
 
   return (
     <div className="payment-result-screen">
-      <div className="payment-result-logo">EtherSpace</div>
+      <div className="payment-result-logo">FlexiSpace</div>
       <div className="glass-card payment-result-card animate-in">
         <div className="payment-result-icon-wrap payment-result-icon-wrap--failed">
           <XCircle size={36} />
