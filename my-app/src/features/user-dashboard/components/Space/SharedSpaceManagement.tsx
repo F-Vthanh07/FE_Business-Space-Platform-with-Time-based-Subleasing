@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-import { Plus, Search, Users, MapPin, Edit3, Trash2 } from 'lucide-react';
+import { Plus, Search, Users, MapPin, Edit3, Trash2, CheckSquare, Briefcase } from 'lucide-react';
 import { ShareListingForm } from '../Listing/ShareListingForm';
 import { deleteShareListing, fetchMyShareListings } from '../Listing/shareListing.api';
 import { fetchActiveRentedContracts, spaceNameOf } from '../contract/contract.api';
@@ -164,6 +164,59 @@ export const SharedSpaceManagement: React.FC = () => {
                 {listing.shareSpaceDetailIsLegalCommitted && (
                   <div className="listing-meta-item" style={{ color: 'var(--color-positive)' }}>
                     <span>✓ Có cam kết pháp lý</span>
+                  </div>
+                )}
+
+                {/* TIỆN ÍCH CHIA SẺ */}
+                {((listing.shareSpaceDetailShareSpaceAmenities || listing.shareSpaceAmenities || listing.sharedSpaceAmenities)?.length > 0) && (
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '8px' }}>
+                    {(listing.shareSpaceDetailShareSpaceAmenities || listing.shareSpaceAmenities || listing.sharedSpaceAmenities).slice(0, 3).map((a: any, i: number) => (
+                      <span
+                        key={i}
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: 'rgba(0, 212, 160, 0.1)',
+                          color: 'var(--color-primary)',
+                          fontWeight: 500
+                        }}
+                      >
+                        ✓ {a.name || a.Name}
+                      </span>
+                    ))}
+                    {(listing.shareSpaceDetailShareSpaceAmenities || listing.shareSpaceAmenities || listing.sharedSpaceAmenities).length > 3 && (
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                        +{(listing.shareSpaceDetailShareSpaceAmenities || listing.shareSpaceAmenities || listing.sharedSpaceAmenities).length - 3} tiện ích
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* NGÀNH NGHỀ THUÊ CHUNG */}
+                {((listing.shareSpaceDetailShareSpaceCategories || listing.shareSpaceCategories || listing.sharedSpaceCategories)?.length > 0) && (
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
+                    {(listing.shareSpaceDetailShareSpaceCategories || listing.shareSpaceCategories || listing.sharedSpaceCategories).slice(0, 3).map((c: any, i: number) => (
+                      <span
+                        key={i}
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: 'var(--color-bg-hover)',
+                          border: '1px solid var(--color-border)',
+                          color: 'var(--color-text-primary)',
+                          fontWeight: 500
+                        }}
+                      >
+                        • {c.name || c.Name}
+                      </span>
+                    ))}
+                    {(listing.shareSpaceDetailShareSpaceCategories || listing.shareSpaceCategories || listing.sharedSpaceCategories).length > 3 && (
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                        +{(listing.shareSpaceDetailShareSpaceCategories || listing.shareSpaceCategories || listing.sharedSpaceCategories).length - 3} ngành
+                      </span>
+                    )}
                   </div>
                 )}
               </div>

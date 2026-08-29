@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
-import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X, Layers, User as UserIcon } from 'lucide-react';
+import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X, Layers, User as UserIcon, Megaphone } from 'lucide-react';
 import { SpaceForm } from './SpaceForm';
 import { SpacePartForm } from './SpacePartForm';
 import { SpacePartListModal } from './SpacePartListModal';
+import { ListingForm } from '../Listing/ListingForm';
 import { useThemeLanguage } from '../../../../context/ThemeLanguageContext';
 import { useConfirm } from '../../../../components/ConfirmModal';
 import '../../../shared/ModalShell.css';
@@ -44,7 +45,15 @@ export const OwnerSpaces: React.FC = () => {
   const [editingSpacePart, setEditingSpacePart] = useState<any | null>(null);
   const [editingSpace, setEditingSpace] = useState<Space | null>(null);
   const [viewingSpace, setViewingSpace] = useState<Space | null>(null);
+  const [isListingFormOpen, setIsListingFormOpen] = useState(false);
+  const [selectedSpaceIdForListing, setSelectedSpaceIdForListing] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleCreateListingForSpace = (space: Space) => {
+    const currentId = space.id || (space as any).Id;
+    setSelectedSpaceIdForListing(Number(currentId));
+    setIsListingFormOpen(true);
+  };
   const { t, language } = useThemeLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -372,6 +381,25 @@ export const OwnerSpaces: React.FC = () => {
                 </div>
 
                 <div className="space-card-actions">
+                  <button
+                    className="btn-primary"
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: '12px',
+                      height: '28px',
+                      gap: '4px',
+                      background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontWeight: 600
+                    }}
+                    onClick={() => handleCreateListingForSpace(space)}
+                    title="Đăng bài cho thuê mặt bằng này"
+                  >
+                    <Megaphone size={13} />
+                    <span>Đăng bài</span>
+                  </button>
                   <button className="btn-ghost" onClick={() => handleOpenSpacePartList(space)} title="Danh sách chia nhỏ">
                     <Layers size={13} /> <span>D.sách chia nhỏ</span>
                   </button>
@@ -392,6 +420,16 @@ export const OwnerSpaces: React.FC = () => {
             );
           })}
         </div>
+      )}
+
+      {isListingFormOpen && createPortal(
+        <ListingForm
+          onClose={() => { setIsListingFormOpen(false); setSelectedSpaceIdForListing(null); }}
+          onSuccess={() => { setIsListingFormOpen(false); setSelectedSpaceIdForListing(null); fetchSpaces(); }}
+          initialData={{ spaceId: selectedSpaceIdForListing }}
+          mode="create"
+        />,
+        document.body
       )}
 
       {isFormOpen && createPortal(

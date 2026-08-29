@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { X, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, Users, ShieldCheck, Clock, Megaphone, Wallet } from 'lucide-react';
+import { X, FileText, Camera, Plus, Trash2, Calendar, ShieldAlert, Users, ShieldCheck, Clock, Megaphone, Wallet, CheckSquare, Briefcase } from 'lucide-react';
 import { VerificationWarningBanner, useIdentityVerification } from '../../../identity-verification';
 import { Select } from '../../../../components/Select';
 import { DatePicker } from '../../../../components/DatePicker';
@@ -133,11 +133,17 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const initialMode: ListingMode = initialData?.listingType === 'SharedSpace' ? 'share' : 'longterm';
   const [mode, setMode] = useState<ListingMode>(initialMode);
 
-  const [spaceId, setSpaceId] = useState<number | ''>(initialData?.spaceId || '');
+  const [spaceId, setSpaceId] = useState<number | ''>(initialData?.spaceId ? Number(initialData.spaceId) : '');
   const [price, setPrice] = useState<number>(initialData?.price || 0);
   const [priceUnit, setPriceUnit] = useState<string>(initialData?.priceUnit || 'PerHour');
   const [name, setName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
+
+  useEffect(() => {
+    if (initialData?.spaceId) {
+      setSpaceId(Number(initialData.spaceId));
+    }
+  }, [initialData?.spaceId]);
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -216,10 +222,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
           const data = await res.json();
           const spaces = Array.isArray(data) ? data : (data?.data || []);
 
-          let allSpacesAndParts: any[] = [];
-
-          for (const space of spaces) {
-            allSpacesAndParts.push({ ...space, isPart: false, isFromUsageRight: false });
+          const partsPromises = spaces.map(async (space: any) => {
             try {
               const partRes = await fetch(`${API_BASE_URL}/api/SpacePart/GetByParent/${space.id || space.Id}`, {
                 headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
@@ -227,13 +230,19 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
               if (partRes.ok) {
                 const partData = await partRes.json();
                 const parts = Array.isArray(partData) ? partData : (partData?.items || []);
-                parts.forEach((p: any) => {
-                  allSpacesAndParts.push({ ...p, isPart: true, parentName: space.name, isFromUsageRight: false });
-                });
+                return parts.map((p: any) => ({ ...p, isPart: true, parentName: space.name, isFromUsageRight: false }));
               }
             } catch (err) {
               console.error("Lỗi lấy space part", err);
             }
+            return [];
+          });
+
+          const allPartsArrays = await Promise.all(partsPromises);
+          const allSpacesAndParts: any[] = [];
+          for (let i = 0; i < spaces.length; i++) {
+            allSpacesAndParts.push({ ...spaces[i], isPart: false, isFromUsageRight: false });
+            allSpacesAndParts.push(...allPartsArrays[i]);
           }
           const usageRes = await fetch(`${API_BASE_URL}/api/SpaceUsageRight/Mine`, {
             headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
@@ -313,6 +322,101 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     };
     loadWalletBalance();
   }, [isEditingListing]);
+
+  const DEFAULT_SHARE_AMENITIES = [
+    'Wifi tốc độ cao',
+    'Điều hòa / Máy lạnh',
+    'Bàn ghế làm việc',
+    'Máy in / Photocopy',
+    'Chỗ đỗ xe máy / Ô tô',
+    'Phòng họp chung',
+    'Máy chiếu / TV màn hình lớn',
+    'Trà & Cà phê miễn phí',
+    'Lễ tân / Nhận bưu phẩm',
+    'Tủ locker cá nhân'
+  ];
+
+  const DEFAULT_SHARE_CATEGORIES = [
+    'Văn phòng / Co-working',
+    'Bán lẻ / Cửa hàng',
+    'Showroom / Trưng bày sản phẩm',
+    'Kho chứa hàng / Logistics nhỏ',
+    'Lớp học / Đào tạo / Hội thảo',
+    'Studio / Quay phim / Chụp ảnh',
+    'Spa / Làm đẹp / Massage',
+    'F&B / Quán cà phê'
+  ];
+
+  const [amenityItems, setAmenityItems] = useState<{ name: string; quantity: number; isIncluded: boolean; price: number; selected: boolean }[]>(() => {
+    const initFromExisting = initialData?.shareSpaceDetailShareSpaceAmenities;
+    if (Array.isArray(initFromExisting) && initFromExisting.length > 0) {
+      const existingNames = new Set(initFromExisting.map((a: any) => (a.name || '').toLowerCase()));
+      const mappedExisting = initFromExisting.map((a: any) => ({
+        name: a.name || '',
+        quantity: a.quantity || 1,
+        isIncluded: a.isIncluded ?? true,
+        price: a.price || 0,
+        selected: true
+      }));
+      const remainingDefaults = DEFAULT_SHARE_AMENITIES
+        .filter(name => !existingNames.has(name.toLowerCase()))
+        .map(name => ({ name, quantity: 1, isIncluded: true, price: 0, selected: false }));
+      return [...mappedExisting, ...remainingDefaults];
+    }
+    return DEFAULT_SHARE_AMENITIES.map(name => ({
+      name,
+      quantity: 1,
+      isIncluded: true,
+      price: 0,
+      selected: false
+    }));
+  });
+
+  const [newAmenityName, setNewAmenityName] = useState('');
+
+  const handleAddCustomAmenity = () => {
+    if (!newAmenityName.trim()) return;
+    setAmenityItems(prev => [
+      ...prev,
+      { name: newAmenityName.trim(), quantity: 1, isIncluded: true, price: 0, selected: true }
+    ]);
+    setNewAmenityName('');
+  };
+
+  const [categoryItems, setCategoryItems] = useState<{ name: string; note: string; selected: boolean }[]>(() => {
+    const initFromExisting = initialData?.shareSpaceDetailShareSpaceCategories;
+    if (Array.isArray(initFromExisting) && initFromExisting.length > 0) {
+      const existingNames = new Set(initFromExisting.map((c: any) => (c.name || '').toLowerCase()));
+      const mappedExisting = initFromExisting.map((c: any) => ({
+        name: c.name || '',
+        note: c.note || '',
+        selected: true
+      }));
+      const remainingDefaults = DEFAULT_SHARE_CATEGORIES
+        .filter(name => !existingNames.has(name.toLowerCase()))
+        .map(name => ({ name, note: '', selected: false }));
+      return [...mappedExisting, ...remainingDefaults];
+    }
+    return DEFAULT_SHARE_CATEGORIES.map(name => ({
+      name,
+      note: '',
+      selected: false
+    }));
+  });
+
+  const [showCustomAmenityInput, setShowCustomAmenityInput] = useState(false);
+  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
+
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  const handleAddCustomCategory = () => {
+    if (!newCategoryName.trim()) return;
+    setCategoryItems(prev => [
+      ...prev,
+      { name: newCategoryName.trim(), note: '', selected: true }
+    ]);
+    setNewCategoryName('');
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -650,12 +754,24 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
           shareSpaceDetailMaxSubRenter: Number(maxSubRenter),
           shareSpaceDetailIsOwner: !(mySpaces.find(s => (s.id || s.Id) === Number(spaceId))?.isFromUsageRight),
           shareSpaceDetailIsLegalCommitted: isLegalCommitted,
-          shareSpaceDetailShareSpaceAmenities: [],
+          shareSpaceDetailShareSpaceAmenities: amenityItems
+            .filter(a => a.selected && a.name.trim())
+            .map(a => ({
+              name: a.name.trim(),
+              quantity: Number(a.quantity) || 1,
+              isIncluded: a.isIncluded,
+              price: a.isIncluded ? 0 : (Number(a.price) || 0)
+            })),
           shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => ({
             ...slot,
             specificdate: (slot.specificdate && !String(slot.specificdate).startsWith('0001')) ? slot.specificdate : undefined
           })),
-          shareSpaceDetailShareSpaceCategories: []
+          shareSpaceDetailShareSpaceCategories: categoryItems
+            .filter(c => c.selected && c.name.trim())
+            .map(c => ({
+              name: c.name.trim(),
+              note: c.note ? c.note.trim() : ''
+            }))
         } : {})
       };
 
@@ -705,12 +821,44 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         shareSpaceDetailMaxSubRenter: Number(maxSubRenter),
         shareSpaceDetailIsOwner: !(mySpaces.find(s => (s.id || s.Id) === Number(spaceId))?.isFromUsageRight),
         shareSpaceDetailIsLegalCommitted: isLegalCommitted,
-        shareSpaceDetailShareSpaceAmenities: [],
-        shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => ({
-          ...slot,
-          specificdate: (slot.specificdate && !String(slot.specificdate).startsWith('0001')) ? slot.specificdate : undefined
-        })),
-        shareSpaceDetailShareSpaceCategories: []
+        shareSpaceDetailShareSpaceAmenities: amenityItems
+          .filter(a => a.selected && a.name.trim())
+          .map(a => ({
+            name: a.name.trim(),
+            quantity: Number(a.quantity) || 1,
+            isIncluded: a.isIncluded,
+            price: a.isIncluded ? 0 : (Number(a.price) || 0)
+          })),
+          shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => {
+            const hasDays = Array.isArray(slot.daysOfWeek) && slot.daysOfWeek.length > 0;
+            const hasSpecificDate = slot.specificdate && !String(slot.specificdate).startsWith('0001') && slot.specificdate.trim() !== '';
+
+            if (hasSpecificDate) {
+              return {
+                daysOfWeek: null,
+                specificdate: slot.specificdate,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                validFrom: null,
+                validTo: null
+              };
+            } else {
+              return {
+                daysOfWeek: hasDays ? slot.daysOfWeek : null,
+                specificdate: null,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                validFrom: slot.validFrom || null,
+                validTo: slot.validTo || null
+              };
+            }
+          }),
+        shareSpaceDetailShareSpaceCategories: categoryItems
+          .filter(c => c.selected && c.name.trim())
+          .map(c => ({
+            name: c.name.trim(),
+            note: c.note ? c.note.trim() : ''
+          }))
       };
 
       try {
@@ -959,7 +1107,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 type="button"
                 className={`filter-tab ${mode === 'longterm' ? 'filter-tab--active' : ''}`}
                 onClick={() => setMode('longterm')}
-                disabled={isLoading || !!initialData} // không cho đổi loại khi đang sửa
+                disabled={isLoading || !!(initialData?.id || initialData?.Id)}
                 style={{ flex: 1, justifyContent: 'center', padding: '10px' }}
               >
                 <FileText size={14} /> Cho thuê dài hạn
@@ -968,7 +1116,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 type="button"
                 className={`filter-tab ${mode === 'share' ? 'filter-tab--active' : ''}`}
                 onClick={() => setMode('share')}
-                disabled={isLoading || !!initialData}
+                disabled={isLoading || !!(initialData?.id || initialData?.Id)}
                 style={{ flex: 1, justifyContent: 'center', padding: '10px' }}
               >
                 <Users size={14} /> Chia sẻ mặt bằng
@@ -987,7 +1135,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 <Select
                   value={spaceId}
                   onChange={(v) => setSpaceId(Number(v))}
-                  disabled={isLoading || !!initialData}
+                  disabled={isLoading || !!(initialData?.id || initialData?.Id)}
                   placeholder="-- Chọn mặt bằng --"
                   options={mySpaces.map(s => ({
                     value: s.id || s.Id,
@@ -1415,6 +1563,345 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
                 <Plus size={14} /> Thêm khung giờ khác
               </button>
             </div>
+          )}
+
+          {/* TIỆN ÍCH MẶT BẰNG CHIA SẺ & NGÀNH NGHỀ THUÊ CHUNG (HIỆN KHI CHI SẺ MẶT BẰNG) */}
+          {mode === 'share' && (
+            <>
+              {/* TIỆN ÍCH MẶT BẰNG CHIA SẺ */}
+              <div className="form-section">
+                <h3 className="form-section-title">
+                  <CheckSquare size={14} /> Tiện ích mặt bằng chia sẻ
+                </h3>
+
+                {/* Dropdown chọn tiện ích */}
+                {!lockRenewFields && (
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                    <select
+                      className="form-select-input form-select-input--flat"
+                      style={{ flex: 1 }}
+                      value=""
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '__custom__') {
+                          setShowCustomAmenityInput(true);
+                        } else if (val) {
+                          setAmenityItems(prev => prev.map(a => a.name === val ? { ...a, selected: true } : a));
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <option value="">-- Chọn tiện ích để thêm vào bài đăng --</option>
+                      {amenityItems.filter(a => !a.selected).map((a, i) => (
+                        <option key={i} value={a.name}>+ {a.name}</option>
+                      ))}
+                      <option value="__custom__">+ Thêm tiện ích khác...</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Ô nhập tiện ích tùy chỉnh */}
+                {showCustomAmenityInput && (
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Nhập tên tiện ích tùy chỉnh..."
+                      value={newAmenityName}
+                      onChange={e => setNewAmenityName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newAmenityName.trim()) {
+                            handleAddCustomAmenity();
+                            setShowCustomAmenityInput(false);
+                          }
+                        }
+                      }}
+                      disabled={isLoading || lockRenewFields}
+                      style={{ flex: 1 }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => {
+                        if (newAmenityName.trim()) {
+                          handleAddCustomAmenity();
+                          setShowCustomAmenityInput(false);
+                        }
+                      }}
+                      disabled={isLoading || !newAmenityName.trim()}
+                      style={{ height: 38, padding: '0 14px', fontSize: 13 }}
+                    >
+                      Thêm
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() => setShowCustomAmenityInput(false)}
+                      style={{ height: 38, padding: '0 12px', fontSize: 13 }}
+                    >
+                      Hủy
+                    </button>
+                  </div>
+                )}
+
+                {/* Danh sách các tiện ích đã chọn */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {amenityItems.filter(a => a.selected).length === 0 && (
+                    <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic', margin: '4px 0' }}>
+                      Chưa chọn tiện ích nào. Chọn từ danh sách thả xuống ở trên.
+                    </p>
+                  )}
+
+                  {amenityItems.filter(a => a.selected).map((item) => {
+                    const idx = amenityItems.findIndex(a => a.name === item.name);
+                    return (
+                      <div
+                        key={item.name}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '10px',
+                          background: 'rgba(0, 212, 160, 0.04)',
+                          border: '1px solid var(--color-primary)',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          flexWrap: 'wrap'
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-primary)', flex: 1, minWidth: '140px' }}>
+                          ✓ {item.name}
+                        </span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                          {/* Số lượng */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>SL:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              className="form-input"
+                              style={{ width: '55px', padding: '2px 6px', fontSize: '12px', textAlign: 'center' }}
+                              value={item.quantity}
+                              onChange={e => {
+                                const q = Number(e.target.value);
+                                setAmenityItems(prev => prev.map((a, i) => i === idx ? { ...a, quantity: q < 1 ? 1 : q } : a));
+                              }}
+                              disabled={isLoading || lockRenewFields}
+                            />
+                          </div>
+
+                          {/* Phụ phí */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                name={`listing-amenity-price-type-${idx}`}
+                                checked={item.isIncluded}
+                                onChange={() => {
+                                  setAmenityItems(prev => prev.map((a, i) => i === idx ? { ...a, isIncluded: true, price: 0 } : a));
+                                }}
+                                disabled={isLoading || lockRenewFields}
+                              />
+                              <span>Miễn phí</span>
+                            </label>
+                            <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                name={`listing-amenity-price-type-${idx}`}
+                                checked={!item.isIncluded}
+                                onChange={() => {
+                                  setAmenityItems(prev => prev.map((a, i) => i === idx ? { ...a, isIncluded: false } : a));
+                                }}
+                                disabled={isLoading || lockRenewFields}
+                              />
+                              <span>Có phụ phí</span>
+                            </label>
+                          </div>
+
+                          {!item.isIncluded && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="Phụ phí"
+                                className="form-input"
+                                style={{ width: '100px', padding: '2px 6px', fontSize: '12px' }}
+                                value={item.price === 0 ? '' : item.price}
+                                onChange={e => {
+                                  const p = Number(e.target.value);
+                                  setAmenityItems(prev => prev.map((a, i) => i === idx ? { ...a, price: p } : a));
+                                }}
+                                disabled={isLoading || lockRenewFields}
+                              />
+                              <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>VNĐ</span>
+                            </div>
+                          )}
+
+                          {!lockRenewFields && (
+                            <button
+                              type="button"
+                              className="btn-icon"
+                              style={{ color: '#ef4444', padding: '4px' }}
+                              onClick={() => {
+                                setAmenityItems(prev => prev.map((a, i) => i === idx ? { ...a, selected: false } : a));
+                              }}
+                              disabled={isLoading}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* NGÀNH NGHỀ ĐƯỢC PHÉP THUÊ CHUNG */}
+              <div className="form-section">
+                <h3 className="form-section-title">
+                  <Briefcase size={14} /> Ngành nghề / Mô hình phù hợp thuê chung
+                </h3>
+
+                {/* Dropdown chọn ngành nghề */}
+                {!lockRenewFields && (
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                    <select
+                      className="form-select-input form-select-input--flat"
+                      style={{ flex: 1 }}
+                      value=""
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '__custom__') {
+                          setShowCustomCategoryInput(true);
+                        } else if (val) {
+                          setCategoryItems(prev => prev.map(c => c.name === val ? { ...c, selected: true } : c));
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <option value="">-- Chọn ngành nghề / mô hình để thêm vào bài đăng --</option>
+                      {categoryItems.filter(c => !c.selected).map((c, i) => (
+                        <option key={i} value={c.name}>+ {c.name}</option>
+                      ))}
+                      <option value="__custom__">+ Thêm ngành nghề khác...</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Ô nhập ngành nghề tùy chỉnh */}
+                {showCustomCategoryInput && (
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Nhập tên ngành nghề tùy chỉnh..."
+                      value={newCategoryName}
+                      onChange={e => setNewCategoryName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newCategoryName.trim()) {
+                            handleAddCustomCategory();
+                            setShowCustomCategoryInput(false);
+                          }
+                        }
+                      }}
+                      disabled={isLoading || lockRenewFields}
+                      style={{ flex: 1 }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => {
+                        if (newCategoryName.trim()) {
+                          handleAddCustomCategory();
+                          setShowCustomCategoryInput(false);
+                        }
+                      }}
+                      disabled={isLoading || !newCategoryName.trim()}
+                      style={{ height: 38, padding: '0 14px', fontSize: 13 }}
+                    >
+                      Thêm
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() => setShowCustomCategoryInput(false)}
+                      style={{ height: 38, padding: '0 12px', fontSize: 13 }}
+                    >
+                      Hủy
+                    </button>
+                  </div>
+                )}
+
+                {/* Danh sách các ngành nghề đã chọn */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {categoryItems.filter(c => c.selected).length === 0 && (
+                    <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic', margin: '4px 0' }}>
+                      Chưa chọn ngành nghề nào. Chọn từ danh sách thả xuống ở trên.
+                    </p>
+                  )}
+
+                  {categoryItems.filter(c => c.selected).map((item) => {
+                    const idx = categoryItems.findIndex(c => c.name === item.name);
+                    return (
+                      <div
+                        key={item.name}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '10px',
+                          background: 'rgba(0, 212, 160, 0.04)',
+                          border: '1px solid var(--color-primary)',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          flexWrap: 'wrap'
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-primary)', flex: 1, minWidth: '150px' }}>
+                          ✓ {item.name}
+                        </span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 2, minWidth: '200px' }}>
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder="Ghi chú / Yêu cầu riêng (tùy chọn)..."
+                            style={{ fontSize: '12px', padding: '4px 8px' }}
+                            value={item.note}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setCategoryItems(prev => prev.map((c, i) => i === idx ? { ...c, note: val } : c));
+                            }}
+                            disabled={isLoading || lockRenewFields}
+                          />
+                          {!lockRenewFields && (
+                            <button
+                              type="button"
+                              className="btn-icon"
+                              style={{ color: '#ef4444', padding: '4px' }}
+                              onClick={() => {
+                                setCategoryItems(prev => prev.map((c, i) => i === idx ? { ...c, selected: false } : c));
+                              }}
+                              disabled={isLoading}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
           )}
 
           <div className="form-section">

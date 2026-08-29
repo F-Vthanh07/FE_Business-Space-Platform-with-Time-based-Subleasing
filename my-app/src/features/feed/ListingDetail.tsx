@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Tag, Flag, Star, Sofa, Wand2, Eye, ShieldCheck, Lock, FileText } from 'lucide-react';
+import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Tag, Flag, Star, Sofa, Wand2, Eye, ShieldCheck, Lock, FileText, CheckSquare, Briefcase } from 'lucide-react';
 import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
@@ -876,6 +876,72 @@ export const ListingDetail: React.FC = () => {
                       </div>
                     );
                   })}
+                </div>
+              </>
+            )}
+
+            {/* TIỆN ÍCH MẶT BẰNG CHIA SẺ */}
+            {((listing?.shareSpaceDetailShareSpaceAmenities || listing?.shareSpaceAmenities || listing?.sharedSpaceAmenities)?.length > 0) && (
+              <>
+                <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CheckSquare size={18} color="var(--color-primary)" /> Tiện ích chia sẻ đi kèm
+                </h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '40px' }}>
+                  {(listing?.shareSpaceDetailShareSpaceAmenities || listing?.shareSpaceAmenities || listing?.sharedSpaceAmenities).map((a: any, idx: number) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '10px 16px', borderRadius: '8px',
+                        border: '1px solid var(--color-primary)', backgroundColor: 'rgba(0, 212, 160, 0.06)',
+                        fontSize: '14px', color: '#333'
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>✓ {a.name || a.Name}</span>
+                      {a.quantity > 1 && <span style={{ color: '#666', fontSize: '12px' }}>(x{a.quantity})</span>}
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          backgroundColor: (a.isIncluded ?? a.IsIncluded) ? '#D1FAE5' : '#FEF3C7',
+                          color: (a.isIncluded ?? a.IsIncluded) ? '#047857' : '#D97706',
+                          fontWeight: 600
+                        }}
+                      >
+                        {(a.isIncluded ?? a.IsIncluded) ? 'Miễn phí' : `+${(a.price || a.Price || 0).toLocaleString('vi-VN')}₫`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* NGÀNH NGHỀ PHÙ HỢP THUÊ CHUNG */}
+            {((listing?.shareSpaceDetailShareSpaceCategories || listing?.shareSpaceCategories || listing?.sharedSpaceCategories)?.length > 0) && (
+              <>
+                <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Briefcase size={18} color="var(--color-primary)" /> Ngành nghề / Mô hình phù hợp thuê chung
+                </h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '40px' }}>
+                  {(listing?.shareSpaceDetailShareSpaceCategories || listing?.shareSpaceCategories || listing?.sharedSpaceCategories).map((c: any, idx: number) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex', flexDirection: 'column', gap: '2px',
+                        padding: '10px 16px', borderRadius: '8px',
+                        border: '1px solid #E0E0E0', backgroundColor: '#fff',
+                        fontSize: '14px', color: '#333'
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, color: '#1E293B' }}>• {c.name || c.Name}</span>
+                      {(c.note || c.Note) && (
+                        <span style={{ fontSize: '12px', color: '#64748B', fontStyle: 'italic' }}>
+                          Ghi chú: {c.note || c.Note}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </>
             )}

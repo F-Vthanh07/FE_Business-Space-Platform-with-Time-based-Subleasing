@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { X, Users, ShieldCheck, ShieldAlert, Plus, Trash2, Clock, Type, Wallet } from 'lucide-react';
+import { X, Users, ShieldCheck, ShieldAlert, Plus, Trash2, Clock, Type, Wallet, CheckSquare, Briefcase } from 'lucide-react';
 import "../../../shared/ModalShell.css";
 import { Select } from '../../../../components/Select';
 import { createShareListing, updateShareListing } from './shareListing.api';
@@ -20,7 +20,7 @@ interface ShareListingFormProps {
   onClose: () => void;
   onSuccess: () => void;
   initialData?: any;
-  spaceOptions: SpaceOption[]; 
+  spaceOptions: SpaceOption[];
   apiCategories: { id: number; name: string }[];
   apiAmenities: { id: number; name: string }[];
 }
@@ -33,7 +33,7 @@ const DAYS_LABEL_VI: Record<string, string> = {
 
 const getValidDaysOfWeek = (validFrom?: string, validTo?: string) => {
   if (!validFrom || !validTo) return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  
+
   const parseDate = (dStr: string) => {
     const parts = dStr.split('-');
     if (parts.length === 3) {
@@ -77,6 +77,21 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
   const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
   const [priorityLevelId, setPriorityLevelId] = useState<number | ''>('');
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+
+  const [categoriesList, setCategoriesList] = useState<{ id: number; name: string }[]>(apiCategories || []);
+  useEffect(() => {
+    if (categoriesList.length === 0) {
+      fetch('https://flexi-space-capstone-project.onrender.com/api/BussinessCategory/GetAll', { headers: { accept: '*/*' } })
+        .then(res => res.json())
+        .then(data => {
+          const list = Array.isArray(data) ? data : (data?.data || []);
+          if (list.length > 0) {
+            setCategoriesList(list.map((c: any) => ({ id: c.id || c.Id, name: c.name || c.Name })));
+          }
+        })
+        .catch(() => { });
+    }
+  }, [apiCategories]);
 
   useEffect(() => {
     if (isEditingListing) return;
@@ -147,60 +162,110 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
     return getSafeDateString(nextMonth);
   });
 
-  const [selectedAmenities, setSelectedAmenities] = useState<Record<number, { included: boolean; price: number }>>(
-    () => {
-      const init: Record<number, { included: boolean; price: number }> = {};
-      (initialData?.shareSpaceDetailShareSpaceAmenities || []).forEach((a: any) => {
-        init[a.amenityId] = { included: a.isIncluded, price: a.price };
-      });
-      return init;
-    }
-  );
+  const DEFAULT_SHARE_AMENITIES = [
+    'Wifi tốc độ cao',
+    'Điều hòa / Máy lạnh',
+    'Bàn ghế làm việc',
+    'Máy in / Photocopy',
+    'Chỗ đỗ xe máy / Ô tô',
+    'Phòng họp chung',
+    'Máy chiếu / TV màn hình lớn',
+    'Trà & Cà phê miễn phí',
+    'Lễ tân / Nhận bưu phẩm',
+    'Tủ locker cá nhân'
+  ];
 
-  const [selectedCategories, setSelectedCategories] = useState<Record<number, { included: boolean; note: string }>>(
-    () => {
-      const init: Record<number, { included: boolean; note: string }> = {};
-      (initialData?.shareSpaceDetailShareSpaceCategories || []).forEach((c: any) => {
-        init[c.bussinessCategoryId] = { included: true, note: c.note || '' };
-      });
-      return init;
+  const DEFAULT_SHARE_CATEGORIES = [
+    'Văn phòng / Co-working',
+    'Bán lẻ / Cửa hàng',
+    'Showroom / Trưng bày sản phẩm',
+    'Kho chứa hàng / Logistics nhỏ',
+    'Lớp học / Đào tạo / Hội thảo',
+    'Studio / Quay phim / Chụp ảnh',
+    'Spa / Làm đẹp / Massage',
+    'F&B / Quán cà phê'
+  ];
+
+  const [amenityItems, setAmenityItems] = useState<{ name: string; quantity: number; isIncluded: boolean; price: number; selected: boolean }[]>(() => {
+    const initFromExisting = initialData?.shareSpaceDetailShareSpaceAmenities;
+    if (Array.isArray(initFromExisting) && initFromExisting.length > 0) {
+      const existingNames = new Set(initFromExisting.map((a: any) => (a.name || '').toLowerCase()));
+      const mappedExisting = initFromExisting.map((a: any) => ({
+        name: a.name || '',
+        quantity: a.quantity || 1,
+        isIncluded: a.isIncluded ?? true,
+        price: a.price || 0,
+        selected: true
+      }));
+      const remainingDefaults = DEFAULT_SHARE_AMENITIES
+        .filter(name => !existingNames.has(name.toLowerCase()))
+        .map(name => ({ name, quantity: 1, isIncluded: true, price: 0, selected: false }));
+      return [...mappedExisting, ...remainingDefaults];
     }
-  );
+    return DEFAULT_SHARE_AMENITIES.map(name => ({
+      name,
+      quantity: 1,
+      isIncluded: true,
+      price: 0,
+      selected: false
+    }));
+  });
+
+  const [newAmenityName, setNewAmenityName] = useState('');
+
+  const handleAddCustomAmenity = () => {
+    if (!newAmenityName.trim()) return;
+    setAmenityItems(prev => [
+      ...prev,
+      { name: newAmenityName.trim(), quantity: 1, isIncluded: true, price: 0, selected: true }
+    ]);
+    setNewAmenityName('');
+  };
+
+  const [categoryItems, setCategoryItems] = useState<{ name: string; note: string; selected: boolean }[]>(() => {
+    const initFromExisting = initialData?.shareSpaceDetailShareSpaceCategories;
+    if (Array.isArray(initFromExisting) && initFromExisting.length > 0) {
+      const existingNames = new Set(initFromExisting.map((c: any) => (c.name || '').toLowerCase()));
+      const mappedExisting = initFromExisting.map((c: any) => ({
+        name: c.name || '',
+        note: c.note || '',
+        selected: true
+      }));
+      const remainingDefaults = DEFAULT_SHARE_CATEGORIES
+        .filter(name => !existingNames.has(name.toLowerCase()))
+        .map(name => ({ name, note: '', selected: false }));
+      return [...mappedExisting, ...remainingDefaults];
+    }
+    return DEFAULT_SHARE_CATEGORIES.map(name => ({
+      name,
+      note: '',
+      selected: false
+    }));
+  });
+
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  const handleAddCustomCategory = () => {
+    if (!newCategoryName.trim()) return;
+    setCategoryItems(prev => [
+      ...prev,
+      { name: newCategoryName.trim(), note: '', selected: true }
+    ]);
+    setNewCategoryName('');
+  };
+
+  const [showCustomAmenityInput, setShowCustomAmenityInput] = useState(false);
+  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
 
   const [availabilities, setAvailabilities] = useState<any[]>(
     initialData?.shareSpaceDetailAvailabilitiesTimes?.length
       ? initialData.shareSpaceDetailAvailabilitiesTimes.map((slot: any) => ({
-          ...slot,
-          specificdate: (slot.specificdate && String(slot.specificdate).startsWith('0001')) ? '' : slot.specificdate
-        }))
+        ...slot,
+        daysOfWeek: slot.daysOfWeek || [],
+        specificdate: (slot.specificdate && String(slot.specificdate).startsWith('0001')) ? '' : (slot.specificdate || '')
+      }))
       : [{ daysOfWeek: [], specificdate: '', startTime: '08:00', endTime: '12:00', validFrom: getSafeDateString(null), validTo: getSafeDateString(null) }]
   );
-
-  const toggleAmenity = (amenityId: number) => {
-    setSelectedAmenities(prev => ({
-      ...prev,
-      [amenityId]: prev[amenityId]?.included
-        ? { ...prev[amenityId], included: false }
-        : { included: true, price: prev[amenityId]?.price || 0 }
-    }));
-  };
-
-  const setAmenityPrice = (amenityId: number, value: number) => {
-    setSelectedAmenities(prev => ({ ...prev, [amenityId]: { ...prev[amenityId], price: value } }));
-  };
-
-  const toggleCategory = (catId: number) => {
-    setSelectedCategories(prev => ({
-      ...prev,
-      [catId]: prev[catId]?.included
-        ? { ...prev[catId], included: false }
-        : { included: true, note: prev[catId]?.note || '' }
-    }));
-  };
-
-  const setCategoryNote = (catId: number, value: string) => {
-    setSelectedCategories(prev => ({ ...prev, [catId]: { ...prev[catId], note: value } }));
-  };
 
   const toggleDayInSlot = (slotIndex: number, day: string) => {
     setAvailabilities(prev => prev.map((slot, i) => {
@@ -352,18 +417,46 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       price: Number(price),
       priceUnit,
       shareSpaceDetailMaxSubRenter: Number(maxSubRenter),
-      shareSpaceDetailIsOwner: false, 
+      shareSpaceDetailIsOwner: true,
       shareSpaceDetailIsLegalCommitted: isLegalCommitted,
-      shareSpaceDetailShareSpaceAmenities: Object.entries(selectedAmenities)
-        .filter(([, v]) => v.included)
-        .map(([amenityId, v]) => ({ amenityId: Number(amenityId), isIncluded: true, price: Number(v.price) || 0 })),
-      shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => ({
-        ...slot,
-        specificdate: (slot.specificdate && !String(slot.specificdate).startsWith('0001')) ? slot.specificdate : null
-      })),
-      shareSpaceDetailShareSpaceCategories: Object.entries(selectedCategories)
-        .filter(([, v]) => v.included)
-        .map(([catId, v]) => ({ bussinessCategoryId: Number(catId), note: v.note || '' }))
+      shareSpaceDetailShareSpaceAmenities: amenityItems
+        .filter(a => a.selected && a.name.trim())
+        .map(a => ({
+          name: a.name.trim(),
+          quantity: Number(a.quantity) || 1,
+          isIncluded: a.isIncluded,
+          price: a.isIncluded ? 0 : (Number(a.price) || 0)
+        })),
+      shareSpaceDetailAvailabilitiesTimes: availabilities.map(slot => {
+        const hasDays = Array.isArray(slot.daysOfWeek) && slot.daysOfWeek.length > 0;
+        const hasSpecificDate = slot.specificdate && !String(slot.specificdate).startsWith('0001') && slot.specificdate.trim() !== '';
+
+        if (hasSpecificDate) {
+          return {
+            daysOfWeek: null,
+            specificdate: slot.specificdate,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            validFrom: null,
+            validTo: null
+          };
+        } else {
+          return {
+            daysOfWeek: hasDays ? slot.daysOfWeek : null,
+            specificdate: null,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            validFrom: slot.validFrom || null,
+            validTo: slot.validTo || null
+          };
+        }
+      }),
+      shareSpaceDetailShareSpaceCategories: categoryItems
+        .filter(c => c.selected && c.name.trim())
+        .map(c => ({
+          name: c.name.trim(),
+          note: c.note ? c.note.trim() : ''
+        }))
     };
 
     try {
@@ -374,13 +467,13 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
       }
       onSuccess();
     } catch (err: any) {
-        let errorMsg = err.message || 'Lỗi xử lý hệ thống';
-        try {
-            const parsed = JSON.parse(errorMsg);
-            errorMsg = parsed.message || parsed.title || parsed.detail || errorMsg;
+      let errorMsg = err.message || 'Lỗi xử lý hệ thống';
+      try {
+        const parsed = JSON.parse(errorMsg);
+        errorMsg = parsed.message || parsed.title || parsed.detail || errorMsg;
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch(e) { /* empty */ }
-        setError(errorMsg);
+      } catch (e) { /* empty */ }
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -423,7 +516,7 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
             overflow: 'hidden'
           }}>
             <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: 'radial-gradient(circle, rgba(168,85,247,0.15) 0%, rgba(255,255,255,0) 70%)', borderRadius: '50%' }}></div>
-            
+
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', zIndex: 1 }}>
               <div style={{
                 width: '48px', height: '48px', borderRadius: '12px',
@@ -431,7 +524,7 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                 display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
                 boxShadow: '0 4px 10px rgba(168,85,247,0.3)'
               }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72" /><path d="m14 7 3 3" /><path d="M5 6v4" /><path d="M19 14v4" /><path d="M10 2v2" /><path d="M7 8H3" /><path d="M21 16h-4" /><path d="M11 3H9" /></svg>
               </div>
               <div>
                 <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 'bold', color: '#1e293b' }}>
@@ -442,9 +535,9 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
                 </p>
               </div>
             </div>
-            
-            <a 
-              href="http://localhost:5173/ai-image-editor" 
+
+            <a
+              href="http://localhost:5173/ai-image-editor"
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -466,7 +559,7 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
               onMouseOver={(e) => { e.currentTarget.style.borderColor = '#ec4899'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.15)'; }}
               onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 2px 5px rgba(0,0,0,0.02)'; }}
             >
-              Trải nghiệm ngay <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              Trải nghiệm ngay <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
             </a>
           </div>
           <div className="form-section">
@@ -644,54 +737,55 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
             {availabilities.map((slot, idx) => {
               const validDays = getValidDaysOfWeek(slot.validFrom, slot.validTo);
               return (
-              <div key={idx} style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '14px', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-                  {DAYS_OF_WEEK.map(day => {
-                    const isDayValid = validDays.includes(day);
-                    return (
-                    <button
-                      type="button" key={day}
-                      className={`filter-tab ${slot.daysOfWeek.includes(day) ? 'filter-tab--active' : ''}`}
-                      onClick={() => toggleDayInSlot(idx, day)}
-                      disabled={isLoading || !isDayValid}
-                      style={{ opacity: isDayValid ? 1 : 0.5 }}
-                    >
-                      {DAYS_LABEL_VI[day]}
-                    </button>
-                  )})}
-                </div>
+                <div key={idx} style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-xl)', padding: '14px', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                    {DAYS_OF_WEEK.map(day => {
+                      const isDayValid = validDays.includes(day);
+                      return (
+                        <button
+                          type="button" key={day}
+                          className={`filter-tab ${slot.daysOfWeek.includes(day) ? 'filter-tab--active' : ''}`}
+                          onClick={() => toggleDayInSlot(idx, day)}
+                          disabled={isLoading || !isDayValid}
+                          style={{ opacity: isDayValid ? 1 : 0.5 }}
+                        >
+                          {DAYS_LABEL_VI[day]}
+                        </button>
+                      )
+                    })}
+                  </div>
 
-                <div className="form-grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Giờ bắt đầu</label>
-                    <input type="time" className="form-input" value={slot.startTime}
-                      onChange={e => updateSlotField(idx, 'startTime', e.target.value)} disabled={isLoading} />
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label className="form-label">Giờ bắt đầu</label>
+                      <input type="time" className="form-input" value={slot.startTime}
+                        onChange={e => updateSlotField(idx, 'startTime', e.target.value)} disabled={isLoading} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Giờ kết thúc</label>
+                      <input type="time" className="form-input" value={slot.endTime}
+                        onChange={e => updateSlotField(idx, 'endTime', e.target.value)} disabled={isLoading} />
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Giờ kết thúc</label>
-                    <input type="time" className="form-input" value={slot.endTime}
-                      onChange={e => updateSlotField(idx, 'endTime', e.target.value)} disabled={isLoading} />
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label className="form-label">Áp dụng từ</label>
+                      <input type="date" lang="vi-VN" className="form-input" value={slot.validFrom}
+                        onChange={e => updateSlotField(idx, 'validFrom', e.target.value)} disabled={isLoading} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Áp dụng đến</label>
+                      <input type="date" lang="vi-VN" className="form-input" value={slot.validTo}
+                        onChange={e => updateSlotField(idx, 'validTo', e.target.value)} disabled={isLoading}
+                        min={slot.validFrom} />
+                    </div>
                   </div>
+                  {availabilities.length > 1 && (
+                    <button type="button" className="btn-ghost" style={{ color: 'var(--color-negative)' }} onClick={() => removeSlot(idx)}>
+                      <Trash2 size={13} /> Xóa khung giờ này
+                    </button>
+                  )}
                 </div>
-                <div className="form-grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Áp dụng từ</label>
-                    <input type="date" lang="vi-VN" className="form-input" value={slot.validFrom}
-                      onChange={e => updateSlotField(idx, 'validFrom', e.target.value)} disabled={isLoading} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Áp dụng đến</label>
-                    <input type="date" lang="vi-VN" className="form-input" value={slot.validTo}
-                      onChange={e => updateSlotField(idx, 'validTo', e.target.value)} disabled={isLoading}
-                      min={slot.validFrom} />
-                  </div>
-                </div>
-                {availabilities.length > 1 && (
-                  <button type="button" className="btn-ghost" style={{ color: 'var(--color-negative)' }} onClick={() => removeSlot(idx)}>
-                    <Trash2 size={13} /> Xóa khung giờ này
-                  </button>
-                )}
-              </div>
               );
             })}
             <button type="button" className="btn-ghost" onClick={addSlot} disabled={isLoading}>
@@ -699,66 +793,331 @@ export const ShareListingForm: React.FC<ShareListingFormProps> = ({
             </button>
           </div>
 
-          {apiAmenities.length > 0 && (
-            <div className="form-section">
-              <h3 className="form-section-title">Tiện ích đi kèm</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {apiAmenities.map(a => (
-                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input
-                      type="checkbox"
-                      checked={!!selectedAmenities[a.id]?.included}
-                      onChange={() => toggleAmenity(a.id)}
-                      disabled={isLoading}
-                    />
-                    <span style={{ flex: 1 }}>{a.name}</span>
-                    {selectedAmenities[a.id]?.included && (
-                      <input
-                        type="number"
-                        min="0"
-                        className="form-input"
-                        style={{ width: 120 }}
-                        placeholder="Phụ phí"
-                        value={selectedAmenities[a.id]?.price || 0}
-                        onChange={e => setAmenityPrice(a.id, Number(e.target.value))}
-                        disabled={isLoading}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* TIỆN ÍCH MẶT BẰNG CHIA SẺ */}
+          <div className="form-section">
+            <h3 className="form-section-title">
+              <CheckSquare size={14} /> Tiện ích mặt bằng chia sẻ
+            </h3>
 
-          {apiCategories.length > 0 && (
-            <div className="form-section">
-              <h3 className="form-section-title">Ngành nghề được phép thuê chung</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {apiCategories.map(c => (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input
-                      type="checkbox"
-                      checked={!!selectedCategories[c.id]?.included}
-                      onChange={() => toggleCategory(c.id)}
-                      disabled={isLoading}
-                    />
-                    <span style={{ flex: 1 }}>{c.name}</span>
-                    {selectedCategories[c.id]?.included && (
+            {/* Dropdown chọn tiện ích */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              <select
+                className="form-select-input form-select-input--flat"
+                style={{ flex: 1 }}
+                value=""
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '__custom__') {
+                    setShowCustomAmenityInput(true);
+                  } else if (val) {
+                    setAmenityItems(prev => prev.map(a => a.name === val ? { ...a, selected: true } : a));
+                  }
+                }}
+                disabled={isLoading}
+              >
+                <option value="">-- Chọn tiện ích để thêm vào bài đăng --</option>
+                {amenityItems.filter(a => !a.selected).map((a, i) => (
+                  <option key={i} value={a.name}>+ {a.name}</option>
+                ))}
+                <option value="__custom__">+ Thêm tiện ích khác...</option>
+              </select>
+            </div>
+
+            {/* Ô nhập tiện ích tùy chỉnh */}
+            {showCustomAmenityInput && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Nhập tên tiện ích tùy chỉnh..."
+                  value={newAmenityName}
+                  onChange={e => setNewAmenityName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (newAmenityName.trim()) {
+                        handleAddCustomAmenity();
+                        setShowCustomAmenityInput(false);
+                      }
+                    }
+                  }}
+                  disabled={isLoading}
+                  style={{ flex: 1 }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => {
+                    if (newAmenityName.trim()) {
+                      handleAddCustomAmenity();
+                      setShowCustomAmenityInput(false);
+                    }
+                  }}
+                  disabled={isLoading || !newAmenityName.trim()}
+                  style={{ height: 38, padding: '0 14px', fontSize: 13 }}
+                >
+                  Thêm
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setShowCustomAmenityInput(false)}
+                  style={{ height: 38, padding: '0 12px', fontSize: 13 }}
+                >
+                  Hủy
+                </button>
+              </div>
+            )}
+
+            {/* Danh sách tiện ích đã chọn */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {amenityItems.filter(a => a.selected).length === 0 && (
+                <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic', margin: '4px 0' }}>
+                  Chưa chọn tiện ích nào. Chọn từ danh sách thả xuống ở trên.
+                </p>
+              )}
+
+              {amenityItems.filter(a => a.selected).map((item) => {
+                const idx = amenityItems.findIndex(a => a.name === item.name);
+                return (
+                  <div
+                    key={item.name}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '10px',
+                      background: 'rgba(0, 212, 160, 0.04)',
+                      border: '1px solid var(--color-primary)',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-primary)', flex: 1, minWidth: '140px' }}>
+                      ✓ {item.name}
+                    </span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      {/* Số lượng */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>SL:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          className="form-input"
+                          style={{ width: '55px', padding: '2px 6px', fontSize: '12px', textAlign: 'center' }}
+                          value={item.quantity}
+                          onChange={e => {
+                            const q = Number(e.target.value);
+                            setAmenityItems(prev => prev.map((a, i) => i === idx ? { ...a, quantity: q < 1 ? 1 : q } : a));
+                          }}
+                          disabled={isLoading}
+                        />
+                      </div>
+
+                      {/* Phụ phí */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name={`amenity-price-type-${idx}`}
+                            checked={item.isIncluded}
+                            onChange={() => {
+                              setAmenityItems(prev => prev.map((a, i) => i === idx ? { ...a, isIncluded: true, price: 0 } : a));
+                            }}
+                            disabled={isLoading}
+                          />
+                          <span>Miễn phí</span>
+                        </label>
+                        <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name={`amenity-price-type-${idx}`}
+                            checked={!item.isIncluded}
+                            onChange={() => {
+                              setAmenityItems(prev => prev.map((a, i) => i === idx ? { ...a, isIncluded: false } : a));
+                            }}
+                            disabled={isLoading}
+                          />
+                          <span>Phụ phí</span>
+                        </label>
+                      </div>
+
+                      {!item.isIncluded && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Phụ phí"
+                            className="form-input"
+                            style={{ width: '100px', padding: '2px 6px', fontSize: '12px' }}
+                            value={item.price === 0 ? '' : item.price}
+                            onChange={e => {
+                              const p = Number(e.target.value);
+                              setAmenityItems(prev => prev.map((a, i) => i === idx ? { ...a, price: p } : a));
+                            }}
+                            disabled={isLoading}
+                          />
+                          <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>VNĐ</span>
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        style={{ color: '#ef4444', padding: '4px' }}
+                        onClick={() => {
+                          setAmenityItems(prev => prev.map((a, i) => i === idx ? { ...a, selected: false } : a));
+                        }}
+                        disabled={isLoading}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* NGÀNH NGHỀ ĐƯỢC PHÉP THUÊ CHUNG */}
+          <div className="form-section">
+            <h3 className="form-section-title">
+              <Briefcase size={14} /> Ngành nghề / Mô hình phù hợp thuê chung
+            </h3>
+
+            {/* Dropdown chọn ngành nghề */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+              <select
+                className="form-select-input form-select-input--flat"
+                style={{ flex: 1 }}
+                value=""
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '__custom__') {
+                    setShowCustomCategoryInput(true);
+                  } else if (val) {
+                    setCategoryItems(prev => prev.map(c => c.name === val ? { ...c, selected: true } : c));
+                  }
+                }}
+                disabled={isLoading}
+              >
+                <option value="">-- Chọn ngành nghề / mô hình để thêm vào bài đăng --</option>
+                {categoryItems.filter(c => !c.selected).map((c, i) => (
+                  <option key={i} value={c.name}>+ {c.name}</option>
+                ))}
+                <option value="__custom__">+ Thêm ngành nghề khác...</option>
+              </select>
+            </div>
+
+            {/* Ô nhập ngành nghề tùy chỉnh */}
+            {showCustomCategoryInput && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Nhập tên ngành nghề tùy chỉnh..."
+                  value={newCategoryName}
+                  onChange={e => setNewCategoryName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (newCategoryName.trim()) {
+                        handleAddCustomCategory();
+                        setShowCustomCategoryInput(false);
+                      }
+                    }
+                  }}
+                  disabled={isLoading}
+                  style={{ flex: 1 }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => {
+                    if (newCategoryName.trim()) {
+                      handleAddCustomCategory();
+                      setShowCustomCategoryInput(false);
+                    }
+                  }}
+                  disabled={isLoading || !newCategoryName.trim()}
+                  style={{ height: 38, padding: '0 14px', fontSize: 13 }}
+                >
+                  Thêm
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setShowCustomCategoryInput(false)}
+                  style={{ height: 38, padding: '0 12px', fontSize: 13 }}
+                >
+                  Hủy
+                </button>
+              </div>
+            )}
+
+            {/* Danh sách các ngành nghề đã chọn */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {categoryItems.filter(c => c.selected).length === 0 && (
+                <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontStyle: 'italic', margin: '4px 0' }}>
+                  Chưa chọn ngành nghề nào. Chọn từ danh sách thả xuống ở trên.
+                </p>
+              )}
+
+              {categoryItems.filter(c => c.selected).map((item) => {
+                const idx = categoryItems.findIndex(c => c.name === item.name);
+                return (
+                  <div
+                    key={item.name}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '10px',
+                      background: 'rgba(0, 212, 160, 0.04)',
+                      border: '1px solid var(--color-primary)',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-primary)', flex: 1, minWidth: '150px' }}>
+                      ✓ {item.name}
+                    </span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 2, minWidth: '200px' }}>
                       <input
                         type="text"
                         className="form-input"
-                        style={{ width: 200 }}
-                        placeholder="Ghi chú (tùy chọn)"
-                        value={selectedCategories[c.id]?.note || ''}
-                        onChange={e => setCategoryNote(c.id, e.target.value)}
+                        placeholder="Ghi chú / Yêu cầu riêng (tùy chọn)..."
+                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                        value={item.note}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setCategoryItems(prev => prev.map((c, i) => i === idx ? { ...c, note: val } : c));
+                        }}
                         disabled={isLoading}
                       />
-                    )}
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        style={{ color: '#ef4444', padding: '4px' }}
+                        onClick={() => {
+                          setCategoryItems(prev => prev.map((c, i) => i === idx ? { ...c, selected: false } : c));
+                        }}
+                        disabled={isLoading}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          )}
+          </div>
 
           <div className="form-section">
             <h3 className="form-section-title">Mô tả</h3>
