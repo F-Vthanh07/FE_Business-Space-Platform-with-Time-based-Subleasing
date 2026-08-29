@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import {
   Plus, Search, Eye, Edit3, Trash2,
-  Building2, MapPin, Clock, CheckCircle2, XCircle, Star, ChevronLeft, ChevronRight, X, Users, RefreshCw
+  Building2, MapPin, Clock, CheckCircle2, XCircle, Star, ChevronLeft, ChevronRight, X, Users, RefreshCw, CheckSquare, Briefcase
 } from 'lucide-react';
 import './OwnerListings.css';
 import "../../../shared/ModalShell.css";
@@ -896,6 +896,90 @@ export const OwnerListings: React.FC = () => {
                       </div>
                     ) : (
                       <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '13px' }}>Chưa có khung giờ Chia sẻ nào.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* TIỆN ÍCH MẶT BẰNG CHIA SẺ */}
+                {isShareListing(viewingListing) && (
+                  <div className="glass-card--inset" style={{ padding: '16px', borderRadius: 'var(--radius-lg)' }}>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CheckSquare size={16} style={{ color: 'var(--color-primary)' }} /> Tiện ích mặt bằng chia sẻ
+                    </h4>
+                    {((viewingListing.shareSpaceDetailShareSpaceAmenities || viewingListing.shareSpaceAmenities || viewingListing.sharedSpaceAmenities)?.length > 0) ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {(viewingListing.shareSpaceDetailShareSpaceAmenities || viewingListing.shareSpaceAmenities || viewingListing.sharedSpaceAmenities).map((a: any, i: number) => (
+                          <div
+                            key={i}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: 'rgba(0, 212, 160, 0.08)',
+                              border: '1px solid var(--color-primary)',
+                              borderRadius: '8px',
+                              padding: '6px 12px',
+                              fontSize: '13px'
+                            }}
+                          >
+                            <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>✓ {a.name || a.Name}</span>
+                            {a.quantity > 1 && (
+                              <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>(x{a.quantity})</span>
+                            )}
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                background: (a.isIncluded ?? a.IsIncluded) ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                                color: (a.isIncluded ?? a.IsIncluded) ? '#059669' : '#d97706',
+                                fontWeight: 600
+                              }}
+                            >
+                              {(a.isIncluded ?? a.IsIncluded) ? 'Miễn phí' : `+${(a.price || a.Price || 0).toLocaleString('vi-VN')}₫`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '13px' }}>Chưa có thông tin tiện ích chia sẻ.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* NGÀNH NGHỀ PHÙ HỢP THUÊ CHUNG */}
+                {isShareListing(viewingListing) && (
+                  <div className="glass-card--inset" style={{ padding: '16px', borderRadius: 'var(--radius-lg)' }}>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Briefcase size={16} style={{ color: 'var(--color-primary)' }} /> Ngành nghề / Mô hình phù hợp thuê chung
+                    </h4>
+                    {((viewingListing.shareSpaceDetailShareSpaceCategories || viewingListing.shareSpaceCategories || viewingListing.sharedSpaceCategories)?.length > 0) ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {(viewingListing.shareSpaceDetailShareSpaceCategories || viewingListing.shareSpaceCategories || viewingListing.sharedSpaceCategories).map((c: any, i: number) => (
+                          <div
+                            key={i}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '2px',
+                              background: 'var(--color-bg-hover)',
+                              border: '1px solid var(--color-border)',
+                              borderRadius: '8px',
+                              padding: '6px 12px',
+                              fontSize: '13px'
+                            }}
+                          >
+                            <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>• {c.name || c.Name}</span>
+                            {(c.note || c.Note) && (
+                              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
+                                Ghi chú: {c.note || c.Note}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '13px' }}>Chưa chọn ngành nghề phù hợp nào.</p>
                     )}
                   </div>
                 )}

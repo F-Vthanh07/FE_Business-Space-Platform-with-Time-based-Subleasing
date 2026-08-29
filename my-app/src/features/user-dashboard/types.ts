@@ -42,23 +42,24 @@ export interface MockSpace {
 }
 
 export interface ShareSpaceAmenity {
-  amenityId: number;
+  name: string;
+  quantity?: number;
   isIncluded: boolean;
   price: number;
 }
 
 export interface ShareAvailabilityTime {
-  daysOfWeek: string[];
-  specificdate: string;
+  daysOfWeek: string[] | null;
+  specificdate: string | null;
   startTime: string;
   endTime: string;
-  validFrom: string;
-  validTo: string;
+  validFrom: string | null;
+  validTo: string | null;
 }
 
 export interface ShareSpaceCategory {
-  bussinessCategoryId: number;
-  note: string;
+  name: string;
+  note?: string;
 }
 
 export interface ShareListingPayload {
@@ -72,15 +73,8 @@ export interface ShareListingPayload {
   shareSpaceDetailMaxSubRenter: number;
   shareSpaceDetailIsOwner: boolean;
   shareSpaceDetailIsLegalCommitted: boolean;
-
-  shareSpaceDetailShareSpaceAmenities: {
-    amenityId: number;
-    isIncluded: boolean;
-    price: number;
-  }[];
-
+  shareSpaceDetailShareSpaceAmenities: ShareSpaceAmenity[];
   shareSpaceDetailAvailabilitiesTimes: any[];
-
   shareSpaceDetailShareSpaceCategories: ShareSpaceCategory[];
 }
 
