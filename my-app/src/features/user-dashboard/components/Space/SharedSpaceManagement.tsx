@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-import { Plus, Search, Users, MapPin, Edit3, Trash2, CheckSquare, Briefcase } from 'lucide-react';
+import { Plus, Search, Users, MapPin, Edit3, Trash2 } from 'lucide-react';
 import { ShareListingForm } from '../Listing/ShareListingForm';
 import { deleteShareListing, fetchMyShareListings } from '../Listing/shareListing.api';
 import { fetchActiveRentedContracts, spaceNameOf } from '../contract/contract.api';
