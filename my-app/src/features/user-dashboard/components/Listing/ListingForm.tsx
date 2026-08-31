@@ -9,7 +9,7 @@ import { Select } from '../../../../components/Select';
 import { DatePicker } from '../../../../components/DatePicker';
 import "../../../shared/ModalShell.css";
 import './ListingForm.css';
-import { createShareListing, updateShareListing } from './shareListing.api';
+import { createShareListing, updateShareListing, renewExpiredListing } from './shareListing.api';
 import { createUserBanner, uploadUserBannerPictures } from './banner.api';
 import { fetchBannerPriorityLevels, fetchPriorityLevels, type PriorityLevel } from './priorityLevel.api';
 import { fetchWalletAccount } from '../../../wallet/api/wallet.api';
@@ -108,7 +108,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
   const isRenewMode = formMode === 'renew';
   const isEditingListing = !!(initialData?.id || initialData?.Id) && !isRenewMode;
-  const lockRenewFields = isRenewMode;
+  const lockRenewFields = false;
   const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
   const [bannerPriorityLevels, setBannerPriorityLevels] = useState<PriorityLevel[]>([]);
   const [priorityLevelId, setPriorityLevelId] = useState<number | ''>('');
@@ -676,17 +676,17 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       return;
     }
 
-    if (mode === 'share' && !isRenewMode && (!maxSubRenter || maxSubRenter < 1)) {
+    if (mode === 'share' && (!maxSubRenter || maxSubRenter < 1)) {
       setError('Số người thuê chung tối đa phải từ 1 trở lên!');
       return;
     }
 
-    if (mode === 'share' && !isRenewMode && availabilities.some(slot => slot.daysOfWeek.length === 0 && !slot.specificdate)) {
+    if (mode === 'share' && availabilities.some(slot => slot.daysOfWeek.length === 0 && !slot.specificdate)) {
       setError('Vui lòng chọn ít nhất 1 ngày hoặc ngày cụ thể cho mỗi khung giờ chia sẻ!');
       return;
     }
 
-    if (mode === 'share' && !isRenewMode) {
+    if (mode === 'share') {
       const allowedEnd = new Date(allowedEndTime);
       const allowedStart = new Date(allowedStartTime);
       allowedEnd.setHours(23, 59, 59, 999);
@@ -729,7 +729,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       }
     }
 
-    if (mode === 'share' && !isRenewMode && !isLegalCommitted) {
+    if (mode === 'share' && !isLegalCommitted) {
       setError('Vui lòng tích "Cam kết pháp lý" để xác nhận thỏa thuận trước khi đăng chia sẻ!');
       return;
     }
@@ -751,7 +751,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
 
       const renewPayload = {
         ...initialData,
-        id: targetId,
+        id: Number(targetId),
         spaceId: Number(spaceId),
         allowedStartTime,
         allowedEndTime,
@@ -786,32 +786,12 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       };
 
       try {
-        const params = new URLSearchParams({
-          amount: String(amount),
-          durationInDays: String(durationInDays)
-        });
-        const res = await fetch(`${API_BASE_URL}/api/Listing/Renew/${targetId}?${params.toString()}`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'accept': '*/*'
-          },
-          body: JSON.stringify(renewPayload)
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          setError(errText || 'Gia han bai dang that bai.');
-          setIsLoading(false);
-          return;
-        }
-
+        await renewExpiredListing(targetId, renewPayload, amount, durationInDays);
         await maybeCreateBannerForListing(targetId);
         onSuccess();
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        setError('Lỗi kết nối máy chủ khi gia hạn bài đăng.');
+        setError(err?.message || 'Lỗi kết nối máy chủ khi gia hạn bài đăng.');
       } finally {
         setIsLoading(false);
       }
