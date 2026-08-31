@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/immutability */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { gsap } from 'gsap';
 import {
   Plus, Search, Eye, Edit3, Trash2,
@@ -280,6 +281,8 @@ const SummaryMiniChart: React.FC<{ points: SummaryChartPoint[]; type: SummaryCha
 
 export const OwnerListings: React.FC = () => {
   const { confirm, confirmModal } = useConfirm();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [listings, setListings] = useState<any[]>([]); // Data lấy từ API
   const [listingOverview, setListingOverview] = useState<ListingOverview>(null);
   const [search, setSearch] = useState('');
@@ -297,6 +300,32 @@ export const OwnerListings: React.FC = () => {
 
   const { t, language } = useThemeLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const searchFromUrl = searchParams.get('search') || location.state?.search;
+    const listingIdFromUrl = searchParams.get('listingId') || location.state?.openListingId;
+    if (searchFromUrl && !listingIdFromUrl) {
+      setSearch(searchFromUrl);
+    }
+  }, [searchParams, location.state]);
+
+  useEffect(() => {
+    const listingIdFromUrl = searchParams.get('listingId') || location.state?.openListingId;
+    if (listingIdFromUrl) {
+      setFilterStatus('all');
+      setFilterType('all');
+    }
+  }, [searchParams, location.state]);
+
+  useEffect(() => {
+    const listingIdFromUrl = searchParams.get('listingId') || location.state?.openListingId;
+    if (listingIdFromUrl && listings.length > 0) {
+      const found = listings.find(l => String(l.id || l.Id) === String(listingIdFromUrl));
+      if (found) {
+        setViewingListing(found);
+      }
+    }
+  }, [listings, searchParams, location.state]);
 
   const buildCurrentUserListingUrl = () => {
     const params = new URLSearchParams();
@@ -776,11 +805,32 @@ export const OwnerListings: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: '700px', width: '95%', padding: 0, overflow: 'hidden' }}
           >
-            <div className="modal-header" style={{ padding: '16px 20px', margin: 0, top: 0 }}>
+            <div className="modal-header" style={{ padding: '16px 20px', margin: 0, top: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>Chi tiết bài đăng</h2>
-              <button type="button" className="btn-icon" onClick={() => setViewingListing(null)}>
-                <X size={20} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '13px',
+                    height: '34px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onClick={() => {
+                    const target = viewingListing;
+                    setViewingListing(null);
+                    handleOpenEdit(target);
+                  }}
+                >
+                  <Edit3 size={14} /> {t('spaces.edit') || 'Sửa'}
+                </button>
+                <button type="button" className="btn-icon" onClick={() => setViewingListing(null)}>
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             <div style={{ maxHeight: '80vh', overflowY: 'auto' }}>
@@ -984,6 +1034,23 @@ export const OwnerListings: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            <div className="modal-actions-footer" style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button type="button" className="btn-ghost cancel-btn" onClick={() => setViewingListing(null)}>
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  const target = viewingListing;
+                  setViewingListing(null);
+                  handleOpenEdit(target);
+                }}
+              >
+                <Edit3 size={14} /> {t('spaces.edit') || 'Sửa bài đăng'}
+              </button>
             </div>
           </div>
         </div>,
