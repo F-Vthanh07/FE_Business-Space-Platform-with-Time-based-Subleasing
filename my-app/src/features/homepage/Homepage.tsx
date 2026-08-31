@@ -4,11 +4,10 @@
 // src/features/homepage/Homepage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-import { ChevronLeft, ChevronRight, Map, Navigation, Brain, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Navigation, Brain, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { API_BASE_URL } from '../../config/api';
-import { MapComponent } from './components/MapComponent';
 
 // Components dùng chung
 import { Header } from '../../components/Header';
@@ -84,8 +83,7 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
   const [banners, setBanners] = useState<HomepageBanner[]>([]);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
 
-  // State bật/tắt Map
-  const [isMapMode, setIsMapMode] = useState(false);
+  // Map mode đã bị tắt để ổn định cho demo
 
   // State cho phần Listing
   const [selectedVenueId, setSelectedVenueId] = useState<string>('FS1');
@@ -203,27 +201,7 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
     };
   }, []);
 
-  // GSAP Animation khi toggle Map/List
-  // GSAP Animation khi toggle Map/List
-  useEffect(() => {
-    let ctx = gsap.context(() => {
-      if (isMapMode) {
-        gsap.fromTo(
-          '.map-view-container',
-          { x: 50, opacity: 0 },
-          { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }
-        );
-      } else {
-        gsap.fromTo(
-          '.right-sidebar-content',
-          { opacity: 0, scale: 0.98 },
-          { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out' }
-        );
-      }
-    }, containerRef);
 
-    return () => ctx.revert(); // Dọn dẹp
-  }, [isMapMode]);
 
   return (
     <div className="homepage-wrapper" ref={containerRef}>
@@ -292,25 +270,16 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
           KHU VỰC TÌM KIẾM & DANH SÁCH
           ========================================= */}
       <div id="search-nav">
-        {/* GRID LAYOUT CHIA ĐÔI MÀN HÌNH */}
-        <div className={`listings-layout ${isMapMode ? 'map-active' : ''}`}>
+        {/* GRID LAYOUT */}
+        <div className="listings-layout">
 
-          {/* CỘT TRÁI: Danh sách listing (thu lại khi bật map) */}
+          {/* Danh sách listing */}
           <HomeListings
             selectedId={selectedVenueId}
             onCardClick={(id) => setSelectedVenueId(id)}
-            isMapMode={isMapMode}
-            onToggleMap={() => setIsMapMode((prev) => !prev)}
+            isMapMode={false}
+            onToggleMap={() => {}}
           />
-
-          {/* CỘT PHẢI: Bản đồ (khi bật map) */}
-          {isMapMode && (
-            <div className="right-sidebar-column">
-              <div className="map-view-container">
-                <MapComponent />
-              </div>
-            </div>
-          )}
 
         </div>
       </div>
@@ -390,34 +359,7 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
         </div>
       </section>
 
-      {/* =========================================
-          SECTION 3: INTERACTIVE MAP FEATURE
-          ========================================= */}
-      <section className="feature-showcase-section feature-map-section reveal-on-scroll">
-        <div className="feature-showcase-container">
-          <div className="feature-text-content">
-            <h2 className="section-title" style={{ textAlign: 'left' }}>Khám Phá Mặt Bằng Trực Quan</h2>
-            <p className="feature-desc">
-              Trải nghiệm bản đồ tương tác thông minh. Dễ dàng quét các khu vực đắc địa, so sánh khoảng cách tới trung tâm và xem nhanh các tiện ích xung quanh khu vực kinh doanh của bạn.
-            </p>
-            <ul className="feature-list">
-              <li><Map size={18} /> Hiển thị vị trí chính xác trên bản đồ 2D/3D</li>
-              <li><Navigation size={18} /> Lọc bán kính tìm kiếm quanh vị trí hiện tại</li>
-            </ul>
-            <button className="btn-primary feature-cta" style={{ background: '#00d4a0', borderColor: '#00d4a0', color: '#fff' }} onClick={() => {
-              document.getElementById('search-nav')?.scrollIntoView({ behavior: 'smooth' });
-              setIsMapMode(true);
-            }}>
-              Mở Bản Đồ Ngay <ArrowRight size={16} />
-            </button>
-          </div>
-          <div className="feature-visual-content">
-            <div className="mockup-glass" style={{ padding: 0 }}>
-              <img src="/map-mockup.jpg" alt="Bản Đồ" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-          </div>
-        </div>
-      </section>
+
 
       {/* =========================================
           SECTION 4: AI IMAGE EDITOR
