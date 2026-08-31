@@ -105,3 +105,28 @@ export const deleteShareListing = async (id: number) => {
   });
   return res.ok;
 };
+
+export const renewExpiredListing = async (id: number | string, payload: any, amount: number, durationInDays: number) => {
+  const params = new URLSearchParams({
+    amount: String(amount),
+    durationInDays: String(durationInDays)
+  });
+
+  const res = await fetch(`${BASE_URL}/Listing/Renew/${id}?${params.toString()}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseErrorResponse(res, 'Gia hạn bài đăng thất bại'));
+  }
+
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+};
+
