@@ -460,26 +460,7 @@ export const HomeListings: React.FC<HomeListingsProps> = ({
             <Globe size={14} /> Khám phá Feed
           </button>
           
-          {onToggleMap && (
-            <button
-              onClick={onToggleMap}
-              style={{
-                borderRadius: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '13px',
-                padding: '8px 16px',
-                border: '1px solid #00D4A0',
-                backgroundColor: isMapMode ? '#00D4A0' : '#fff',
-                color: isMapMode ? '#fff' : '#00D4A0',
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
-            >
-              <Globe size={14} /> {isMapMode ? 'Ẩn bản đồ' : 'Xem bản đồ'}
-            </button>
-          )}
+
         </div>
 
         <span className="sort-by">
