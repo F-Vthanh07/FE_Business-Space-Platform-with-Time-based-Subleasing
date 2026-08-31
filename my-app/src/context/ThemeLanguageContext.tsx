@@ -33,7 +33,7 @@ const translations: Translations = {
   'home.statSpaces': { en: 'Verified Venues', vi: 'Mặt bằng xác minh' },
 
   'home.featTitle': { en: 'Engineered for Spatial Flexibility', vi: 'Thiết kế cho sự linh hoạt không gian' },
-  'home.featSub': { en: 'Discover how EtherSpace simplifies sharing and subleasing.', vi: 'Khám phá cách EtherSpace tối ưu hóa việc chia sẻ mặt bằng kinh doanh.' },
+  'home.featSub': { en: 'Discover how FlexiSpace simplifies sharing and subleasing.', vi: 'Khám phá cách FlexiSpace tối ưu hóa việc chia sẻ mặt bằng kinh doanh.' },
 
   'home.feat1Title': { en: 'Hourly Scheduling', vi: 'Lịch trình theo giờ' },
   'home.feat1Desc': { en: 'Divide daily operational hours into micro-slots, allowing multiple business models in a single location.', vi: 'Chia nhỏ khung giờ hoạt động hàng ngày thành các slot nhỏ, hỗ trợ nhiều mô hình kinh doanh trên một mặt bằng.' },
@@ -247,8 +247,8 @@ const translations: Translations = {
   'overview.welcomeTag': { en: 'DASHBOARD', vi: 'BẢNG ĐIỀU KHIỂN' },
   'overview.welcome': { en: 'Welcome back,', vi: 'Chào mừng trở lại,' },
   'overview.welcomeDesc': {
-    en: 'Here is a quick overview of your EtherSpace account and recent activity.',
-    vi: 'Đây là tổng quan nhanh về tài khoản EtherSpace và hoạt động gần đây của bạn.',
+    en: 'Here is a quick overview of your FlexiSpace account and recent activity.',
+    vi: 'Đây là tổng quan nhanh về tài khoản FlexiSpace và hoạt động gần đây của bạn.',
   },
   'overview.verified': { en: 'Verified', vi: 'Đã xác minh' },
   'overview.unverified': { en: 'Not verified', vi: 'Chưa xác minh' },
@@ -277,8 +277,8 @@ const translations: Translations = {
   'overview.actionBookings': { en: 'Booking Requests', vi: 'Yêu cầu đặt chỗ' },
   'overview.tipsTitle': { en: 'Tips & Insights', vi: 'Mẹo & Thông tin' },
   'overview.tip1': {
-    en: 'Complete your identity verification to unlock all EtherSpace features and build trust with renters.',
-    vi: 'Hoàn tất xác minh danh tính để mở khóa toàn bộ tính năng EtherSpace và tạo uy tín với người thuê.',
+    en: 'Complete your identity verification to unlock all FlexiSpace features and build trust with renters.',
+    vi: 'Hoàn tất xác minh danh tính để mở khóa toàn bộ tính năng FlexiSpace và tạo uy tín với người thuê.',
   },
   'overview.tip2': {
     en: 'Weekend time slots (9:00 - 12:00) tend to have the highest occupancy rate. Consider optimizing your pricing.',
@@ -902,8 +902,8 @@ const translations: Translations = {
     vi: 'Cổng Stripe (Thẻ tín dụng Quốc tế)',
   },
   'subbookingForm.formPaymentWallet': {
-    en: 'EtherSpace Account Wallet',
-    vi: 'Ví tài khoản EtherSpace',
+    en: 'FlexiSpace Account Wallet',
+    vi: 'Ví tài khoản FlexiSpace',
   },
   'subbookingForm.formTransactionBanner': {
     en: 'System automatically generates transaction code and electronic VAT invoice upon payment.',
@@ -1050,12 +1050,12 @@ const translations: Translations = {
     vi: 'Giao diện Tối',
   },
   // Auth Page
-  'auth.title': { en: 'EtherSpace Console', vi: 'Bảng Điều Khiển EtherSpace' },
+  'auth.title': { en: 'FlexiSpace Console', vi: 'Bảng Điều Khiển FlexiSpace' },
   'auth.subtitle': { en: 'Secure Access Gateway', vi: 'Cổng Kết Nối Hệ Thống Bảo Mật' },
   'auth.loginTab': { en: 'LOGIN', vi: 'ĐĂNG NHẬP' },
   'auth.registerTab': { en: 'REGISTER', vi: 'ĐĂNG KÝ' },
   'auth.emailLabel': { en: 'EMAIL ADDRESS', vi: 'ĐỊA CHỈ EMAIL' },
-  'auth.emailPlaceholder': { en: 'e.g., operator@etherspace.io', vi: 'Ví dụ: operator@etherspace.io' },
+  'auth.emailPlaceholder': { en: 'e.g., operator@flexispace.io', vi: 'Ví dụ: operator@flexispace.io' },
   'auth.passwordLabel': { en: 'PASSWORD', vi: 'MẬT KHẨU' },
   'auth.passwordPlaceholder': { en: 'Enter credentials', vi: 'Nhập mật khẩu' },
   'auth.confirmPasswordLabel': { en: 'CONFIRM PASSWORD', vi: 'XÁC NHẬN MẬT KHẨU' },
@@ -1092,7 +1092,7 @@ const translations: Translations = {
   'wallet.noTransactionsDesc': { en: 'Your deposits, payments and payouts will show up here.', vi: 'Các giao dịch nạp tiền, thanh toán và chi trả sẽ hiển thị tại đây.' },
 
   'wallet.deposit.title': { en: 'Deposit Funds', vi: 'Nạp tiền vào ví' },
-  'wallet.deposit.subtitle': { en: 'Top up your EtherSpace wallet to pay for bookings and services', vi: 'Nạp tiền vào ví EtherSpace để thanh toán đặt lịch và dịch vụ' },
+  'wallet.deposit.subtitle': { en: 'Top up your FlexiSpace wallet to pay for bookings and services', vi: 'Nạp tiền vào ví FlexiSpace để thanh toán đặt lịch và dịch vụ' },
   'wallet.deposit.amountLabel': { en: 'AMOUNT TO DEPOSIT', vi: 'SỐ TIỀN MUỐN NẠP' },
   'wallet.deposit.amountPlaceholder': { en: 'Enter amount', vi: 'Nhập số tiền' },
   'wallet.deposit.quickSelect': { en: 'Quick select', vi: 'Chọn nhanh' },
@@ -1104,7 +1104,7 @@ const translations: Translations = {
   'wallet.deposit.submit': { en: 'Proceed to Payment', vi: 'Tiến hành thanh toán' },
   'wallet.deposit.processing': { en: 'Processing...', vi: 'Đang xử lý...' },
   'wallet.deposit.minAmount': { en: 'Minimum deposit must be greater than 2,000 VND', vi: 'Số tiền nạp phải lớn hơn 2.000₫' },
-  'wallet.deposit.secureNote': { en: 'Payments are processed securely. EtherSpace never stores your card details.', vi: 'Giao dịch được xử lý bảo mật. EtherSpace không lưu trữ thông tin thẻ của bạn.' },
+  'wallet.deposit.secureNote': { en: 'Payments are processed securely. FlexiSpace never stores your card details.', vi: 'Giao dịch được xử lý bảo mật. FlexiSpace không lưu trữ thông tin thẻ của bạn.' },
 
   'wallet.history.title': { en: 'Transaction History', vi: 'Lịch sử giao dịch' },
   'wallet.history.subtitle': { en: 'All wallet activity in one place', vi: 'Toàn bộ hoạt động của ví tại một nơi' },

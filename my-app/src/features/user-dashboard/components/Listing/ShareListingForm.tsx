@@ -69,6 +69,7 @@ const getSafeDateString = formatDateISOOnly;
 export const ShareListingForm: React.FC<ShareListingFormProps> = ({
   onClose, onSuccess, initialData, spaceOptions, apiCategories, apiAmenities
 }) => {
+  void apiAmenities;
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');

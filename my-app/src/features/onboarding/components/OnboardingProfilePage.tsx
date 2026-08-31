@@ -45,7 +45,7 @@ export const OnboardingProfilePage: React.FC = () => {
 
   return (
     <div className="onboarding-screen">
-      <div className="onboarding-logo">EtherSpace</div>
+      <div className="onboarding-logo">FlexiSpace</div>
 
       <div className="glass-card onboarding-card animate-in">
         <div className="onboarding-steps">

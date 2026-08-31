@@ -602,7 +602,7 @@ export const ListingFeed: React.FC = () => {
           </div>
 
           <div style={{ fontSize: '13px', color: '#65676B', padding: '0 8px' }}>
-            Quyền riêng tư · Điều khoản · Quảng cáo · Tùy chọn · <br /> EtherSpace © 2026
+            Quyền riêng tư · Điều khoản · Quảng cáo · Tùy chọn · <br /> FlexiSpace © 2026
           </div>
         </div>
 

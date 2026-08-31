@@ -195,7 +195,7 @@ export const Header: React.FC<HeaderProps> = ({ userInitials, userName }) => {
           onClick={() => navigate('/')}
           style={{ display: 'flex', alignItems: 'center', fontFamily: "'Press Start 2P', cursive", fontSize: '24px', cursor: 'pointer' }}
         >
-          <span>Ether</span><Shuffle text="Space" />
+          <span>Flexi</span><Shuffle text="Space" />
         </div>
 
         {/* NAVIGATION TABS */}

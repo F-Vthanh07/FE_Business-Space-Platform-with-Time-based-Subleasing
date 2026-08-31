@@ -18,8 +18,7 @@ export const Footer: React.FC = () => {
       <div className="footer-content">
         <div className="footer-brand">
           <div className="logo-container" onClick={() => scrollToSection('hero')}>
-            <div className="logo-symbol">E</div>
-            <span className="logo-text">EtherSpace</span>
+            <span className="logo-text">FlexiSpace</span>
           </div>
           <p className="footer-desc">
             Nền tảng chia sẻ mặt bằng kinh doanh theo<br />
@@ -54,11 +53,8 @@ export const Footer: React.FC = () => {
       </div>
 
       <div className="footer-bottom">
-        <span>&copy; {new Date().getFullYear()} EtherSpace. All rights reserved.</span>
-        <div style={{ display: 'flex', gap: 16 }}>
-          <span>Network: EtherMainnet v1.0.4</span>
-          <span>Latency: 12ms</span>
-        </div>
+        <span>&copy; {new Date().getFullYear()} FlexiSpace. All rights reserved.</span>
+        
       </div>
       
       <button className="floating-chat-btn" aria-label="Chat Support">
