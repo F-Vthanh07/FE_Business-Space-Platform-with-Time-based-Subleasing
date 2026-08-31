@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
-import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X, Layers, User as UserIcon, Megaphone } from 'lucide-react';
+import { Plus, Search, Building2, MapPin, Edit3, Trash2, CheckCircle2, Clock, Eye, X, Layers, User as UserIcon, Megaphone, FileText, XCircle } from 'lucide-react';
 import { SpaceForm } from './SpaceForm';
 import { SpacePartForm } from './SpacePartForm';
 import { SpacePartListModal } from './SpacePartListModal';
@@ -33,8 +34,16 @@ interface Space {
 }
 
 export const OwnerSpaces: React.FC = () => {
+  const navigate = useNavigate();
   const { confirm, confirmModal } = useConfirm();
   const [spaces, setSpaces] = useState<Space[]>([]);
+
+  const handleNavigateToListing = (listing: any) => {
+    const listingId = listing.id || listing.Id;
+    navigate(`/user/listings?listingId=${listingId}`, {
+      state: { openListingId: listingId }
+    });
+  };
   const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
   const [apiCategories, setApiCategories] = useState<any[]>([]); 
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,11 +56,76 @@ export const OwnerSpaces: React.FC = () => {
   const [viewingSpace, setViewingSpace] = useState<Space | null>(null);
   const [isListingFormOpen, setIsListingFormOpen] = useState(false);
   const [selectedSpaceIdForListing, setSelectedSpaceIdForListing] = useState<number | null>(null);
+  const [selectedSpaceForListing, setSelectedSpaceForListing] = useState<Space | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewingSpaceListings, setViewingSpaceListings] = useState<any[]>([]);
+  const [isLoadingSpaceListings, setIsLoadingSpaceListings] = useState(false);
+  const [selectedSpaceForListingsModal, setSelectedSpaceForListingsModal] = useState<Space | null>(null);
+
+  const fetchListingsBySpaceId = useCallback(async (spaceId: number) => {
+    setIsLoadingSpaceListings(true);
+    try {
+      const token = localStorage.getItem('portal_token');
+      const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetListingsBySpaceId/${spaceId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'accept': '*/*'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : (data?.data || data?.items || []);
+        setViewingSpaceListings(items);
+      } else {
+        setViewingSpaceListings([]);
+      }
+    } catch (err) {
+      console.error("Lỗi lấy danh sách bài đăng theo mặt bằng:", err);
+      setViewingSpaceListings([]);
+    } finally {
+      setIsLoadingSpaceListings(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const targetSpace = viewingSpace || selectedSpaceForListingsModal;
+    if (targetSpace) {
+      const sId = targetSpace.id || (targetSpace as any).Id;
+      if (sId) {
+        fetchListingsBySpaceId(Number(sId));
+      }
+    } else {
+      setViewingSpaceListings([]);
+    }
+  }, [viewingSpace, selectedSpaceForListingsModal, fetchListingsBySpaceId]);
+
+  const getPriceUnitText = (unit: any) => {
+    if (unit === 'PerHour' || unit === 0) return '/ Giờ';
+    if (unit === 'PerDay' || unit === 1) return '/ Ngày';
+    if (unit === 'PerWeek' || unit === 2) return '/ Tuần';
+    if (unit === 'PerMonth' || unit === 3) return '/ Tháng';
+    if (unit === 'PerYear' || unit === 4) return '/ Năm';
+    return '';
+  };
+
+  const getListingStatusBadge = (status: any) => {
+    const s = String(status);
+    if (s === 'Available' || s === 'Accepted' || s === '0') {
+      return <span className="badge badge--positive"><CheckCircle2 size={11} /> Đang hoạt động</span>;
+    }
+    if (s === 'Occupied' || s === '1') {
+      return <span className="badge badge--neutral"><Clock size={11} /> Đã kí hợp đồng</span>;
+    }
+    if (s === 'Expired' || s === '2') {
+      return <span className="badge badge--negative"><XCircle size={11} /> Hết hạn</span>;
+    }
+    return <span className="badge badge--neutral">{s}</span>;
+  };
 
   const handleCreateListingForSpace = (space: Space) => {
     const currentId = space.id || (space as any).Id;
     setSelectedSpaceIdForListing(Number(currentId));
+    setSelectedSpaceForListing(space);
     setIsListingFormOpen(true);
   };
   const { t, language } = useThemeLanguage();
@@ -400,6 +474,9 @@ export const OwnerSpaces: React.FC = () => {
                     <Megaphone size={13} />
                     <span>Đăng bài</span>
                   </button>
+                  <button className="btn-ghost" onClick={() => setSelectedSpaceForListingsModal(space)} title="Danh sách bài đăng của mặt bằng">
+                    <FileText size={13} /> <span>Bài đăng</span>
+                  </button>
                   <button className="btn-ghost" onClick={() => handleOpenSpacePartList(space)} title="Danh sách chia nhỏ">
                     <Layers size={13} /> <span>D.sách chia nhỏ</span>
                   </button>
@@ -424,12 +501,15 @@ export const OwnerSpaces: React.FC = () => {
 
       {isListingFormOpen && createPortal(
         <ListingForm
-          onClose={() => { setIsListingFormOpen(false); setSelectedSpaceIdForListing(null); }}
-          onSuccess={() => { setIsListingFormOpen(false); setSelectedSpaceIdForListing(null); fetchSpaces(); }}
-          initialData={{ spaceId: selectedSpaceIdForListing }}
+          onClose={() => { setIsListingFormOpen(false); setSelectedSpaceIdForListing(null); setSelectedSpaceForListing(null); }}
+          onSuccess={() => { setIsListingFormOpen(false); setSelectedSpaceIdForListing(null); setSelectedSpaceForListing(null); fetchSpaces(); }}
+          initialData={{
+            spaceId: selectedSpaceIdForListing,
+            initialMode: (selectedSpaceForListing as any)?.isFromUsageRight ? 'share' : undefined
+          }}
           mode="create"
         />,
-        document.body
+          document.body
       )}
 
       {isFormOpen && createPortal(
@@ -453,6 +533,142 @@ export const OwnerSpaces: React.FC = () => {
           onClose={() => { setIsSpacePartListOpen(false); setParentSpaceForPart(null); }}
           onEditPart={handleEditSpacePart}
         />
+      )}
+
+      {selectedSpaceForListingsModal && createPortal(
+        <div className="modal-backdrop" onClick={() => setSelectedSpaceForListingsModal(null)}>
+          <div className="modal-shell modal-shell--wide" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '650px' }}>
+            <div className="modal-header">
+              <div className="modal-title-area">
+                <div className="modal-icon-wrap modal-icon-wrap--green">
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <h3 className="modal-title">Danh sách bài đăng của mặt bằng</h3>
+                  <p className="modal-subtitle text-secondary">
+                    {selectedSpaceForListingsModal.name} ({viewingSpaceListings.length} bài đăng)
+                  </p>
+                </div>
+              </div>
+              <button className="btn-icon" onClick={() => setSelectedSpaceForListingsModal(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {isLoadingSpaceListings && (
+                <div className="loading-state text-secondary" style={{ padding: '30px' }}>
+                  <Clock size={20} />
+                  <span>Đang tải danh sách bài đăng...</span>
+                </div>
+              )}
+
+              {!isLoadingSpaceListings && viewingSpaceListings.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--color-text-secondary)' }}>
+                  <p style={{ marginBottom: '16px' }}>Mặt bằng này chưa có bài đăng cho thuê nào.</p>
+                  <button
+                    className="btn-primary"
+                    style={{ margin: '0 auto', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    onClick={() => {
+                      const s = selectedSpaceForListingsModal;
+                      setSelectedSpaceForListingsModal(null);
+                      handleCreateListingForSpace(s);
+                    }}
+                  >
+                    <Megaphone size={14} /> Đăng bài ngay
+                  </button>
+                </div>
+              )}
+
+              {!isLoadingSpaceListings && viewingSpaceListings.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {viewingSpaceListings.map((l: any, idx: number) => (
+                    <div
+                      key={l.id || l.Id || idx}
+                      className="glass-card"
+                      style={{
+                        padding: '14px 16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        borderRadius: '10px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                              {l.name || 'Bài đăng chưa đặt tên'}
+                            </h4>
+                            <span className="badge badge--accent badge-sm">
+                              {l.listingType === 'SharedSpace' || l.listingType === 1 ? 'Chia sẻ' : 'Dài hạn'}
+                            </span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                            {l.description ? (l.description.length > 100 ? `${l.description.slice(0, 100)}...` : l.description) : 'Không có mô tả'}
+                          </p>
+                        </div>
+                        {getListingStatusBadge(l.status)}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid var(--color-border)', marginTop: '4px', fontSize: '13px' }}>
+                        <div>
+                          <span className="text-secondary">Đơn giá: </span>
+                          <strong style={{ color: '#10B981', fontSize: '14px' }}>
+                            {l.price ? `${Number(l.price).toLocaleString('vi-VN')}₫` : 'Thỏa thuận'}
+                          </strong>
+                          <span className="text-secondary">{getPriceUnitText(l.priceUnit)}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="text-secondary" style={{ fontSize: '12px' }}>
+                            Lượt xem: <strong>{l.viewCount ?? 0}</strong>
+                          </span>
+                          <button
+                            className="btn-ghost"
+                            style={{ padding: '4px 10px', fontSize: '12px', height: '28px', gap: '4px', color: '#3b82f6', background: 'rgba(59, 130, 246, 0.08)' }}
+                            onClick={() => {
+                              setSelectedSpaceForListingsModal(null);
+                              handleNavigateToListing(l);
+                            }}
+                            title="Xem chi tiết trên trang Bài đăng"
+                          >
+                            <Eye size={13} /> Xem ở trang Bài đăng
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-actions-footer">
+              <button className="btn-ghost cancel-btn" onClick={() => setSelectedSpaceForListingsModal(null)}>
+                Đóng
+              </button>
+              <button
+                className="btn-ghost"
+                onClick={() => {
+                  setSelectedSpaceForListingsModal(null);
+                  navigate('/user/listings');
+                }}
+              >
+                Tất cả bài đăng →
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  const s = selectedSpaceForListingsModal;
+                  setSelectedSpaceForListingsModal(null);
+                  handleCreateListingForSpace(s);
+                }}
+              >
+                <Plus size={14} /> Đăng bài mới
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {viewingSpace && createPortal(
@@ -526,6 +742,64 @@ export const OwnerSpaces: React.FC = () => {
                     <span className="text-muted text-xs">{t('spaces.notConfigured') || 'Không ràng buộc'}</span>
                   )}
                 </div>
+              </div>
+
+              <div className="form-section">
+                <div className="form-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Bài đăng thuộc mặt bằng này</span>
+                  {isLoadingSpaceListings && <span className="text-muted text-xs">Đang tải...</span>}
+                </div>
+                {!isLoadingSpaceListings && viewingSpaceListings.length === 0 && (
+                  <p className="text-muted text-xs" style={{ margin: 0 }}>Mặt bằng này chưa có bài đăng nào.</p>
+                )}
+                {!isLoadingSpaceListings && viewingSpaceListings.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                    {viewingSpaceListings.map((l: any, idx: number) => (
+                      <div
+                        key={l.id || l.Id || idx}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          background: 'var(--color-bg-secondary)',
+                          border: '1px solid var(--color-border)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px'
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                            <strong style={{ fontSize: '13px', color: 'var(--color-text-primary)' }} className="truncate">
+                              {l.name || 'Bài đăng chưa đặt tên'}
+                            </strong>
+                            <span className="badge badge--accent badge-sm" style={{ fontSize: '10px', padding: '1px 6px' }}>
+                              {l.listingType === 'SharedSpace' || l.listingType === 1 ? 'Chia sẻ' : 'Dài hạn'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'flex', gap: '12px' }}>
+                            <span>Giá: <strong style={{ color: '#10B981' }}>{l.price ? `${Number(l.price).toLocaleString('vi-VN')}₫` : 'Thỏa thuận'}</strong>{getPriceUnitText(l.priceUnit)}</span>
+                            {l.viewCount !== undefined && <span>Lượt xem: {l.viewCount}</span>}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {getListingStatusBadge(l.status)}
+                          <button
+                            className="btn-ghost"
+                            style={{ fontSize: '11px', padding: '3px 8px', height: '26px', gap: '4px', whiteSpace: 'nowrap', color: '#3b82f6', background: 'rgba(59, 130, 246, 0.08)' }}
+                            onClick={() => {
+                              setViewingSpace(null);
+                              handleNavigateToListing(l);
+                            }}
+                            title="Xem trên trang /user/listings"
+                          >
+                            <Eye size={12} /> Xem ở /user/listings
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

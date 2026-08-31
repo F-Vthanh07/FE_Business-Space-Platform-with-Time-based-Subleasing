@@ -99,7 +99,7 @@ const cropBannerFile = async (file: File, previewUrl: string, position: { x: num
   return new File([blob], file.name, { type: blob.type || file.type, lastModified: Date.now() });
 };
 
-export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, initialData, mode: formMode = initialData ? 'edit' : 'create' }) => {
+export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, initialData, mode: formMode = (initialData?.id || initialData?.Id) ? 'edit' : 'create' }) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [mySpaces, setMySpaces] = useState<any[]>([]);
@@ -107,7 +107,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const { isVerified } = useIdentityVerification();
 
   const isRenewMode = formMode === 'renew';
-  const isEditingListing = !!initialData && !isRenewMode;
+  const isEditingListing = !!(initialData?.id || initialData?.Id) && !isRenewMode;
   const lockRenewFields = isRenewMode;
   const [priorityLevels, setPriorityLevels] = useState<PriorityLevel[]>([]);
   const [bannerPriorityLevels, setBannerPriorityLevels] = useState<PriorityLevel[]>([]);
@@ -129,8 +129,8 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
   const [isDraggingBannerImage, setIsDraggingBannerImage] = useState(false);
   const bannerImageDragRef = useRef(false);
 
-  // Đã sửa: Dựa vào listingType thật từ API để quyết định form
-  const initialMode: ListingMode = initialData?.listingType === 'SharedSpace' ? 'share' : 'longterm';
+  // Dựa vào listingType thật từ API hoặc initialMode để quyết định form
+  const initialMode: ListingMode = (initialData?.initialMode || (initialData?.listingType === 'SharedSpace' ? 'share' : 'longterm'));
   const [mode, setMode] = useState<ListingMode>(initialMode);
 
   const [spaceId, setSpaceId] = useState<number | ''>(initialData?.spaceId ? Number(initialData.spaceId) : '');
@@ -144,6 +144,16 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
       setSpaceId(Number(initialData.spaceId));
     }
   }, [initialData?.spaceId]);
+
+  // Nếu mặt bằng được chọn là mặt bằng thuê lại (Quyền sử dụng / UsageRight), tự động chuyển sang tab Chia sẻ mặt bằng
+  useEffect(() => {
+    if (spaceId && mySpaces.length > 0 && !initialData?.id) {
+      const selectedSpaceObj = mySpaces.find(s => (s.id || s.Id) === Number(spaceId));
+      if (selectedSpaceObj?.isFromUsageRight) {
+        setMode('share');
+      }
+    }
+  }, [spaceId, mySpaces, initialData?.id]);
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -866,7 +876,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
         const targetId = initialData?.id || initialData?.Id;
         let createdShareListingId: any = targetId;
 
-        if (initialData) {
+        if (initialData?.id || initialData?.Id) {
           await updateShareListing(initialData.id || initialData.Id, sharePayload);
         } else {
           const created = await createShareListing(sharePayload, amount, durationInDays);
@@ -919,7 +929,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
     }
 
     try {
-      const isEditing = !!initialData;
+      const isEditing = !!(initialData?.id || initialData?.Id);
       const targetId = initialData?.id || initialData?.Id;
       const url = isEditing
         ? `https://flexi-space-capstone-project.onrender.com/api/Listing/Update/${targetId}`
@@ -1024,7 +1034,7 @@ export const ListingForm: React.FC<ListingFormProps> = ({ onClose, onSuccess, in
             </div>
             <div>
               <h2 className="modal-title">
-                {initialData ? 'Cập nhật bài đăng' : 'Tạo bài đăng cho thuê'}
+                {isEditingListing ? 'Cập nhật bài đăng' : (isRenewMode ? 'Gia hạn bài đăng' : 'Tạo bài đăng cho thuê')}
               </h2>
               <p className="modal-subtitle text-secondary">Thông tin bài đăng hiển thị công khai trên chợ thuê</p>
             </div>
