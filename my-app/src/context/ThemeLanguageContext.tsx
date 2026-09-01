@@ -284,6 +284,10 @@ const translations: Translations = {
     en: 'Weekend time slots (9:00 - 12:00) tend to have the highest occupancy rate. Consider optimizing your pricing.',
     vi: 'Khung giờ cuối tuần (9:00 - 12:00) thường có tỷ lệ lấp đầy cao nhất. Hãy cân nhắc tối ưu giá thuê.',
   },
+  'overview.tip3': {
+    en: 'After a wallet top-up, the balance may take 2-5 minutes to update while the system processes the payment.',
+    vi: 'Sau khi nạp tiền vào ví, số dư có thể mất 2-5 phút để cập nhật do hệ thống cần thời gian xử lý giao dịch.',
+  },
   'overview.accountInfo': { en: 'Account Info', vi: 'Thông tin tài khoản' },
   'overview.role': { en: 'Role', vi: 'Vai trò' },
   'overview.status': { en: 'Status', vi: 'Trạng thái' },
@@ -1105,6 +1109,7 @@ const translations: Translations = {
   'wallet.deposit.processing': { en: 'Processing...', vi: 'Đang xử lý...' },
   'wallet.deposit.minAmount': { en: 'Minimum deposit must be greater than 2,000 VND', vi: 'Số tiền nạp phải lớn hơn 2.000₫' },
   'wallet.deposit.secureNote': { en: 'Payments are processed securely. FlexiSpace never stores your card details.', vi: 'Giao dịch được xử lý bảo mật. FlexiSpace không lưu trữ thông tin thẻ của bạn.' },
+  'wallet.deposit.pendingNotice': { en: 'Note: after a successful deposit, your wallet balance may take 2-5 minutes to update while the system processes the transaction.', vi: 'Lưu ý: sau khi nạp tiền thành công, số dư ví có thể mất 2-5 phút để cập nhật do hệ thống cần thời gian xử lý giao dịch.' },
 
   'wallet.history.title': { en: 'Transaction History', vi: 'Lịch sử giao dịch' },
   'wallet.history.subtitle': { en: 'All wallet activity in one place', vi: 'Toàn bộ hoạt động của ví tại một nơi' },
@@ -1130,7 +1135,7 @@ const translations: Translations = {
   'wallet.txn.refundLabel': { en: 'Refund', vi: 'Hoàn tiền' },
 
   'wallet.payment.successTitle': { en: 'Payment Successful', vi: 'Thanh toán thành công' },
-  'wallet.payment.successDesc': { en: 'Your wallet has been topped up successfully. The funds are now available to use.', vi: 'Ví của bạn đã được nạp tiền thành công. Số dư đã sẵn sàng để sử dụng.' },
+  'wallet.payment.successDesc': { en: 'Your payment was received. The system is processing your deposit — your wallet balance will be updated within 2-5 minutes.', vi: 'Chúng tôi đã nhận được thanh toán của bạn. Hệ thống đang xử lý giao dịch nạp tiền — số dư ví sẽ được cập nhật trong khoảng 2-5 phút.' },
   'wallet.payment.failedTitle': { en: 'Payment Failed', vi: 'Thanh toán thất bại' },
   'wallet.payment.failedDesc': { en: 'We could not process your payment. No amount has been deducted from your account.', vi: 'Chúng tôi không thể xử lý giao dịch này. Không có khoản tiền nào bị trừ từ tài khoản của bạn.' },
   'wallet.payment.transactionId': { en: 'Transaction ID', vi: 'Mã giao dịch' },

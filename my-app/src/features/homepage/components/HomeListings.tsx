@@ -7,8 +7,6 @@ import { getPriceUnitText } from '../../../utils/formatPriceUnit';
 interface HomeListingsProps {
   onCardClick: (id: string) => void;
   selectedId: string;
-  isMapMode?: boolean;
-  onToggleMap?: () => void;
 }
 
 // Ảnh mặc định duy nhất, chỉ dùng khi bài đăng KHÔNG có ảnh thật nào
@@ -48,8 +46,6 @@ const getRentalCategory = (listing: any): RentalCategory => {
 
 export const HomeListings: React.FC<HomeListingsProps> = ({
   selectedId,
-  isMapMode,
-  onToggleMap,
 }) => {
   const [listings, setListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
