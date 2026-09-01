@@ -174,6 +174,7 @@ export const ListingDetail: React.FC = () => {
 
   const [listing, setListing] = useState<any | null>(null);
   const [similarListings, setSimilarListings] = useState<any[]>([]);
+  const [subleaseContract, setSubleaseContract] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -386,6 +387,24 @@ export const ListingDetail: React.FC = () => {
               return itemId?.toString() === id.toString();
             });
             setIsFavorite(isFav);
+          }
+        }
+
+        // BƯỚC 6: LẤY THÔNG TIN HỢP ĐỒNG CHO THUÊ LẠI (SUBLEASE CONTRACT)
+        if (id) {
+          try {
+            const contractRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Contract/sublease-info/${id}`, {
+              headers: { accept: '*/*' }
+            });
+            if (contractRes.ok) {
+              const contractData = await contractRes.json();
+              const contractObj = contractData?.data || contractData;
+              if (contractObj && contractObj.hasContract) {
+                setSubleaseContract(contractObj);
+              }
+            }
+          } catch (cErr) {
+            console.error("Lỗi lấy thông tin hợp đồng sublease:", cErr);
           }
         }
 
@@ -768,21 +787,29 @@ export const ListingDetail: React.FC = () => {
                          <div style={{ position: 'absolute', width: '100%', height: '100%', filter: 'blur(4px)', background: 'url("https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=200") center/cover' }} />
                          <Lock size={24} color="#047857" style={{ position: 'relative', zIndex: 1 }} />
                        </div>
-                       <div style={{ flex: 1, fontSize: '13px', color: '#065F46' }}>
-                         <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '4px', marginBottom: '8px' }}>
-                           <span style={{ fontWeight: 600 }}>Người thuê gốc:</span>
-                           <span>{(listing.ownerName || 'Nguyễn Văn A').substring(0, 8)}***</span>
-                           
-                           <span style={{ fontWeight: 600 }}>Thời hạn HĐ:</span>
-                           <span>{listing.allowedEndTime ? new Date(listing.allowedEndTime).toLocaleDateString('vi-VN') : 'Còn hiệu lực (Đã xác minh)'}</span>
-                         </div>
-                         <button 
-                           onClick={() => setIsContractModalOpen(true)}
-                           style={{ padding: '6px 12px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
-                         >
-                           Xem chi tiết hợp đồng
-                         </button>
-                       </div>
+                        <div style={{ flex: 1, fontSize: '13px', color: '#065F46' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '4px', marginBottom: '8px' }}>
+                            <span style={{ fontWeight: 600 }}>Người thuê gốc:</span>
+                            <span>{(subleaseContract?.lesseeName || listing.ownerName || 'Nguyễn Văn A').substring(0, 8)}***</span>
+                            
+                            <span style={{ fontWeight: 600 }}>Thời hạn HĐ:</span>
+                            <span>{subleaseContract?.startDate ? `${new Date(subleaseContract.startDate).toLocaleDateString('vi-VN')} - ${new Date(subleaseContract.endDate).toLocaleDateString('vi-VN')}` : (listing.allowedEndTime ? new Date(listing.allowedEndTime).toLocaleDateString('vi-VN') : 'Còn hiệu lực (Đã xác minh)')}</span>
+
+                            <span style={{ fontWeight: 600 }}>Quyền chia sẻ:</span>
+                            <span style={{ color: subleaseContract?.canShare !== false ? '#10B981' : '#EF4444', fontWeight: 600 }}>
+                              {subleaseContract?.canShare !== false ? 'Được phép cho thuê lại' : 'Không được phép'}
+                            </span>
+
+                            <span style={{ fontWeight: 600 }}>Diện tích HĐ:</span>
+                            <span>{subleaseContract?.acreage ? `${subleaseContract.acreage} m²` : (listing.area ? `${listing.area} m²` : 'Đã xác minh')}</span>
+                          </div>
+                          <button 
+                            onClick={() => setIsContractModalOpen(true)}
+                            style={{ padding: '6px 12px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                          >
+                            Xem chi tiết hợp đồng
+                          </button>
+                        </div>
                      </div>
                    </div>
                  </>
@@ -1542,12 +1569,10 @@ export const ListingDetail: React.FC = () => {
                 </div>
                 <h2 style={{ textAlign: 'center', margin: '30px 0', fontSize: '24px' }}>HỢP ĐỒNG THUÊ MẶT BẰNG</h2>
                 <div style={{ lineHeight: '1.8', color: '#333' }}>
-                  <p><strong>Bên Cho Thuê (Bên A):</strong> Chủ mặt bằng gốc</p>
-                  <p><strong>Bên Thuê (Bên B):</strong> {(listing.ownerName || 'Nguyễn Văn A')}</p>
-                  <p><strong>Diện tích thuê:</strong> {listing.area || 'Không rõ'} m2</p>
+                  <p><strong>Diện tích thuê (Acreage):</strong> {subleaseContract?.acreage ?? listing.area ?? 'Không rõ'} m²</p>
                   <p><strong>Địa chỉ:</strong> {listing.spaceAddress || listing.address || listing.location || 'Hồ Chí Minh'}</p>
-                  <p><strong>Thời hạn thuê:</strong> Từ 01/01/2023 đến {listing.allowedEndTime ? new Date(listing.allowedEndTime).toLocaleDateString('vi-VN') : '31/12/2025'}</p>
-                  <p><strong>Điều khoản đặc biệt:</strong> Bên B <span style={{ color: '#10B981', fontWeight: 'bold' }}>ĐƯỢC PHÉP</span> cho thuê lại (sublease) một phần hoặc toàn bộ mặt bằng trong thời gian hợp đồng còn hiệu lực.</p>
+                  <p><strong>Thời hạn hợp đồng (StartDate - EndDate):</strong> {subleaseContract?.startDate ? `Từ ${new Date(subleaseContract.startDate).toLocaleDateString('vi-VN')} đến ${new Date(subleaseContract.endDate).toLocaleDateString('vi-VN')}` : `Từ 01/01/2023 đến ${listing.allowedEndTime ? new Date(listing.allowedEndTime).toLocaleDateString('vi-VN') : '31/12/2025'}`}</p>
+                  <p><strong>Điều khoản đặc biệt (CanShare):</strong> Bên B <span style={{ color: subleaseContract?.canShare !== false ? '#10B981' : '#EF4444', fontWeight: 'bold' }}>{subleaseContract?.canShare !== false ? 'ĐƯỢC PHÉP' : 'KHÔNG ĐƯỢC PHÉP'}</span> cho thuê lại (sublease) một phần hoặc toàn bộ mặt bằng trong thời gian hợp đồng còn hiệu lực.</p>
                 </div>
                 
                 {/* Fake image to simulate a real document scan */}
