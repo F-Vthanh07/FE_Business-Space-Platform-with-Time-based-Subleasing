@@ -16,8 +16,8 @@ export const VerificationWarningBanner: React.FC<VerificationWarningBannerProps>
       <AlertTriangle size={16} className="warning-banner-icon" />
       <span className="warning-banner-text">
         {isEn
-          ? "You haven't verified your identity yet. Verification is required to post listings or book a space."
-          : 'Bạn chưa xác thực định danh. Cần xác thực để đăng tin cho thuê hoặc đặt thuê mặt bằng.'}
+          ? "You haven't verified your identity yet. Verification is required to sign a contract."
+          : 'Bạn chưa xác thực định danh. Cần xác thực để ký kết hợp đồng.'}
       </span>
       {onVerifyClick && (
         <button type="button" className="warning-banner-action" onClick={onVerifyClick}>

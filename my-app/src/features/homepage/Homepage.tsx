@@ -4,7 +4,7 @@
 // src/features/homepage/Homepage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-import { ChevronLeft, ChevronRight, Navigation, Brain, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Brain, ArrowRight, Wand2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useThemeLanguage } from '../../context/ThemeLanguageContext';
 import { API_BASE_URL } from '../../config/api';
@@ -277,8 +277,6 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
           <HomeListings
             selectedId={selectedVenueId}
             onCardClick={(id) => setSelectedVenueId(id)}
-            isMapMode={false}
-            onToggleMap={() => {}}
           />
 
         </div>
@@ -373,7 +371,7 @@ export const Homepage: React.FC<HomepageProps> = ({ onLaunch: _onLaunch }) => {
             </p>
             <ul className="feature-list" style={{ marginBottom: '24px' }}>
               <li><Brain size={18} /> Phân tích & Gợi ý bố cục nội thất thông minh</li>
-              <li><Map size={18} /> Xóa vật thể thừa, tự động làm sáng không gian</li>
+              <li><Wand2 size={18} /> Xóa vật thể thừa, tự động làm sáng không gian</li>
             </ul>
             <button className="btn-primary feature-cta" style={{ background: '#00d4a0', borderColor: '#00d4a0', color: '#fff' }} onClick={() => navigate('/ai-image-editor')}>
               Trải Nghiệm AI Editor <ArrowRight size={16} />

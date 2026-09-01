@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Wallet, Plus, ArrowUpRight, TrendingUp, TrendingDown, Inbox } from 'lucide-react';
+import { Wallet, Plus, ArrowUpRight, TrendingUp, TrendingDown, Inbox, Clock3 } from 'lucide-react';
 import { useThemeLanguage } from '../../../context/ThemeLanguageContext';
 import { formatVnd } from '../utils/format';
 import { fetchWalletAccount, fetchTransactionHistory } from '../api/wallet.api';
@@ -18,6 +18,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({ onNavigate }) =>
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [, setBalanceError] = useState('');
   const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
+
   useEffect(() => {
     const token = localStorage.getItem('portal_token') || '';
     fetchWalletAccount(token)
@@ -47,6 +48,11 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({ onNavigate }) =>
           <h1 className="page-title">{t('wallet.title')}</h1>
           <p className="page-subtitle text-secondary">{t('wallet.subtitle')}</p>
         </div>
+      </div>
+
+      <div className="glass-card wallet-pending-notice" role="status">
+        <Clock3 size={16} className="wallet-pending-notice-icon" />
+        <span className="wallet-pending-notice-text">{t('wallet.deposit.pendingNotice')}</span>
       </div>
 
       {/* Hero balance card */}

@@ -599,6 +599,12 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
                 </div>
                 <p className="tip-text">{t('overview.tip2')}</p>
               </div>
+              <div className="tip-item">
+                <div className="tip-icon">
+                  <Wallet size={12} />
+                </div>
+                <p className="tip-text">{t('overview.tip3')}</p>
+              </div>
             </div>
           </div>
         </div>
