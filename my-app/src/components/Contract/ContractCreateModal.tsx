@@ -408,6 +408,47 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
 
         setMatchedBookingRequests(matched);
 
+        // Fetch space details using GetById for each matched request so part-spaces are included
+        const spaceIdsToFetch = Array.from(new Set(matched.map((r: any) => r.spaceId).filter(Boolean)));
+        if (spaceIdsToFetch.length > 0) {
+          const spacePromises = spaceIdsToFetch.map(async (id: any) => {
+            try {
+              const res = await fetch(`${API_BASE}/api/Space/GetById${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (res.ok) return await res.json();
+            } catch {}
+            return null;
+          });
+          
+          const resolvedSpaces = (await Promise.all(spacePromises)).filter(Boolean);
+          setMySpaces((prev) => {
+            const combined = [...prev, ...resolvedSpaces];
+            return Array.from(new Map(combined.map((s) => [s.id || s.Id, s])).values());
+          });
+          
+          // Also fetch owner names for these spaces just in case
+          const ownerIds = Array.from(new Set(resolvedSpaces.map((s: any) => s.ownerId || s.OwnerId).filter(Boolean)));
+          if (ownerIds.length > 0) {
+            const ownerPromises = ownerIds.map(async (id: any) => {
+              try {
+                  const resp = await fetch(`${API_BASE}/api/User/${id}`, { headers: { 'Authorization': `Bearer ${token}` }});
+                  if (resp.ok) {
+                      const data = await resp.json();
+                      return { id, name: data.profileFullName || data.userName || data.email };
+                  }
+              } catch {}
+              return { id, name: 'Unknown' };
+            });
+            const resolvedOwners = await Promise.all(ownerPromises);
+            setOwnerNames((prev) => {
+              const newMap = { ...prev };
+              resolvedOwners.forEach(o => { newMap[o.id] = o.name; });
+              return newMap;
+            });
+          }
+        }
+
         // Chỉ auto-fill theo request khi đang TẠO MỚI (không phải sửa)
         if (!existingContract && matched.length === 1) {
           const only = matched[0];
@@ -994,8 +1035,8 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                   required
                   value={contractData.spaceId}
                   onChange={(e) => setContractData({ ...contractData, spaceId: e.target.value })}
-                  disabled={!!contractData.primaryBookingRequestId}
-                  style={contractData.primaryBookingRequestId ? { backgroundColor: '#F1F5F9', cursor: 'not-allowed', color: '#64748B' } : undefined}
+                  disabled={true}
+                  style={{ backgroundColor: '#F1F5F9', cursor: 'not-allowed', color: '#64748B' }}
                 >
                   <option value="" disabled>
                     -- Chọn mặt bằng --

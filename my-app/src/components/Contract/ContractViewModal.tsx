@@ -268,15 +268,13 @@ export const ContractViewModal: React.FC<ContractViewModalProps> = ({
 
     const fetchSpace = async (sId: string) => {
       try {
-        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetAll`, {
+        const res = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetById${sId}`, {
           headers: { Authorization: `Bearer ${token}`, accept: '*/*' },
         });
         if (res.ok) {
           const data = await res.json();
-          const items = Array.isArray(data) ? data : (data?.data || data?.items || []);
-          const matchedSpace = items.find((s: any) => String(s.id || s.Id) === String(sId));
-          if (matchedSpace) {
-            setSpaceDetail(matchedSpace);
+          if (data) {
+            setSpaceDetail(data);
           }
         }
       } catch (err) {}
