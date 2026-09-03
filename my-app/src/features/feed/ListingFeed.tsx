@@ -272,7 +272,9 @@ export const ListingFeed: React.FC = () => {
               city: city,
               isSpacePart: item.isSpacePart,
               allowedCategories,
-              spaceOwnerId
+              spaceOwnerId,
+              _parentSpaceInfo: item._parentSpace || (item.isSpacePart && spaceOrPart?.parentSpaceId ? spaces.find((s: any) => (s.id || s.Id) == spaceOrPart.parentSpaceId) : null),
+              _spacePartInfo: item.isSpacePart ? spaceOrPart : null
             };
           });
         }
@@ -772,6 +774,23 @@ export const ListingFeed: React.FC = () => {
                       </div>
                     )}
                     <ExpandableDescription text={item.description} />
+                    
+                    {item.isSpacePart && item._parentSpaceInfo && (
+                      <div style={{ marginTop: '12px', padding: '8px', backgroundColor: '#F8FAFC', border: '1px dashed #CBD5E1', borderRadius: '8px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <div style={{ width: '48px', height: '48px', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
+                           <img 
+                              src={(getListingPictureUrls(item._parentSpaceInfo.pictureURLs || item._parentSpaceInfo.spacePictures || item._parentSpaceInfo.pictures)?.[0] || 'https://via.placeholder.com/150')}
+                              alt="Parent Space"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                           />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                           <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Thuộc mặt bằng gốc</div>
+                           <div style={{ fontSize: '13px', fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item._parentSpaceInfo.name || 'Không gian gốc'}</div>
+                           <div style={{ fontSize: '12px', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Mặt bằng: {item._spacePartInfo?.name || 'Mặt bằng này'}</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* KHU VỰC ẢNH */}

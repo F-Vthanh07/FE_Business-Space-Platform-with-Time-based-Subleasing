@@ -1,9 +1,10 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { MapPin, Share2, Heart, ChevronRight, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Tag, Flag, Star, Sofa, Wand2, Eye, ShieldCheck, Lock, FileText, CheckSquare, Briefcase } from 'lucide-react';
+import { MapPin, Share2, Heart, ChevronRight, ChevronLeft, Home, Calendar, Edit3, Send, X, ClipboardSignature, Wifi, Snowflake, Car, Sparkles, Tag, Flag, Star, Sofa, Wand2, Eye, ShieldCheck, Lock, FileText, CheckSquare, Briefcase, Maximize } from 'lucide-react';
 import { Header } from '../../components/Header';
 import { Copy, Check, Mail } from "lucide-react";
 import { FaFacebook, FaFacebookMessenger, FaTelegramPlane, FaLink } from "react-icons/fa";
@@ -177,6 +178,7 @@ export const ListingDetail: React.FC = () => {
   const [subleaseContract, setSubleaseContract] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [viewingImages, setViewingImages] = useState<string[] | null>(null);
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -316,7 +318,9 @@ export const ListingDetail: React.FC = () => {
               amenities: found.amenities || spaceOrPart?.amenities || parentSpace?.amenities || [],
               allowedCategories: (found.spaceAllowedCategories?.length > 0 ? found.spaceAllowedCategories : null) || (spaceOrPart?.spaceAllowedCategories?.length > 0 ? spaceOrPart.spaceAllowedCategories : null) || parentSpace?.spaceAllowedCategories || [],
               isSpacePart,
-              spaceOwnerId
+              spaceOwnerId,
+              _parentSpaceInfo: parentSpace || (isSpacePart && spaceOrPart?.parentSpaceId ? spaces.find((s: any) => (s.id || s.Id) == spaceOrPart.parentSpaceId) : null),
+              _spacePartInfo: isSpacePart ? spaceOrPart : null
             };
           }
           setListing(foundWithSpaceInfo);
@@ -646,8 +650,18 @@ export const ListingDetail: React.FC = () => {
           {/* CỘT TRÁI */}
           <div>
             <div style={{ backgroundColor: '#000', borderRadius: '8px', overflow: 'hidden', marginBottom: '12px', position: 'relative' }}>
-              <img src={mainImage} alt="Main" style={{ width: '100%', height: '450px', objectFit: 'contain', display: 'block' }} />
-              <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 12px', borderRadius: '16px', fontSize: '13px' }}>
+              <img 
+                src={mainImage} 
+                alt="Main" 
+                style={{ width: '100%', height: '450px', objectFit: 'contain', display: 'block', cursor: 'pointer' }} 
+                onClick={() => {
+                  if (realImages.length > 0) {
+                    setViewingImages(realImages.map((img: any) => getUrl(img)));
+                    setCurrentImageIndex(currentImageIndex);
+                  }
+                }}
+              />
+              <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 12px', borderRadius: '16px', fontSize: '13px', pointerEvents: 'none' }}>
                 {currentImageIndex + 1} / {realImages.length || 1}
               </div>
             </div>
@@ -850,6 +864,81 @@ export const ListingDetail: React.FC = () => {
                 ) : null
               )}
             </div>
+
+            {/* THÔNG TIN MẶT BẰNG */}
+            {listing._parentSpaceInfo && (
+              <>
+                <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Thông tin mặt bằng</h3>
+                <div style={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '20px', marginBottom: '40px' }}>
+                  
+                  {/* MAIN SPACE INFO (Target Space: SpacePart if isSpacePart, otherwise Root Space) */}
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '16px' }}>
+                    <div style={{ width: '120px', height: '90px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
+                      <img 
+                        src={(
+                          getListingPictureUrls(listing.isSpacePart && listing._spacePartInfo ? (listing._spacePartInfo.pictureURLs || listing._spacePartInfo.pictures) : null)?.[0] || 
+                          getListingPictureUrls(listing._parentSpaceInfo.pictureURLs || listing._parentSpaceInfo.spacePictures || listing._parentSpaceInfo.pictures)?.[0] || 
+                          'https://via.placeholder.com/300x200?text=No+Image'
+                        )}
+                        alt="Hình ảnh mặt bằng"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                        onClick={() => {
+                          const img = (
+                            getListingPictureUrls(listing.isSpacePart && listing._spacePartInfo ? (listing._spacePartInfo.pictureURLs || listing._spacePartInfo.pictures) : null)?.[0] || 
+                            getListingPictureUrls(listing._parentSpaceInfo.pictureURLs || listing._parentSpaceInfo.spacePictures || listing._parentSpaceInfo.pictures)?.[0]
+                          );
+                          if (img) {
+                             setViewingImages([img]);
+                             setCurrentImageIndex(0);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#0F172A' }}>
+                        {listing.isSpacePart && listing._spacePartInfo ? listing._spacePartInfo.name : (listing._parentSpaceInfo.name || 'Chưa cập nhật tên')}
+                      </h4>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748B', fontSize: '13px', marginBottom: '4px' }}>
+                        <MapPin size={14} />
+                        <span>{listing._parentSpaceInfo.address || listing._parentSpaceInfo.location || 'Chưa cập nhật địa chỉ'}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748B', fontSize: '13px' }}>
+                        <Maximize size={14} />
+                        <span>Diện tích: {listing.isSpacePart && listing._spacePartInfo && listing._spacePartInfo.area ? `${listing._spacePartInfo.area} m²` : (listing._parentSpaceInfo.area ? `${listing._parentSpaceInfo.area} m²` : 'Đang cập nhật')}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PARENT SPACE INFO (Only if it's a SpacePart) */}
+                  {listing.isSpacePart && listing._spacePartInfo && (
+                    <div style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '16px', border: '1px dashed #CBD5E1', display: 'flex', gap: '16px', alignItems: 'center' }}>
+                      <div style={{ width: '80px', height: '60px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
+                        <img 
+                          src={(
+                            getListingPictureUrls(listing._parentSpaceInfo.pictureURLs || listing._parentSpaceInfo.spacePictures || listing._parentSpaceInfo.pictures)?.[0] || 
+                            'https://via.placeholder.com/300x200?text=No+Image'
+                          )}
+                          alt="Không gian gốc"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                          onClick={() => {
+                            const img = getListingPictureUrls(listing._parentSpaceInfo.pictureURLs || listing._parentSpaceInfo.spacePictures || listing._parentSpaceInfo.pictures)?.[0];
+                            if (img) {
+                               setViewingImages([img]);
+                               setCurrentImageIndex(0);
+                            }
+                          }}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#64748B', fontWeight: 600 }}>Thuộc mặt bằng gốc</h5>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B', marginBottom: '4px' }}>{listing._parentSpaceInfo.name || 'Không gian gốc'}</div>
+                        <div style={{ fontSize: '12px', color: '#475569' }}>Tổng diện tích: {listing._parentSpaceInfo.area ? `${listing._parentSpaceInfo.area} m²` : 'Đang cập nhật'}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* TIỆN ÍCH */}
             {activeAmenities.length > 0 && (
@@ -1587,6 +1676,54 @@ export const ListingDetail: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+      {/* MODAL XEM ẢNH FULL MÀN HÌNH */}
+      {viewingImages && createPortal(
+        <div
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 999999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setViewingImages(null)}
+        >
+          <button
+            onClick={() => setViewingImages(null)}
+            style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
+          >
+            <X size={24} color="#fff" />
+          </button>
+
+          {viewingImages.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : viewingImages.length - 1)); }}
+              style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
+            >
+              <ChevronLeft size={32} color="#fff" />
+            </button>
+          )}
+
+          <div style={{ width: '90%', height: '90%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img
+              src={viewingImages[currentImageIndex]}
+              alt="fullscreen view"
+              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+
+          {viewingImages.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((prev) => (prev < viewingImages.length - 1 ? prev + 1 : 0)); }}
+              style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}
+            >
+              <ChevronRight size={32} color="#fff" />
+            </button>
+          )}
+
+          {viewingImages.length > 1 && (
+            <div style={{ position: 'absolute', bottom: '20px', color: '#fff', fontSize: '16px', fontWeight: 'bold' }}>
+              {currentImageIndex + 1} / {viewingImages.length}
+            </div>
+          )}
+        </div>,
+        document.body
       )}
 
     </div>

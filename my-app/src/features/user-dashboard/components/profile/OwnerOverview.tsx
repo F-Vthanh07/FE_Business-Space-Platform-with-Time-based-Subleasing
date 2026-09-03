@@ -174,7 +174,13 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
       const allListings = listingsResult.status === 'fulfilled' ? listingsResult.value : [];
       // Filter listings to only those belonging to the user's spaces
       const spaceIds = new Set(spaces.map((s) => s.id || (s as any).Id));
-      const userListings = allListings.filter((l: any) => spaceIds.has(l.spaceId || l.SpaceId));
+      const userListings = allListings.filter((l: any) => spaceIds.has(l.spaceId || l.SpaceId)).map((l: any) => {
+        const space = spaces.find(s => (s.id || (s as any).Id) === (l.spaceId || l.SpaceId));
+        return {
+          ...l,
+          name: l.name || l.title || space?.name || 'Chưa đặt tên'
+        };
+      });
       setListingsData(userListings);
       
       setPendingBookings(bookingsResult.status === 'fulfilled' ? bookingsResult.value : []);
@@ -511,7 +517,7 @@ export const OwnerOverview: React.FC<OwnerOverviewProps> = ({ onNavigate }) => {
                         </div>
                         <div className="summary-meta">
                           <span className="summary-name">
-                            {listing.location || listing.address || listing.title || (language === 'en' ? 'Unnamed listing' : 'Chưa đặt tên')}
+                            {listing.name || listing.location || listing.address || listing.title || (language === 'en' ? 'Unnamed listing' : 'Chưa đặt tên')}
                           </span>
                           <span className="summary-sub">
                             {listing.price ? `${listing.price.toLocaleString('vi-VN')}₫/${language === 'en' ? 'hr' : 'giờ'}` : (language === 'en' ? 'Negotiable' : 'Thỏa thuận')}
