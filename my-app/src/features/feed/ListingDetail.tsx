@@ -513,8 +513,21 @@ export const ListingDetail: React.FC = () => {
         toast.success("🎉 Gửi yêu cầu thuê thành công! Vui lòng chờ chủ nhà duyệt trong mục Quản lý.");
         setIsBookingModalOpen(false);
       } else {
-        const err = await response.json().catch(() => ({}));
-        toast.error(err.message || "Có lỗi xảy ra khi gửi yêu cầu.");
+        const errText = await response.text();
+        let errorMessage = "Có lỗi xảy ra khi gửi yêu cầu.";
+        
+        if (errText.includes("You already have a pending booking request for this listing")) {
+          errorMessage = "Bạn đã có yêu cầu thuê đang chờ duyệt cho mặt bằng này rồi.";
+        } else {
+          try {
+            const errObj = JSON.parse(errText);
+            if (errObj.message) errorMessage = errObj.message;
+          } catch (e) {
+            errorMessage = errText || errorMessage;
+          }
+        }
+        
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Lỗi API Booking:", error);
@@ -846,7 +859,13 @@ export const ListingDetail: React.FC = () => {
                          const d = new Date(dateStr);
                          return d.toLocaleDateString('vi-VN');
                        };
-                       const dayStr = slot.daysOfWeek?.length > 0 ? slot.daysOfWeek.join(', ') : (slot.specificdate ? formatDate(slot.specificdate) : 'Hôm nay');
+                       const dayMapping: any = {
+                         'Monday': 'Thứ 2', 'Tuesday': 'Thứ 3', 'Wednesday': 'Thứ 4',
+                         'Thursday': 'Thứ 5', 'Friday': 'Thứ 6', 'Saturday': 'Thứ 7', 'Sunday': 'Chủ nhật',
+                         '1': 'Thứ 2', '2': 'Thứ 3', '3': 'Thứ 4', '4': 'Thứ 5', '5': 'Thứ 6', '6': 'Thứ 7', '0': 'Chủ nhật'
+                       };
+                       const getDayName = (d: string | number) => dayMapping[d?.toString()] || d;
+                       const dayStr = slot.daysOfWeek?.length > 0 ? slot.daysOfWeek.map(getDayName).join(', ') : (slot.specificdate ? formatDate(slot.specificdate) : 'Hôm nay');
                        return (
                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                            <span style={{ fontWeight: 600, color: '#0F172A', fontSize: '14px' }}>{dayStr}</span>
@@ -870,33 +889,29 @@ export const ListingDetail: React.FC = () => {
               <>
                 <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#2C2C2C' }}>Thông tin mặt bằng</h3>
                 <div style={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '20px', marginBottom: '40px' }}>
-                  
-                  {/* MAIN SPACE INFO (Target Space: SpacePart if isSpacePart, otherwise Root Space) */}
-                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '16px' }}>
-                    <div style={{ width: '120px', height: '90px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
-                      <img 
-                        src={(
-                          getListingPictureUrls(listing.isSpacePart && listing._spacePartInfo ? (listing._spacePartInfo.pictureURLs || listing._spacePartInfo.pictures) : null)?.[0] || 
-                          getListingPictureUrls(listing._parentSpaceInfo.pictureURLs || listing._parentSpaceInfo.spacePictures || listing._parentSpaceInfo.pictures)?.[0] || 
-                          'https://via.placeholder.com/300x200?text=No+Image'
-                        )}
-                        alt="Hình ảnh mặt bằng"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                        onClick={() => {
-                          const img = (
-                            getListingPictureUrls(listing.isSpacePart && listing._spacePartInfo ? (listing._spacePartInfo.pictureURLs || listing._spacePartInfo.pictures) : null)?.[0] || 
-                            getListingPictureUrls(listing._parentSpaceInfo.pictureURLs || listing._parentSpaceInfo.spacePictures || listing._parentSpaceInfo.pictures)?.[0]
+
+                  {/* MẶT BẰNG GỐC - Hiện trước, to hơn */}
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: listing.isSpacePart ? '16px' : '0' }}>
+                    <div style={{ width: '140px', height: '105px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
+                      {(() => {
+                        const img = getListingPictureUrls(listing._parentSpaceInfo.pictureURLs || listing._parentSpaceInfo.spacePictures || listing._parentSpaceInfo.pictures)?.[0];
+                        if (img) {
+                          return (
+                            <img 
+                              src={img}
+                              alt="Mặt bằng gốc"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                              onClick={() => { setViewingImages([img]); setCurrentImageIndex(0); }}
+                            />
                           );
-                          if (img) {
-                             setViewingImages([img]);
-                             setCurrentImageIndex(0);
-                          }
-                        }}
-                      />
+                        }
+                        return <span style={{ fontSize: '13px', color: '#94A3B8' }}>Chưa có ảnh</span>;
+                      })()}
                     </div>
                     <div>
-                      <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#0F172A' }}>
-                        {listing.isSpacePart && listing._spacePartInfo ? listing._spacePartInfo.name : (listing._parentSpaceInfo.name || 'Chưa cập nhật tên')}
+                      {listing.isSpacePart && <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, marginBottom: '4px' }}>Mặt bằng gốc</div>}
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 700, color: '#0F172A' }}>
+                        {listing._parentSpaceInfo?.name || 'Chưa cập nhật tên'}
                       </h4>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748B', fontSize: '13px', marginBottom: '4px' }}>
                         <MapPin size={14} />
@@ -904,35 +919,34 @@ export const ListingDetail: React.FC = () => {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748B', fontSize: '13px' }}>
                         <Maximize size={14} />
-                        <span>Diện tích: {listing.isSpacePart && listing._spacePartInfo && listing._spacePartInfo.area ? `${listing._spacePartInfo.area} m²` : (listing._parentSpaceInfo.area ? `${listing._parentSpaceInfo.area} m²` : 'Đang cập nhật')}</span>
+                        <span>Tổng diện tích: {listing._parentSpaceInfo.area ? `${listing._parentSpaceInfo.area} m²` : 'Đang cập nhật'}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* PARENT SPACE INFO (Only if it's a SpacePart) */}
-                  {listing.isSpacePart && listing._spacePartInfo && (
+                  {/* MẶT BẰNG NHỎ (chỉ khi là SpacePart) - Hiện sau, nhỏ hơn */}
+                  {listing.isSpacePart && (
                     <div style={{ backgroundColor: '#F8FAFC', borderRadius: '8px', padding: '16px', border: '1px dashed #CBD5E1', display: 'flex', gap: '16px', alignItems: 'center' }}>
-                      <div style={{ width: '80px', height: '60px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
-                        <img 
-                          src={(
-                            getListingPictureUrls(listing._parentSpaceInfo.pictureURLs || listing._parentSpaceInfo.spacePictures || listing._parentSpaceInfo.pictures)?.[0] || 
-                            'https://via.placeholder.com/300x200?text=No+Image'
-                          )}
-                          alt="Không gian gốc"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                          onClick={() => {
-                            const img = getListingPictureUrls(listing._parentSpaceInfo.pictureURLs || listing._parentSpaceInfo.spacePictures || listing._parentSpaceInfo.pictures)?.[0];
-                            if (img) {
-                               setViewingImages([img]);
-                               setCurrentImageIndex(0);
-                            }
-                          }}
-                        />
+                      <div style={{ width: '90px', height: '70px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
+                        {(() => {
+                          const img = getListingPictureUrls(listing._spacePartInfo ? (listing._spacePartInfo.pictureURLs || listing._spacePartInfo.pictures) : null)?.[0] || getListingPictureUrls(listing.pictureURLs || listing.pictures || listing.images)?.[0];
+                          if (img) {
+                            return (
+                              <img 
+                                src={img}
+                                alt="Mặt bằng nhỏ"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                onClick={() => { setViewingImages([img]); setCurrentImageIndex(0); }}
+                              />
+                            );
+                          }
+                          return <span style={{ fontSize: '11px', color: '#94A3B8' }}>Chưa có ảnh</span>;
+                        })()}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#64748B', fontWeight: 600 }}>Thuộc mặt bằng gốc</h5>
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B', marginBottom: '4px' }}>{listing._parentSpaceInfo.name || 'Không gian gốc'}</div>
-                        <div style={{ fontSize: '12px', color: '#475569' }}>Tổng diện tích: {listing._parentSpaceInfo.area ? `${listing._parentSpaceInfo.area} m²` : 'Đang cập nhật'}</div>
+                        <h5 style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#64748B', fontWeight: 600 }}>Mặt bằng thuê</h5>
+                        <div style={{ fontSize: '15px', fontWeight: 600, color: '#1E293B', marginBottom: '4px' }}>{listing._spacePartInfo?.name || listing.name || 'Mặt bằng chia nhỏ'}</div>
+                        <div style={{ fontSize: '12px', color: '#475569' }}>Diện tích: {listing._spacePartInfo?.area ? `${listing._spacePartInfo.area} m²` : (listing.area ? `${listing.area} m²` : 'Đang cập nhật')}</div>
                       </div>
                     </div>
                   )}
@@ -1619,7 +1633,7 @@ export const ListingDetail: React.FC = () => {
           <div style={{ backgroundColor: '#fff', borderRadius: '12px', width: '90%', maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #E0E0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
               <h2 style={{ margin: 0, fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px', color: '#1E293B' }}>
-                <ShieldCheck size={20} color="#10B981" /> Chi tiết hợp đồng gốc (Bản xem trước)
+                <ShieldCheck size={20} color="#10B981" /> Tóm tắt hợp đồng
               </h2>
               <button onClick={() => setIsContractModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
                 <X size={24} />
@@ -1663,9 +1677,6 @@ export const ListingDetail: React.FC = () => {
                   <p><strong>Thời hạn hợp đồng (StartDate - EndDate):</strong> {subleaseContract?.startDate ? `Từ ${new Date(subleaseContract.startDate).toLocaleDateString('vi-VN')} đến ${new Date(subleaseContract.endDate).toLocaleDateString('vi-VN')}` : `Từ 01/01/2023 đến ${listing.allowedEndTime ? new Date(listing.allowedEndTime).toLocaleDateString('vi-VN') : '31/12/2025'}`}</p>
                   <p><strong>Điều khoản đặc biệt (CanShare):</strong> Bên B <span style={{ color: subleaseContract?.canShare !== false ? '#10B981' : '#EF4444', fontWeight: 'bold' }}>{subleaseContract?.canShare !== false ? 'ĐƯỢC PHÉP' : 'KHÔNG ĐƯỢC PHÉP'}</span> cho thuê lại (sublease) một phần hoặc toàn bộ mặt bằng trong thời gian hợp đồng còn hiệu lực.</p>
                 </div>
-                
-                {/* Fake image to simulate a real document scan */}
-                <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=800" alt="contract scan" style={{ width: '100%', marginTop: '30px', opacity: 0.5, mixBlendMode: 'multiply' }} />
               </div>
             </div>
             

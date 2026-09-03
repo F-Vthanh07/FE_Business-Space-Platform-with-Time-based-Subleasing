@@ -787,7 +787,7 @@ export const ListingFeed: React.FC = () => {
                         <div style={{ flex: 1 }}>
                            <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Thuộc mặt bằng gốc</div>
                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item._parentSpaceInfo.name || 'Không gian gốc'}</div>
-                           <div style={{ fontSize: '12px', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Mặt bằng: {item._spacePartInfo?.name || 'Mặt bằng này'}</div>
+                           <div style={{ fontSize: '12px', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Mặt bằng: {item._spacePartInfo?.name || item.name || 'Mặt bằng chia nhỏ'}</div>
                         </div>
                       </div>
                     )}
