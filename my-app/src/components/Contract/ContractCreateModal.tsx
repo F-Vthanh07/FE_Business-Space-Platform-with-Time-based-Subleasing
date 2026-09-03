@@ -73,7 +73,6 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
   const { toast, showToast } = useToast();
   const { confirm, confirmModal } = useConfirm();
   const [mySpaces, setMySpaces] = useState<any[]>([]);
-  const [ownerNames, setOwnerNames] = useState<Record<string, string>>({});
   const [matchedBookingRequests, setMatchedBookingRequests] = useState<any[]>([]);
   const [isLoadingBookingRequests, setIsLoadingBookingRequests] = useState(false);
   const [isCreatingContract, setIsCreatingContract] = useState(false);
@@ -224,21 +223,6 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
           return Array.from(new Map(combined.map((item) => [item.id || item.Id, item])).values());
         });
 
-        const ownerIds = Array.from(new Set(uniqueSpaces.map(s => s.ownerId || s.OwnerId).filter(Boolean)));
-        const ownerPromises = ownerIds.map(async (id: any) => {
-           try {
-               const resp = await fetch(`${API_BASE}/api/User/${id}`, { headers: { 'Authorization': `Bearer ${token}` }});
-               if (resp.ok) {
-                   const data = await resp.json();
-                   return { id, name: data.profileFullName || data.userName || data.email };
-               }
-           } catch {}
-           return { id, name: 'Unknown' };
-        });
-        const resolvedOwners = await Promise.all(ownerPromises);
-        const ownerMap: Record<string, string> = {};
-        resolvedOwners.forEach(o => { ownerMap[o.id] = o.name; });
-        setOwnerNames((prev) => ({ ...prev, ...ownerMap }));
 
       } catch (err) {
         console.error(err);
@@ -430,26 +414,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
             return Array.from(new Map(combined.map((s) => [s.id || s.Id, s])).values());
           });
           
-          // Also fetch owner names for these spaces just in case
-          const ownerIds = Array.from(new Set(resolvedSpaces.map((s: any) => s.ownerId || s.OwnerId).filter(Boolean)));
-          if (ownerIds.length > 0) {
-            const ownerPromises = ownerIds.map(async (id: any) => {
-              try {
-                  const resp = await fetch(`${API_BASE}/api/User/${id}`, { headers: { 'Authorization': `Bearer ${token}` }});
-                  if (resp.ok) {
-                      const data = await resp.json();
-                      return { id, name: data.profileFullName || data.userName || data.email };
-                  }
-              } catch {}
-              return { id, name: 'Unknown' };
-            });
-            const resolvedOwners = await Promise.all(ownerPromises);
-            setOwnerNames((prev) => {
-              const newMap = { ...prev };
-              resolvedOwners.forEach(o => { newMap[o.id] = o.name; });
-              return newMap;
-            });
-          }
+
         }
 
         // Chỉ auto-fill theo request khi đang TẠO MỚI (không phải sửa)
@@ -1044,14 +1009,11 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                   <option value="" disabled>
                     -- Chọn mặt bằng --
                   </option>
-                  {mySpaces.map((space) => {
-                const ownerName = ownerNames[space.ownerId || space.OwnerId];
-                return (
-                  <option key={space.id || space.Id} value={space.id || space.Id}>
-                    {space.name || `Mặt bằng #${space.id || space.Id}`} {ownerName ? ` (Chủ: ${ownerName})` : ''}
-                  </option>
-                );
-              })}
+                  {mySpaces.map((space) => (
+                    <option key={space.id || space.Id} value={space.id || space.Id}>
+                      {space.name || `Mặt bằng #${space.id || space.Id}`}
+                    </option>
+                  ))}
                 </select>
                 {!!contractData.primaryBookingRequestId && (
                   <span style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px', display: 'block' }}>
