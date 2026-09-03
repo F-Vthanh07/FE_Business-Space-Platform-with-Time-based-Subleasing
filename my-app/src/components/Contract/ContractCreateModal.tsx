@@ -872,7 +872,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12.5px', color: '#334155' }}>
                   <div>
-                    <div style={{ fontWeight: 600, marginBottom: 4, color: '#1E293B' }}>Bên A (chủ mặt bằng)</div>
+                    <div style={{ fontWeight: 600, marginBottom: 4, color: '#1E293B' }}>Bên A (bên cho thuê)</div>
                     <div>{lessorProfile?.fullName || <span style={{ color: '#CBD5E1' }}>Chưa lấy được</span>}</div>
                     <div style={{ color: '#64748B', marginTop: 2 }}>
                       CCCD: {lessorProfile?.citizenIDNumber || '—'}
@@ -1106,9 +1106,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                           <div style={{ marginBottom: '6px' }}>
                             <strong>Tên mặt bằng:</strong> {selectedSpace.name || '—'}
                           </div>
-                          <div style={{ marginBottom: '6px' }}>
-                            <strong>Chủ sở hữu:</strong> {ownerName || '—'}
-                          </div>
+
                           <div style={{ marginBottom: '6px' }}>
                             <strong>Địa chỉ:</strong>{' '}
                             {[selectedSpace.address, selectedSpace.city].filter(Boolean).join(', ') || '—'}
