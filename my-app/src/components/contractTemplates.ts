@@ -29,7 +29,7 @@ export interface ContractTemplate {
 }
 
 export interface ContractSchedule {
-  dayOfWeek: string; // 'Monday' | 'Tuesday' | ... | 'Sunday'
+  dayOfWeek: string | number; // 'Monday' | 'Tuesday' | ... | 'Sunday' or 0-6
   startTime: string; // 'HH:mm'
   endTime: string; // 'HH:mm'
 }
@@ -81,11 +81,19 @@ const DAY_LABELS_VI: Record<string, string> = {
   Friday: 'Thứ Sáu',
   Saturday: 'Thứ Bảy',
   Sunday: 'Chủ Nhật',
+  // Fallback for C# DayOfWeek enum numeric values
+  '0': 'Chủ Nhật',
+  '1': 'Thứ Hai',
+  '2': 'Thứ Ba',
+  '3': 'Thứ Tư',
+  '4': 'Thứ Năm',
+  '5': 'Thứ Sáu',
+  '6': 'Thứ Bảy',
 };
 
 // Thứ tự chuẩn trong tuần, dùng để sắp xếp lại danh sách ngày cho đẹp
 // (tránh trường hợp người dùng tick CN trước, T2 sau mà hiển thị lộn xộn).
-const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAY_ORDER = ['Monday', '1', 'Tuesday', '2', 'Wednesday', '3', 'Thursday', '4', 'Friday', '5', 'Saturday', '6', 'Sunday', '0'];
 
 /**
  * Gom các ngày có CÙNG khung giờ (startTime-endTime) lại thành 1 nhóm để

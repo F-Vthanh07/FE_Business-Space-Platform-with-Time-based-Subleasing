@@ -37,14 +37,14 @@ const API_BASE = 'https://flexi-space-capstone-project.onrender.com';
 
 // Danh sách các ngày trong tuần dùng để hiển thị checkbox chọn lịch hoạt động.
 // value khớp với DayOfWeek mà backend mong đợi ('Monday'...'Sunday').
-const DAYS_OF_WEEK: { value: string; label: string }[] = [
-  { value: 'Monday', label: 'Thứ 2' },
-  { value: 'Tuesday', label: 'Thứ 3' },
-  { value: 'Wednesday', label: 'Thứ 4' },
-  { value: 'Thursday', label: 'Thứ 5' },
-  { value: 'Friday', label: 'Thứ 6' },
-  { value: 'Saturday', label: 'Thứ 7' },
-  { value: 'Sunday', label: 'Chủ Nhật' },
+const DAYS_OF_WEEK: { value: number; stringValue: string; label: string }[] = [
+  { value: 1, stringValue: 'Monday', label: 'Thứ 2' },
+  { value: 2, stringValue: 'Tuesday', label: 'Thứ 3' },
+  { value: 3, stringValue: 'Wednesday', label: 'Thứ 4' },
+  { value: 4, stringValue: 'Thursday', label: 'Thứ 5' },
+  { value: 5, stringValue: 'Friday', label: 'Thứ 6' },
+  { value: 6, stringValue: 'Saturday', label: 'Thứ 7' },
+  { value: 0, stringValue: 'Sunday', label: 'Chủ Nhật' },
 ];
 
 // Đơn vị thời hạn hợp đồng - PHẢI khớp đủ 4 giá trị với enum numeric của
@@ -448,13 +448,13 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
 
   // Bật/tắt 1 ngày trong lịch hoạt động. Khi bật -> thêm với khung giờ mặc
   // định 08:00-22:00 (có thể sửa lại). Khi tắt -> xóa hẳn khỏi mảng.
-  const toggleScheduleDay = (day: string) => {
+  const toggleScheduleDay = (day: number) => {
     setContractData((prev) => {
-      const exists = prev.contractSchedules.find((s) => s.dayOfWeek === day);
+      const exists = prev.contractSchedules.find((s) => s.dayOfWeek == day);
       if (exists) {
         return {
           ...prev,
-          contractSchedules: prev.contractSchedules.filter((s) => s.dayOfWeek !== day),
+          contractSchedules: prev.contractSchedules.filter((s) => s.dayOfWeek != day),
         };
       }
       return {
@@ -466,11 +466,11 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
 
   // Sửa giờ bắt đầu/kết thúc riêng cho 1 ngày cụ thể (mỗi ngày có thể có
   // khung giờ khác nhau, vd Chủ Nhật mở trễ hơn ngày thường).
-  const updateScheduleTime = (day: string, field: 'startTime' | 'endTime', value: string) => {
+  const updateScheduleTime = (day: number, field: 'startTime' | 'endTime', value: string) => {
     setContractData((prev) => ({
       ...prev,
       contractSchedules: prev.contractSchedules.map((s) =>
-        s.dayOfWeek === day ? { ...s, [field]: value } : s
+        s.dayOfWeek == day ? { ...s, [field]: value } : s
       ),
     }));
   };
@@ -1189,7 +1189,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                 <CalendarDays size={14} color="#64748B" /> Lịch hoạt động trong tuần
               </div>
               {DAYS_OF_WEEK.map((d) => {
-                const schedule = contractData.contractSchedules.find((s) => s.dayOfWeek === d.value);
+                const schedule = contractData.contractSchedules.find((s) => s.dayOfWeek == d.value);
                 const checked = !!schedule;
                 return (
                   <div key={d.value} className="cc-schedule-row">

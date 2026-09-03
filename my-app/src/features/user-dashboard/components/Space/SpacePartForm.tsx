@@ -139,16 +139,7 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
       return;
     }
     
-    // Validate against parent area
-    const parentArea = Number(parentSpace.area);
-    const availableArea = parentArea - existingPartsTotalArea;
-    if (!isNaN(parentArea) && numArea > availableArea && !initialData) {
-      setError(`Diện tích không gian con (${numArea}m²) không được vượt quá diện tích còn lại của không gian gốc (${availableArea}m²).`);
-      return;
-    } else if (!isNaN(parentArea) && numArea > parentArea) {
-      setError(`Diện tích không gian con (${numArea}m²) không được vượt quá tổng diện tích không gian gốc (${parentArea}m²).`);
-      return;
-    }
+
 
     setIsLoading(true);
 
@@ -196,14 +187,15 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
+        const errText = await response.text().catch(() => "");
+        let errorMessage = errText;
+        try {
+          const errData = JSON.parse(errText);
+          errorMessage = errData.message || errData.title || errText;
+        } catch (e) {}
         
-        // Dịch lỗi API (ví dụ: Total area of active space parts (24) cannot exceed parent space area (13).)
-        let errorMessage = errData.message || 'Có lỗi xảy ra, vui lòng thử lại.';
-        if (errorMessage.includes('cannot exceed parent space area')) {
-          errorMessage = 'Tổng diện tích các không gian chia nhỏ vượt quá diện tích không gian gốc.';
-        } else if (errorMessage.includes('already been signed') || errorMessage.includes('already has an active contract')) {
-          errorMessage = 'Mặt bằng này đã được ký hợp đồng hoặc đang có người thuê nên không thể chia nhỏ.';
+        if (!errorMessage) {
+            errorMessage = 'Có lỗi xảy ra, vui lòng thử lại.';
         }
         throw new Error(errorMessage);
       }
@@ -283,7 +275,7 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
                 <input
                   type="text"
                   inputMode="numeric"
-                  placeholder={`Nhập diện tích${!initialData ? ` (Tối đa ${parentSpace.area - existingPartsTotalArea}m²)` : ''}`}
+                  placeholder="VD: 50"
                   value={area}
                   onChange={(e) => setArea(e.target.value.replace(/[^\d]/g, ''))}
                   className="form-input"
