@@ -8,7 +8,6 @@ import {
   Trash2,
   FileText,
   Calendar,
-  Clock,
   X,
   DollarSign,
   Hash,
