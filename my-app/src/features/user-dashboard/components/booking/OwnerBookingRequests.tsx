@@ -241,10 +241,7 @@ export const OwnerBookingRequests: React.FC = () => {
                     <td style={{ padding: '16px 12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', marginBottom: '4px' }}>
                         <Calendar size={14} style={{ opacity: 0.7 }}/> 
-                        {formatDate(req.expectedStartDate, 'vi-VN', 'N/A')}
-                      </div>
-                      <div style={{ fontSize: '12px', opacity: 0.7 }}>
-                        Thời lượng: {req.duration} {req.durationUnit || 'kỳ'}
+                        {formatDate(req.expectedStartDate, 'vi-VN', 'N/A')} - {formatDate(req.expectedEndDate, 'vi-VN', 'N/A')}
                       </div>
                     </td>
 
