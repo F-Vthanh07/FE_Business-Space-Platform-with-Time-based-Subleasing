@@ -219,7 +219,10 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         const allSpaces = [...ownerSpaces, ...usageSpaces];
         const uniqueSpaces = Array.from(new Map(allSpaces.map((item) => [item.id || item.Id, item])).values());
         
-        setMySpaces(uniqueSpaces);
+        setMySpaces((prev) => {
+          const combined = [...prev, ...uniqueSpaces];
+          return Array.from(new Map(combined.map((item) => [item.id || item.Id, item])).values());
+        });
 
         const ownerIds = Array.from(new Set(uniqueSpaces.map(s => s.ownerId || s.OwnerId).filter(Boolean)));
         const ownerPromises = ownerIds.map(async (id: any) => {
@@ -235,7 +238,7 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
         const resolvedOwners = await Promise.all(ownerPromises);
         const ownerMap: Record<string, string> = {};
         resolvedOwners.forEach(o => { ownerMap[o.id] = o.name; });
-        setOwnerNames(ownerMap);
+        setOwnerNames((prev) => ({ ...prev, ...ownerMap }));
 
       } catch (err) {
         console.error(err);
