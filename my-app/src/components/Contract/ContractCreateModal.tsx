@@ -1061,7 +1061,6 @@ export const ContractCreateModal: React.FC<ContractCreateModalProps> = ({
                 {contractData.spaceId && (() => {
                   const selectedSpace = mySpaces.find((s) => String(s.id || s.Id) === String(contractData.spaceId));
                   if (!selectedSpace) return null;
-                  const ownerName = ownerNames[selectedSpace.ownerId || selectedSpace.OwnerId];
                   const amenities: any[] = selectedSpace.amenities || selectedSpace.Amenities || [];
                   const operatingHours: any[] = selectedSpace.operatingHours || selectedSpace.OperatingHours || [];
                   const allowedCategories: any[] = selectedSpace.spaceAllowedCategories || selectedSpace.SpaceAllowedCategories || [];
