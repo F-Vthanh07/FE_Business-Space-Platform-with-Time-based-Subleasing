@@ -691,6 +691,22 @@ const translations: Translations = {
     en: 'Loading contract calendar...',
     vi: 'Đang tải lịch hợp đồng...',
   },
+  'renter.calendarTabLessor': {
+    en: 'Leasing out',
+    vi: 'Lịch cho thuê',
+  },
+  'renter.calendarTabLessee': {
+    en: 'Renting',
+    vi: 'Lịch thuê',
+  },
+  'renter.rentedCalendarTitle': {
+    en: 'Rented Space Calendar',
+    vi: 'Quản lý lịch mặt bằng mình đi thuê',
+  },
+  'renter.rentedCalendarSubtitle': {
+    en: 'View the schedule of spaces you rent from other owners, based on your contracts',
+    vi: 'Xem lịch trình các mặt bằng bạn thuê của người khác, dựa trên các hợp đồng của bạn',
+  },
   'renter.subleaseRevenueShort': {
     en: 'Est. Revenue',
     vi: 'Doanh thu dự kiến',

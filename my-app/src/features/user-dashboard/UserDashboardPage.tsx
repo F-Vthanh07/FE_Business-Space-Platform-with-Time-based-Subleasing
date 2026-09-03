@@ -52,6 +52,8 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
   const navigate = useNavigate();
   const [isNewSpaceFormOpen, setIsNewSpaceFormOpen] = useState(false);
   const [isNewSlotFormOpen, setIsNewSlotFormOpen] = useState(false);
+  // Tab lịch: 'lessor' = mặt bằng mình cho người khác thuê | 'lessee' = mặt bằng mình đi thuê của người khác
+  const [calendarTab, setCalendarTab] = useState<'lessor' | 'lessee'>('lessor');
   const [slots, setSlots] = useState<SubSlot[]>(initialMockSlots);
   const { isVerified } = useIdentityVerification();
   const { t } = useThemeLanguage();
@@ -136,13 +138,44 @@ export const UserDashboardPage: React.FC<UserDashboardPageProps> = ({ onLogout }
           <div className="renter-page-wrap">
             <div className="page-header animate-in">
               <div>
-                <h1 className="page-title">{t('renter.subleaseCalendarTitle')}</h1>
+                <h1 className="page-title">
+                  {calendarTab === 'lessor'
+                    ? t('renter.subleaseCalendarTitle')
+                    : t('renter.rentedCalendarTitle')}
+                </h1>
                 <p className="page-subtitle text-secondary">
-                  {t('renter.subleaseCalendarSubtitle')}
+                  {calendarTab === 'lessor'
+                    ? t('renter.subleaseCalendarSubtitle')
+                    : t('renter.rentedCalendarSubtitle')}
                 </p>
               </div>
             </div>
+
+            {/* Chuyển tab: lịch mình cho thuê  |  lịch mình đi thuê */}
+            <div className="calendar-tab-switch" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={calendarTab === 'lessor'}
+                className={`calendar-tab-switch__btn ${calendarTab === 'lessor' ? 'calendar-tab-switch__btn--active' : ''}`}
+                onClick={() => setCalendarTab('lessor')}
+              >
+                {t('renter.calendarTabLessor')}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={calendarTab === 'lessee'}
+                className={`calendar-tab-switch__btn ${calendarTab === 'lessee' ? 'calendar-tab-switch__btn--active' : ''}`}
+                onClick={() => setCalendarTab('lessee')}
+              >
+                {t('renter.calendarTabLessee')}
+              </button>
+            </div>
+
             <SlotCalendar
+              key={calendarTab}
+              mode={calendarTab}
               slots={slots}
               onUpdateSlot={handleUpdateSlot}
               onCreateSlot={handleCreateSlot}

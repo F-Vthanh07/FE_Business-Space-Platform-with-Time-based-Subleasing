@@ -42,6 +42,14 @@ interface OwnedSpace {
   address: string;
 }
 
+// Ghép địa chỉ hoàn chỉnh "địa chỉ, thành phố" từ một object Space bất kỳ (Space/GetById).
+// Fallback: chỉ address -> name -> "#id".
+const buildSpaceAddress = (sp: { address?: string; city?: string; name?: string } | null | undefined, id: number) => {
+  const parts = [sp?.address, sp?.city].filter(Boolean);
+  if (parts.length > 0) return parts.join(', ');
+  return sp?.name || `#${id}`;
+};
+
 interface ContractCalendarEntry {
   effectiveDate: string;
   startDateTime: string;
@@ -88,9 +96,16 @@ interface SlotCalendarProps {
   slots: SubSlot[];
   onUpdateSlot: (updatedSlot: SubSlot) => void;
   onCreateSlot: (newSlot: SubSlot) => void;
+  /**
+   * Cả 2 chế độ đều lấy mặt bằng từ HỢP ĐỒNG (Contract/GetAll), chỉ khác vai trò của mình:
+   * - 'lessor' (mặc định): mặt bằng mình CHO người khác thuê — Contract/GetAll?LessorId=tôi
+   * - 'lessee': mặt bằng mình ĐI THUÊ của người khác — Contract/GetAll?LesseeId=tôi
+   * Sau đó gom spaceId duy nhất và resolve địa chỉ qua Space/GetById.
+   */
+  mode?: 'lessor' | 'lessee';
 }
 
-export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot, onCreateSlot }) => {
+export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot, onCreateSlot, mode = 'lessor' }) => {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => new Date());
   const [selectedSpaceId, setSelectedSpaceId] = useState('');
@@ -128,39 +143,71 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Lấy danh sách mặt bằng của chính người dùng (chỉ cần hiển thị địa chỉ)
+  // Lấy danh sách mặt bằng để đổ vào dropdown (chỉ cần id + địa chỉ).
+  // Cả 2 tab đều dựa trên HỢP ĐỒNG, chỉ khác vai trò của mình trong hợp đồng:
+  // - mode 'lessor': hợp đồng mình là BÊN CHO THUÊ  -> Contract/GetAll?LessorId=tôi
+  // - mode 'lessee': hợp đồng mình là BÊN THUÊ      -> Contract/GetAll?LesseeId=tôi
+  // Từ danh sách hợp đồng, gom spaceId duy nhất rồi resolve địa chỉ qua Space/GetById.
   const fetchOwnedSpaces = useCallback(async () => {
     setIsSpacesLoading(true);
     try {
       const token = localStorage.getItem('portal_token');
-      const ownerId = localStorage.getItem('current_user_id');
-      const url = `${API_BASE_URL}/api/Space/GetAll?OwnerId=${encodeURIComponent(ownerId || '')}`;
+      const userId = localStorage.getItem('current_user_id');
+      const headers = { Authorization: `Bearer ${token}`, accept: '*/*' };
 
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          accept: '*/*',
-        },
-      });
+      const roleParam = mode === 'lessor' ? 'LessorId' : 'LesseeId';
+      const contractRes = await fetch(
+        `${API_BASE_URL}/api/Contract/GetAll?${roleParam}=${encodeURIComponent(userId || '')}`,
+        { headers }
+      );
 
-      if (response.ok) {
-        const data = await response.json();
-        const safeData: OwnedSpace[] = Array.isArray(data) ? data : (data?.data || data?.items || []);
-        setOwnedSpaces(safeData);
-        setSelectedSpaceId((prev) => prev || (safeData[0] ? String(safeData[0].id) : ''));
-      } else {
+      if (!contractRes.ok) {
         setOwnedSpaces([]);
+        return;
       }
+
+      const contractData = await contractRes.json();
+      const contracts: Array<{ spaceId: number }> = Array.isArray(contractData)
+        ? contractData
+        : (contractData?.data || contractData?.items || []);
+
+      // Gom các spaceId duy nhất từ các hợp đồng ở vai trò tương ứng
+      const uniqueSpaceIds = Array.from(
+        new Set(contracts.map((c) => c.spaceId).filter((id): id is number => id != null))
+      );
+
+      // Resolve địa chỉ từng mặt bằng qua Space/GetById.
+      // ⚠️ Endpoint KHÔNG có dấu "/" giữa "GetById" và id — dùng `GetById${id}` giống toàn bộ codebase
+      // (OwnerTenants, ContractDetailModal, ...). Dùng `GetById/${id}` sẽ 404 và rơi về fallback "#id".
+      const resolved = await Promise.all(
+        uniqueSpaceIds.map(async (id) => {
+          try {
+            const res = await fetch(`${API_BASE_URL}/api/Space/GetById${id}`, { headers });
+            if (res.ok) {
+              const sp = await res.json();
+              return { id, address: buildSpaceAddress(sp, id) } as OwnedSpace;
+            }
+          } catch {
+            /* bỏ qua lỗi lẻ, vẫn hiển thị mặt bằng theo id */
+          }
+          return { id, address: `#${id}` } as OwnedSpace;
+        })
+      );
+
+      setOwnedSpaces(resolved);
+      setSelectedSpaceId((prev) => prev || (resolved[0] ? String(resolved[0].id) : ''));
     } catch (error) {
       console.error('Lỗi khi tải danh sách mặt bằng:', error);
       setOwnedSpaces([]);
     } finally {
       setIsSpacesLoading(false);
     }
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
+    // Đổi tab (mode) thì reset lựa chọn mặt bằng để lấy đúng mặt bằng đầu tiên của tab mới
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedSpaceId('');
     fetchOwnedSpaces();
   }, [fetchOwnedSpaces]);
 
@@ -272,7 +319,9 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
               {isSpacesLoading
                 ? (language === 'en' ? 'Loading spaces...' : 'Đang tải mặt bằng...')
                 : ownedSpaces.length === 0
-                  ? (language === 'en' ? 'No spaces found' : 'Bạn chưa có mặt bằng nào')
+                  ? (mode === 'lessee'
+                      ? (language === 'en' ? 'No rented spaces' : 'Bạn chưa thuê mặt bằng nào')
+                      : (language === 'en' ? 'No leased spaces' : 'Bạn chưa cho thuê mặt bằng nào'))
                   : ownedSpaces.find((sp) => String(sp.id) === selectedSpaceId)?.address
                     ?? (language === 'en' ? 'Select a space' : 'Chọn mặt bằng')}
             </span>
@@ -466,7 +515,6 @@ export const SlotCalendar: React.FC<SlotCalendarProps> = ({ slots, onUpdateSlot,
             <div className="day-detail-empty">
               <Info size={28} style={{ color: 'var(--color-text-secondary)', opacity: 0.5 }} />
               <p className="text-secondary" style={{ fontSize: 14, marginTop: 10 }}>{t('renter.noSlotThisDay')}</p>
-              <p className="text-secondary" style={{ fontSize: 12, marginTop: 4 }}>{t('renter.pressAddSlotInstruction')}</p>
             </div>
           ) : (
             <div className="slot-list">
