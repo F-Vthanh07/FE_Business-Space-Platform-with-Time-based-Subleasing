@@ -44,30 +44,6 @@ export const SpacePartForm: React.FC<SpacePartFormProps> = ({ onClose, onSubmit,
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [existingPartsTotalArea, setExistingPartsTotalArea] = useState(0);
-
-  useEffect(() => {
-    const fetchExistingParts = async () => {
-      try {
-        const token = localStorage.getItem('portal_token');
-        const url = `https://flexi-space-capstone-project.onrender.com/api/SpacePart/GetByParent/${parentSpace.id}`;
-        const res = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const parts = Array.isArray(data) ? data : (data?.items || []);
-          const totalArea = parts.reduce((sum: number, p: any) => sum + (p.isActive ? p.area : 0), 0);
-          setExistingPartsTotalArea(totalArea);
-        }
-      } catch (err) {
-        console.error("Lỗi lấy thông tin space parts hiện tại:", err);
-      }
-    };
-    if (parentSpace?.id) {
-      fetchExistingParts();
-    }
-  }, [parentSpace, initialData]);
 
   useEffect(() => {
     const fetchCategories = async () => {

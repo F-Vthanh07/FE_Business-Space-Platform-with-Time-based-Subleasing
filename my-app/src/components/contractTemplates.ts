@@ -111,7 +111,7 @@ export function formatSchedule(schedules?: ContractSchedule[]): string {
     if (!s.dayOfWeek || !s.startTime || !s.endTime) return;
     const key = `${s.startTime}-${s.endTime}`;
     if (!groups[key]) groups[key] = [];
-    groups[key].push(s.dayOfWeek);
+    groups[key].push(String(s.dayOfWeek));
   });
 
   const parts = Object.entries(groups).map(([time, days]) => {
