@@ -319,14 +319,13 @@ export const FloatingChat: React.FC = () => {
     if (activeChat && view === 'CHAT') {
       const fetchReqs = async () => {
         try {
-          const [reqRes1, reqRes2, spaceRes, listingRes] = await Promise.all([
+          const [reqRes1, reqRes2, listingRes] = await Promise.all([
             fetch(`https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll?status=1`, {
               headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
             }),
             fetch(`https://flexi-space-capstone-project.onrender.com/api/PrimaryBookingRequest/GetAll?status=2`, {
               headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
             }),
-            fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetAll`, { headers: { 'accept': '*/*' } }),
             fetch(`https://flexi-space-capstone-project.onrender.com/api/Listing/GetAll`, { headers: { 'accept': '*/*' } })
           ]);
 
@@ -338,25 +337,41 @@ export const FloatingChat: React.FC = () => {
             const safeData2 = Array.isArray(data2) ? data2 : (data2?.data || data2?.items || []);
             const safeData = [...safeData1, ...safeData2];
 
-            const spaceData = spaceRes.ok ? await spaceRes.json() : [];
             const listingData = listingRes.ok ? await listingRes.json() : [];
-
-            const spaces = Array.isArray(spaceData) ? spaceData : (spaceData?.data || spaceData?.items || []);
             const listings = Array.isArray(listingData) ? listingData : (listingData?.data || listingData?.items || []);
 
             const otherId = getOtherPersonId(activeChat);
-            const reqs = safeData.filter((r: any) => 
+            const filteredReqs = safeData.filter((r: any) => 
               (String(r.lessorId) === String(currentUserId) && String(r.lesseeId) === String(otherId)) ||
               (String(r.lessorId) === String(otherId) && String(r.lesseeId) === String(currentUserId))
-            ).map((r: any) => {
-              const space = spaces.find((s: any) => s.id === r.spaceId || s.Id === r.spaceId);
+            );
+
+            const reqs = await Promise.all(filteredReqs.map(async (r: any) => {
+              let spaceName = 'Không xác định';
+              const spaceId = r.spaceId || r.SpaceId;
+              
+              if (spaceId) {
+                try {
+                  const spaceRes = await fetch(`https://flexi-space-capstone-project.onrender.com/api/Space/GetById${spaceId}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'accept': '*/*' }
+                  });
+                  if (spaceRes.ok) {
+                    const spaceData = await spaceRes.json();
+                    spaceName = spaceData?.name || spaceData?.Name || 'Không xác định';
+                  }
+                } catch (e) {
+                  console.error(`Error fetching space ${spaceId}`, e);
+                }
+              }
+
               const listing = listings.find((l: any) => l.id === r.listingId || l.Id === r.listingId);
               return {
                 ...r,
-                spaceName: space?.name || space?.Name || 'Không xác định',
+                spaceName,
                 listingName: listing?.name || listing?.Name || 'Không xác định'
               };
-            });
+            }));
+            
             setRelatedRequests(reqs);
           }
         } catch(e) {}
